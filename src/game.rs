@@ -5,49 +5,50 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
 pub trait Renderer {
-    fn render(&mut self, timestamp: std::time::Duration) -> Result<(), JsValue>;
+    fn prep(&mut self, millis: f64) -> Result<(), JsValue>;
+    fn render(&mut self, millis: f64) -> Result<(), JsValue>;
     fn ready(&self) -> bool;
     fn done(&self) -> bool;
 }
 
-pub fn enter_loop(
-    window: Rc<RefCell<web_sys::Window>>,
-    renderer: Rc<RefCell<dyn Renderer>>,
-) -> Result<(), JsValue> {
-    log::info!("render_loop starting");
-    let f = Rc::new(RefCell::new(None as Option<Closure<dyn FnMut(f64) + 'static>>));
-    let g = f.clone();
-    let captured_window = window.clone();
-    *g.borrow_mut() = Some(Closure::wrap(Box::new(move |timestamp: f64| {
+type RequestAnimationFrameCallback = Closure<dyn FnMut(f64)>;
+
+fn request_animation_frame_helper(callback: Option<&RequestAnimationFrameCallback>) {
+    web_sys::window()
+        .unwrap()
+        .request_animation_frame(callback.unwrap().as_ref().unchecked_ref())
+        .unwrap();
+}
+
+pub fn enter_loop(renderer: Rc<RefCell<dyn Renderer>>) -> Result<(), JsValue> {
+    // Part of this is taken from the wasm-bindgen guide.
+    // This kinda works for now, but needs to be checked for
+    // leaks.
+    // TODO: Check if renderer, callback instances not freed.
+    // TODO: See if there's a better/cleaner way to do this.
+    log::debug!("render_loop starting");
+    let callback = Rc::new(RefCell::new(None as Option<RequestAnimationFrameCallback>));
+    let c = callback.clone();
+    *callback.borrow_mut() = Some(Closure::wrap(Box::new(move |millis: f64| {
         if renderer.borrow().done() {
-            log::info!("render_loop exiting");
-            let _ = f.borrow_mut().take();
+            log::debug!("render_loop exiting");
+            let _ = c.borrow_mut().take();
             return;
         }
 
         if renderer.borrow().ready() {
-            renderer.borrow_mut().render(std::time::Duration::from_micros((timestamp * 1000.0) as u64)).unwrap();
+            renderer.borrow_mut().render(millis).unwrap();
         }
 
-        captured_window
-            .borrow()
-            .request_animation_frame(
-                (f.borrow().as_ref().unwrap() as &Closure<dyn FnMut(f64)>)
-                    .as_ref()
-                    .unchecked_ref(),
-            )
-            .unwrap();
-    }) as Box<dyn FnMut(f64) + 'static>));
+        let c2 = c.clone();
+        let r2 = renderer.clone();
+        wasm_bindgen_futures::spawn_local(async move {
+            r2.borrow_mut().prep(millis).unwrap();
+            request_animation_frame_helper(c2.borrow().as_ref());
+        });
+    }) as Box<dyn FnMut(f64)>));
 
-    window
-        .borrow()
-        .request_animation_frame(
-            (g.borrow().as_ref().unwrap() as &Closure<dyn FnMut(f64)>)
-                .as_ref()
-                .unchecked_ref(),
-        )
-        .unwrap();
-
+    request_animation_frame_helper(callback.borrow().as_ref());
     Ok(())
 }
 

@@ -69,7 +69,8 @@ impl AnimatedCanvas {
 }
 
 impl game::Renderer for AnimatedCanvas {
-    fn render(&mut self, timestamp: std::time::Duration) -> Result<(), JsValue> {
+    fn prep(&mut self, _millis: f64) -> Result<(), JsValue> {
+        log::debug!("prep");
         self.gc.fill(game::Color::White);
         for x in 0..self.gc.width() {
             for y in 0..self.gc.height() {
@@ -133,11 +134,15 @@ impl game::Renderer for AnimatedCanvas {
             30.0,
             26.0,
         );
+        Ok(())
+    }
 
+    fn render(&mut self, millis: f64) -> Result<(), JsValue> {
+        log::debug!("render");
         self.context
             .draw_image_with_html_canvas_element(&self.offscreen_canvas, 0.0, 0.0)
             .unwrap();
-        self.last_render = timestamp;
+        self.last_render = std::time::Duration::from_micros((millis * 1000.0) as u64);
         Ok(())
     }
 
@@ -158,9 +163,5 @@ pub fn main() -> Result<(), wasm_bindgen::JsValue> {
 
     let r = Rc::new(RefCell::new(AnimatedCanvas::new("wasmgame")));
 
-    let window = Rc::new(RefCell::new(
-        web_sys::window().expect("cannot get window object"),
-    ));
-
-    game::enter_loop(window, r)
+    game::enter_loop(r)
 }
