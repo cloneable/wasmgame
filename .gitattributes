@@ -1,1 +1,2 @@
+*.wasm diff=wasm
 web/wasmgame* linguist-vendored
