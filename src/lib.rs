@@ -70,7 +70,6 @@ impl AnimatedCanvas {
 
 impl game::Renderer for AnimatedCanvas {
     fn prep(&mut self, _millis: f64) -> Result<(), JsValue> {
-        log::debug!("prep");
         self.gc.fill(game::Color::White);
         for x in 0..self.gc.width() {
             for y in 0..self.gc.height() {
@@ -138,7 +137,6 @@ impl game::Renderer for AnimatedCanvas {
     }
 
     fn render(&mut self, millis: f64) -> Result<(), JsValue> {
-        log::debug!("render");
         self.context
             .draw_image_with_html_canvas_element(&self.offscreen_canvas, 0.0, 0.0)
             .unwrap();
@@ -158,10 +156,10 @@ impl game::Renderer for AnimatedCanvas {
 #[wasm_bindgen(start)]
 pub fn main() -> Result<(), wasm_bindgen::JsValue> {
     wasm_logger::init(wasm_logger::Config::default());
-
     log::info!("wasmgame loading");
 
     let r = Rc::new(RefCell::new(AnimatedCanvas::new("wasmgame")));
-
-    game::enter_loop(r)
+    let e = game::Engine::new(r);
+    log::info!("wasmgame starting");
+    e.start()
 }

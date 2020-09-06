@@ -11,7 +11,11 @@ pub trait Renderer {
     fn done(&self) -> bool;
 }
 
-type RequestAnimationFrameCallback = Closure<dyn FnMut(f64)>;
+type RequestAnimationFrameCallback = Closure<dyn FnMut(f64) + 'static>;
+
+pub struct Engine {
+    renderer: Rc<RefCell<dyn Renderer>>,
+}
 
 fn request_animation_frame_helper(callback: Option<&RequestAnimationFrameCallback>) {
     web_sys::window()
@@ -20,36 +24,44 @@ fn request_animation_frame_helper(callback: Option<&RequestAnimationFrameCallbac
         .unwrap();
 }
 
-pub fn enter_loop(renderer: Rc<RefCell<dyn Renderer>>) -> Result<(), JsValue> {
-    // Part of this is taken from the wasm-bindgen guide.
-    // This kinda works for now, but needs to be checked for
-    // leaks.
-    // TODO: Check if renderer, callback instances not freed.
-    // TODO: See if there's a better/cleaner way to do this.
-    log::debug!("render_loop starting");
-    let callback = Rc::new(RefCell::new(None as Option<RequestAnimationFrameCallback>));
-    let c = callback.clone();
-    *callback.borrow_mut() = Some(Closure::wrap(Box::new(move |millis: f64| {
-        if renderer.borrow().done() {
-            log::debug!("render_loop exiting");
-            let _ = c.borrow_mut().take();
-            return;
-        }
+impl Engine {
+    pub fn new(renderer: Rc<RefCell<dyn Renderer>>) -> Rc<Self> {
+        Rc::new(Self { renderer })
+    }
 
-        if renderer.borrow().ready() {
-            renderer.borrow_mut().render(millis).unwrap();
-        }
+    pub fn start(self: Rc<Self>) -> Result<(), wasm_bindgen::JsValue> {
+        // Part of this is taken from the wasm-bindgen guide.
+        // This kinda works for now, but needs to be checked for
+        // leaks.
+        // TODO: Check if renderer, callback instances not freed.
+        // TODO: See if there's a better/cleaner way to do this.
+        let callback = Rc::new(RefCell::new(None as Option<RequestAnimationFrameCallback>));
+        let c = callback.clone();
+        *callback.borrow_mut() = Some(Closure::wrap(Box::new(move |millis: f64| {
+            if self.renderer.borrow().done() {
+                let _ = c.borrow_mut().take();
+                return;
+            }
+            if self.renderer.borrow().ready() {
+                self.renderer.borrow_mut().render(millis).unwrap();
+            }
+            let self0 = self.clone();
+            let c0 = c.clone();
+            wasm_bindgen_futures::spawn_local(self0.prep_next_frame(c0, millis));
+        }) as Box<dyn FnMut(f64) + 'static>));
 
-        let c2 = c.clone();
-        let r2 = renderer.clone();
-        wasm_bindgen_futures::spawn_local(async move {
-            r2.borrow_mut().prep(millis).unwrap();
-            request_animation_frame_helper(c2.borrow().as_ref());
-        });
-    }) as Box<dyn FnMut(f64)>));
+        request_animation_frame_helper(callback.borrow().as_ref());
+        Ok(())
+    }
 
-    request_animation_frame_helper(callback.borrow().as_ref());
-    Ok(())
+    async fn prep_next_frame(
+        self: Rc<Self>,
+        callback: Rc<RefCell<Option<RequestAnimationFrameCallback>>>,
+        millis: f64,
+    ) {
+        self.renderer.borrow_mut().prep(millis).unwrap();
+        request_animation_frame_helper(callback.borrow().as_ref());
+    }
 }
 
 #[derive(Copy, Clone)]
