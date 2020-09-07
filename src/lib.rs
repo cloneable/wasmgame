@@ -118,7 +118,7 @@ impl game::Renderer for AnimatedCanvas {
 }
 
 #[wasm_bindgen(start)]
-pub fn main() -> Result<(), wasm_bindgen::JsValue> {
+pub fn wasm_main() -> Result<(), wasm_bindgen::JsValue> {
     wasm_logger::init(wasm_logger::Config::default());
     log::info!("wasmgame loading");
 
