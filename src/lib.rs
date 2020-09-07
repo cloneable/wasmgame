@@ -90,49 +90,13 @@ impl game::Renderer for AnimatedCanvas {
             .put_image_data(self.gc.image_data(), 0.0, 0.0)
             .unwrap();
 
-        game::stroke_hexatile(&self.offscreen_context, 100.0, 100.0, 30.0, 26.0);
-        game::stroke_hexatile(
-            &self.offscreen_context,
-            100.0 + 30.0 + 15.0,
-            100.0 + 26.0,
-            30.0,
-            26.0,
-        );
-        game::stroke_hexatile(
-            &self.offscreen_context,
-            100.0 + 30.0 + 15.0,
-            100.0 - 26.0,
-            30.0,
-            26.0,
-        );
-        game::stroke_hexatile(
-            &self.offscreen_context,
-            100.0,
-            100.0 - 26.0 * 2.0,
-            30.0,
-            26.0,
-        );
-        game::stroke_hexatile(
-            &self.offscreen_context,
-            100.0,
-            100.0 + 26.0 * 2.0,
-            30.0,
-            26.0,
-        );
-        game::stroke_hexatile(
-            &self.offscreen_context,
-            100.0 - 30.0 - 15.0,
-            100.0 + 26.0,
-            30.0,
-            26.0,
-        );
-        game::stroke_hexatile(
-            &self.offscreen_context,
-            100.0 - 30.0 - 15.0,
-            100.0 - 26.0,
-            30.0,
-            26.0,
-        );
+        game::stroke_hexatile(&self.offscreen_context, 100, 100, 30, 26);
+        game::stroke_hexatile(&self.offscreen_context, 100 + 30 + 15, 100 + 26, 30, 26);
+        game::stroke_hexatile(&self.offscreen_context, 100 + 30 + 15, 100 - 26, 30, 26);
+        game::stroke_hexatile(&self.offscreen_context, 100, 100 - 26 * 2, 30, 26);
+        game::stroke_hexatile(&self.offscreen_context, 100, 100 + 26 * 2, 30, 26);
+        game::stroke_hexatile(&self.offscreen_context, 100 - 30 - 15, 100 + 26, 30, 26);
+        game::stroke_hexatile(&self.offscreen_context, 100 - 30 - 15, 100 - 26, 30, 26);
         Ok(())
     }
 

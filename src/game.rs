@@ -148,21 +148,22 @@ impl Canvas {
 
 pub fn stroke_hexatile(
     off_ctx: &web_sys::CanvasRenderingContext2d,
-    x: f64,
-    y: f64,
-    rx: f64,
-    ry: f64,
+    x: u32,
+    y: u32,
+    rx: u32,
+    ry: u32,
 ) {
     //  5  6
     // 4 <>-1
     //  3  2
+    let rx2 = rx >> 1;
     off_ctx.begin_path();
-    off_ctx.move_to(x + rx, y);
-    off_ctx.line_to(x + rx * 0.5, y + ry);
-    off_ctx.line_to(x - rx * 0.5, y + ry);
-    off_ctx.line_to(x - rx, y);
-    off_ctx.line_to(x - rx * 0.5, y - ry);
-    off_ctx.line_to(x + rx * 0.5, y - ry);
+    off_ctx.move_to((x + rx) as f64, y as f64);
+    off_ctx.line_to((x + rx2) as f64, (y + ry) as f64);
+    off_ctx.line_to((x - rx2) as f64, (y + ry) as f64);
+    off_ctx.line_to((x - rx) as f64, y as f64);
+    off_ctx.line_to((x - rx2) as f64, (y - ry) as f64);
+    off_ctx.line_to((x + rx2) as f64, (y - ry) as f64);
     off_ctx.close_path();
     off_ctx.stroke();
 }
