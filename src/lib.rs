@@ -7,16 +7,11 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
 struct AnimatedCanvas {
-    window: web_sys::Window,
-    canvas: web_sys::HtmlCanvasElement,
     context: web_sys::CanvasRenderingContext2d,
     offscreen_canvas: web_sys::HtmlCanvasElement,
     offscreen_context: web_sys::CanvasRenderingContext2d,
 
     gc: game::Canvas,
-
-    drawing: bool,
-    changed: bool,
 
     last_render: std::time::Duration,
 }
@@ -55,14 +50,10 @@ impl AnimatedCanvas {
         let gc = game::Canvas::new(offscreen_canvas.width(), offscreen_canvas.height());
 
         Self {
-            window,
-            canvas,
             context,
             offscreen_canvas,
             offscreen_context,
             gc,
-            drawing: false,
-            changed: false,
             last_render: std::time::Duration::from_secs(0),
         }
     }

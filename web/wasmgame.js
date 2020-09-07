@@ -432,12 +432,12 @@ async function init(input) {
     imports.wbg.__wbg_drawImage_bbf7a4f3f839531f = handleError(function(arg0, arg1, arg2, arg3) {
         getObject(arg0).drawImage(getObject(arg1), arg2, arg3);
     });
-    imports.wbg.__wbindgen_closure_wrapper591 = function(arg0, arg1, arg2) {
-        var ret = makeMutClosure(arg0, arg1, 22, __wbg_adapter_19);
-        return addHeapObject(ret);
-    };
     imports.wbg.__wbindgen_closure_wrapper568 = function(arg0, arg1, arg2) {
         var ret = makeMutClosure(arg0, arg1, 22, __wbg_adapter_16);
+        return addHeapObject(ret);
+    };
+    imports.wbg.__wbindgen_closure_wrapper591 = function(arg0, arg1, arg2) {
+        var ret = makeMutClosure(arg0, arg1, 22, __wbg_adapter_19);
         return addHeapObject(ret);
     };
 
