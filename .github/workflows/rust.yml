@@ -21,7 +21,11 @@ jobs:
         cargo --version
         rustc --version
         rustup target add wasm32-unknown-unknown
-        cargo install wasm-bindgen-cli
+    - name: Install wasm-bindgen
+      uses: actions-rs/install@v0.1
+      with:
+        crate: wasm-bindgen-cli
+        use-tool-cache: true
     - name: Build
       run: |
         cargo build --target=wasm32-unknown-unknown --verbose
