@@ -16,12 +16,14 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Build
+    - name: Set up
       run: |
         cargo --version
         rustc --version
         rustup target add wasm32-unknown-unknown
+    - name: Build
+      run: |
         cargo build --target=wasm32-unknown-unknown --verbose
-    - name: Run tests
+    - name: Test
       run: |
         cargo test --target=wasm32-unknown-unknown --verbose
