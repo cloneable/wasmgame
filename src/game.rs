@@ -13,24 +13,27 @@ use std::ops::FnMut;
 use std::option::{Option, Option::None, Option::Some};
 use std::rc::Rc;
 use std::result::{Result, Result::Ok};
-use std::{vec, vec::Vec};
 
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 
 pub trait Renderer {
-    fn prep(&mut self, millis: f64) -> Result<(), JsValue>;
-    fn render(&mut self, millis: f64) -> Result<(), JsValue>;
-    fn ready(&self) -> bool;
+    fn setup(&mut self, ctx: &RenderingContext) -> Result<(), JsValue>;
+    fn render(&mut self, ctx: &RenderingContext, millis: f64) -> Result<(), JsValue>;
     fn done(&self) -> bool;
 }
 
-type RequestAnimationFrameCallback = Closure<dyn FnMut(f64) + 'static>;
-
-pub struct Engine {
-    renderer: Rc<RefCell<dyn Renderer>>,
+pub struct RenderingContext {
+    /// https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.WebGlRenderingContext.html
+    pub gl: web_sys::WebGlRenderingContext,
+    /// https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.OesVertexArrayObject.html
+    pub vertex_array_object_ext: web_sys::OesVertexArrayObject,
+    /// https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.AngleInstancedArrays.html
+    pub instanced_arrays_ext: web_sys::AngleInstancedArrays,
 }
+
+type RequestAnimationFrameCallback = Closure<dyn FnMut(f64) + 'static>;
 
 fn request_animation_frame_helper(callback: Option<&RequestAnimationFrameCallback>) {
     web_sys::window()
@@ -39,12 +42,40 @@ fn request_animation_frame_helper(callback: Option<&RequestAnimationFrameCallbac
         .unwrap();
 }
 
+pub struct Engine {
+    ctx: RenderingContext,
+    renderer: Rc<RefCell<dyn Renderer>>,
+}
+
 impl Engine {
-    pub fn new(renderer: Rc<RefCell<dyn Renderer>>) -> Rc<Self> {
-        Rc::new(Self { renderer })
+    pub fn new(
+        gl: web_sys::WebGlRenderingContext,
+        renderer: Rc<RefCell<dyn Renderer>>,
+    ) -> Rc<Self> {
+        let vertex_array_object_ext = gl
+            .get_extension("OES_vertex_array_object")
+            .unwrap()
+            .unwrap()
+            .dyn_into::<web_sys::OesVertexArrayObject>()
+            .unwrap();
+        let instanced_arrays_ext = gl
+            .get_extension("ANGLE_instanced_arrays")
+            .unwrap()
+            .unwrap()
+            .dyn_into::<web_sys::AngleInstancedArrays>()
+            .unwrap();
+        Rc::new(Self {
+            ctx: RenderingContext {
+                gl,
+                vertex_array_object_ext,
+                instanced_arrays_ext,
+            },
+            renderer,
+        })
     }
 
     pub fn start(self: Rc<Self>) -> Result<(), JsValue> {
+        self.renderer.borrow_mut().setup(&self.ctx)?;
         // Part of this is taken from the wasm-bindgen guide.
         // This kinda works for now, but needs to be checked for
         // leaks.
@@ -57,128 +88,14 @@ impl Engine {
                 let _ = c.borrow_mut().take();
                 return;
             }
-            if self.renderer.borrow().ready() {
-                self.renderer.borrow_mut().render(millis).unwrap();
-            }
-            let self0 = self.clone();
+
+            self.renderer.borrow_mut().render(&self.ctx, millis).unwrap();
+
             let c0 = c.clone();
-            wasm_bindgen_futures::spawn_local(self0.prep_next_frame(c0, millis));
+            request_animation_frame_helper(c0.borrow().as_ref());
         }) as Box<dyn FnMut(f64) + 'static>));
 
         request_animation_frame_helper(callback.borrow().as_ref());
         Ok(())
     }
-
-    async fn prep_next_frame(
-        self: Rc<Self>,
-        callback: Rc<RefCell<Option<RequestAnimationFrameCallback>>>,
-        millis: f64,
-    ) {
-        self.renderer.borrow_mut().prep(millis).unwrap();
-        request_animation_frame_helper(callback.borrow().as_ref());
-    }
-}
-
-#[derive(Copy, Clone)]
-#[allow(dead_code)]
-pub enum Color {
-    RGBA(u8, u8, u8, u8),
-    RGB(u8, u8, u8),
-    Gray(u8),
-
-    Black,
-    White,
-}
-
-impl Color {
-    fn write_rgba(data: &mut Vec<u8>, offset: usize, r: u8, g: u8, b: u8, a: u8) {
-        data[offset] = r;
-        data[offset + 1] = g;
-        data[offset + 2] = b;
-        data[offset + 3] = a;
-    }
-
-    pub fn write(self, data: &mut Vec<u8>, offset: usize) {
-        match self {
-            Color::RGBA(r, g, b, a) => Color::write_rgba(data, offset, r, g, b, a),
-            Color::RGB(r, g, b) => Color::write_rgba(data, offset, r, g, b, 255),
-            Color::Gray(v) => Color::write_rgba(data, offset, v, v, v, 255),
-            Color::Black => Color::write_rgba(data, offset, 0, 0, 0, 255),
-            Color::White => Color::write_rgba(data, offset, 255, 255, 255, 255),
-        };
-    }
-}
-
-pub struct Canvas {
-    data: Vec<u8>,
-    image_data: web_sys::ImageData,
-    w: u32,
-    h: u32,
-}
-
-impl Canvas {
-    pub fn new(w: u32, h: u32) -> Self {
-        let mut data: Vec<u8> = vec![0; (w * h * 4) as usize];
-        let image_data = web_sys::ImageData::new_with_u8_clamped_array_and_sh(
-            wasm_bindgen::Clamped(&mut data),
-            w,
-            h,
-        )
-        .unwrap();
-        Self {
-            data,
-            image_data,
-            w,
-            h,
-        }
-    }
-
-    pub fn width(&self) -> u32 {
-        self.w
-    }
-
-    pub fn height(&self) -> u32 {
-        self.h
-    }
-
-    pub fn image_data(&self) -> &web_sys::ImageData {
-        &self.image_data
-    }
-
-    pub fn draw_pixel(&mut self, x: u32, y: u32, color: Color) {
-        let offset = ((y * self.w + x) * 4) as usize;
-        color.write(&mut self.data, offset);
-    }
-
-    pub fn fill(&mut self, color: Color) {
-        let mut offset = 0;
-        while offset < self.data.len() {
-            color.write(&mut self.data, offset);
-            offset += 4;
-        }
-    }
-}
-
-//const HEX_R : f64 = 0.8660254037844386; //((1.0 - 0.5 * 0.5) as f64).sqrt();
-
-pub fn stroke_hexatile(
-    off_ctx: &web_sys::CanvasRenderingContext2d,
-    x: u32,
-    y: u32,
-    rx: u32,
-    ry: u32,
-) {
-    //  5  6
-    // 4 <>-1
-    //  3  2
-    let rx2 = rx >> 1;
-    off_ctx.begin_path();
-    off_ctx.move_to((x + rx) as f64, y as f64);
-    off_ctx.line_to((x + rx2) as f64, (y + ry) as f64);
-    off_ctx.line_to((x - rx2) as f64, (y + ry) as f64);
-    off_ctx.line_to((x - rx) as f64, y as f64);
-    off_ctx.line_to((x - rx2) as f64, (y - ry) as f64);
-    off_ctx.line_to((x + rx2) as f64, (y - ry) as f64);
-    off_ctx.close_path();
-    off_ctx.stroke();
 }

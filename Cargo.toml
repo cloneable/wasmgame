@@ -21,14 +21,21 @@ wasm-bindgen-test = "0.3"
 [dependencies.web-sys]
 version = "0.3"
 features = [
-  'CanvasRenderingContext2d',
+  # DOM
   'Document',
   'Element',
+  'Window',
   'HtmlCanvasElement',
   'HtmlElement',
-  'KeyboardEvent',
-  'Window',
-  'ImageData',
+  # WebGL
+  'WebGlBuffer',
+  'WebGlRenderingContext',
+  'WebGlVertexArrayObject',
+  'WebGlProgram',
+  'WebGlShader',
+  # WebGL extensions
+  'AngleInstancedArrays',
+  'OesVertexArrayObject',
 ]
 
 [profile.release]
