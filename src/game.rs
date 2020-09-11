@@ -1,8 +1,23 @@
-use std::cell::RefCell;
-use std::rc::Rc;
+extern crate js_sys;
+extern crate log;
+extern crate std;
+extern crate wasm_bindgen;
+extern crate wasm_bindgen_futures;
+extern crate web_sys;
 
-use wasm_bindgen::prelude::*;
+use std::boxed::Box;
+use std::cell::RefCell;
+use std::clone::Clone;
+use std::convert::AsRef;
+use std::ops::FnMut;
+use std::option::{Option, Option::None, Option::Some};
+use std::rc::Rc;
+use std::result::{Result, Result::Ok};
+use std::{vec, vec::Vec};
+
+use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
+use wasm_bindgen::JsValue;
 
 pub trait Renderer {
     fn prep(&mut self, millis: f64) -> Result<(), JsValue>;
@@ -29,7 +44,7 @@ impl Engine {
         Rc::new(Self { renderer })
     }
 
-    pub fn start(self: Rc<Self>) -> Result<(), wasm_bindgen::JsValue> {
+    pub fn start(self: Rc<Self>) -> Result<(), JsValue> {
         // Part of this is taken from the wasm-bindgen guide.
         // This kinda works for now, but needs to be checked for
         // leaks.

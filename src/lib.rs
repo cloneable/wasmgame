@@ -1,10 +1,24 @@
+#![no_implicit_prelude]
+
+extern crate js_sys;
+extern crate log;
+extern crate std;
+extern crate wasm_bindgen;
+extern crate wasm_bindgen_macro;
+extern crate wasm_logger;
+extern crate web_sys;
+
 mod game;
 
 use std::cell::RefCell;
+use std::default::Default;
 use std::rc::Rc;
+use std::result::{Result, Result::Ok};
+use std::time::Duration;
 
-use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
+use wasm_bindgen::JsValue;
+use wasm_bindgen_macro::wasm_bindgen;
 
 struct AnimatedCanvas {
     context: web_sys::CanvasRenderingContext2d,
@@ -13,7 +27,7 @@ struct AnimatedCanvas {
 
     gc: game::Canvas,
 
-    last_render: std::time::Duration,
+    last_render: Duration,
 }
 
 impl AnimatedCanvas {
@@ -54,7 +68,7 @@ impl AnimatedCanvas {
             offscreen_canvas,
             offscreen_context,
             gc,
-            last_render: std::time::Duration::from_secs(0),
+            last_render: Duration::from_secs(0),
         }
     }
 }
@@ -95,7 +109,7 @@ impl game::Renderer for AnimatedCanvas {
         self.context
             .draw_image_with_html_canvas_element(&self.offscreen_canvas, 0.0, 0.0)
             .unwrap();
-        self.last_render = std::time::Duration::from_micros((millis * 1000.0) as u64);
+        self.last_render = Duration::from_micros((millis * 1000.0) as u64);
         Ok(())
     }
 
@@ -104,12 +118,12 @@ impl game::Renderer for AnimatedCanvas {
     }
 
     fn done(&self) -> bool {
-        self.last_render >= std::time::Duration::from_secs(3)
+        self.last_render >= Duration::from_secs(3)
     }
 }
 
 #[wasm_bindgen(start)]
-pub fn wasm_main() -> Result<(), wasm_bindgen::JsValue> {
+pub fn wasm_main() -> Result<(), JsValue> {
     wasm_logger::init(wasm_logger::Config::default());
     log::info!("wasmgame loading");
 
