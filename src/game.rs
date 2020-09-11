@@ -56,14 +56,12 @@ impl Engine {
             .get_extension("OES_vertex_array_object")
             .unwrap()
             .unwrap()
-            .dyn_into::<web_sys::OesVertexArrayObject>()
-            .unwrap();
+            .unchecked_into::<web_sys::OesVertexArrayObject>();
         let instanced_arrays_ext = gl
             .get_extension("ANGLE_instanced_arrays")
             .unwrap()
             .unwrap()
-            .dyn_into::<web_sys::AngleInstancedArrays>()
-            .unwrap();
+            .unchecked_into::<web_sys::AngleInstancedArrays>();
         Rc::new(Self {
             ctx: RenderingContext {
                 gl,
@@ -89,7 +87,10 @@ impl Engine {
                 return;
             }
 
-            self.renderer.borrow_mut().render(&self.ctx, millis).unwrap();
+            self.renderer
+                .borrow_mut()
+                .render(&self.ctx, millis)
+                .unwrap();
 
             let c0 = c.clone();
             request_animation_frame_helper(c0.borrow().as_ref());
