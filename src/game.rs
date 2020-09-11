@@ -9,10 +9,12 @@ use std::boxed::Box;
 use std::cell::RefCell;
 use std::clone::Clone;
 use std::convert::AsRef;
+use std::convert::From;
 use std::ops::FnMut;
 use std::option::{Option, Option::None, Option::Some};
 use std::rc::Rc;
-use std::result::{Result, Result::Ok};
+use std::result::{Result, Result::Err, Result::Ok};
+use std::string::String;
 
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
@@ -33,6 +35,65 @@ pub struct RenderingContext {
     pub instanced_arrays_ext: web_sys::AngleInstancedArrays,
 }
 
+impl RenderingContext {
+    pub fn create_vertex_shader(&self, glsl: &str) -> Result<web_sys::WebGlShader, String> {
+        self.create_shader(glsl, web_sys::WebGlRenderingContext::VERTEX_SHADER)
+    }
+
+    pub fn create_fragment_shader(&self, glsl: &str) -> Result<web_sys::WebGlShader, String> {
+        self.create_shader(glsl, web_sys::WebGlRenderingContext::FRAGMENT_SHADER)
+    }
+
+    fn create_shader(&self, glsl: &str, type_: u32) -> Result<web_sys::WebGlShader, String> {
+        let shader = self.gl.create_shader(type_).unwrap();
+        self.gl.shader_source(&shader, glsl);
+        self.gl.compile_shader(&shader);
+
+        if self
+            .gl
+            .get_shader_parameter(&shader, web_sys::WebGlRenderingContext::COMPILE_STATUS)
+            .as_bool()
+            .unwrap_or(false)
+        {
+            Ok(shader)
+        } else {
+            Err(self
+                .gl
+                .get_shader_info_log(&shader)
+                .unwrap_or_else(|| String::from("Unknown error creating shader")))
+        }
+    }
+
+    pub fn link_program(
+        &self,
+        vertex_shader: &web_sys::WebGlShader,
+        fragment_shader: &web_sys::WebGlShader,
+    ) -> Result<web_sys::WebGlProgram, String> {
+        let program = self
+            .gl
+            .create_program()
+            .ok_or_else(|| String::from("Unable to create shader object"))?;
+
+        self.gl.attach_shader(&program, vertex_shader);
+        self.gl.attach_shader(&program, fragment_shader);
+        self.gl.link_program(&program);
+
+        if self
+            .gl
+            .get_program_parameter(&program, web_sys::WebGlRenderingContext::LINK_STATUS)
+            .as_bool()
+            .unwrap_or(false)
+        {
+            Ok(program)
+        } else {
+            Err(self
+                .gl
+                .get_program_info_log(&program)
+                .unwrap_or_else(|| String::from("Unknown error creating program object")))
+        }
+    }
+}
+
 type RequestAnimationFrameCallback = Closure<dyn FnMut(f64) + 'static>;
 
 fn request_animation_frame_helper(callback: Option<&RequestAnimationFrameCallback>) {
@@ -43,7 +104,7 @@ fn request_animation_frame_helper(callback: Option<&RequestAnimationFrameCallbac
 }
 
 pub struct Engine {
-    ctx: RenderingContext,
+    pub ctx: RenderingContext,
     renderer: Rc<RefCell<dyn Renderer>>,
 }
 
@@ -84,6 +145,7 @@ impl Engine {
         *callback.borrow_mut() = Some(Closure::wrap(Box::new(move |millis: f64| {
             if self.renderer.borrow().done() {
                 let _ = c.borrow_mut().take();
+                log::info!("wasmgame ending");
                 return;
             }
 
