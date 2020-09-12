@@ -24,15 +24,16 @@ features = [
   # DOM
   'Document',
   'Element',
-  'Window',
   'HtmlCanvasElement',
   'HtmlElement',
+  'Window',
   # WebGL
   'WebGlBuffer',
-  'WebGlRenderingContext',
-  'WebGlVertexArrayObject',
   'WebGlProgram',
+  'WebGlRenderingContext',
   'WebGlShader',
+  'WebGlUniformLocation',
+  'WebGlVertexArrayObject',
   # WebGL extensions
   'AngleInstancedArrays',
   'OesVertexArrayObject',

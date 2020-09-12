@@ -10,6 +10,7 @@ use std::cell::RefCell;
 use std::clone::Clone;
 use std::convert::AsRef;
 use std::convert::From;
+use std::convert::Into;
 use std::ops::FnMut;
 use std::option::{Option, Option::None, Option::Some};
 use std::rc::Rc;
@@ -36,16 +37,19 @@ pub struct RenderingContext {
 }
 
 impl RenderingContext {
-    pub fn create_vertex_shader(&self, glsl: &str) -> Result<web_sys::WebGlShader, String> {
+    pub fn create_vertex_shader(&self, glsl: &str) -> Result<web_sys::WebGlShader, JsValue> {
         self.create_shader(glsl, web_sys::WebGlRenderingContext::VERTEX_SHADER)
     }
 
-    pub fn create_fragment_shader(&self, glsl: &str) -> Result<web_sys::WebGlShader, String> {
+    pub fn create_fragment_shader(&self, glsl: &str) -> Result<web_sys::WebGlShader, JsValue> {
         self.create_shader(glsl, web_sys::WebGlRenderingContext::FRAGMENT_SHADER)
     }
 
-    fn create_shader(&self, glsl: &str, type_: u32) -> Result<web_sys::WebGlShader, String> {
-        let shader = self.gl.create_shader(type_).unwrap();
+    fn create_shader(&self, glsl: &str, type_: u32) -> Result<web_sys::WebGlShader, JsValue> {
+        let shader = self
+            .gl
+            .create_shader(type_)
+            .ok_or_else(|| JsValue::from_str("create_shader failed"))?;
         self.gl.shader_source(&shader, glsl);
         self.gl.compile_shader(&shader);
 
@@ -57,10 +61,12 @@ impl RenderingContext {
         {
             Ok(shader)
         } else {
-            Err(self
+            let info = self
                 .gl
                 .get_shader_info_log(&shader)
-                .unwrap_or_else(|| String::from("Unknown error creating shader")))
+                .unwrap_or_else(|| String::from("unknown error"));
+            log::error!("shader error: {}", info);
+            Err(info.into())
         }
     }
 
@@ -68,11 +74,11 @@ impl RenderingContext {
         &self,
         vertex_shader: &web_sys::WebGlShader,
         fragment_shader: &web_sys::WebGlShader,
-    ) -> Result<web_sys::WebGlProgram, String> {
+    ) -> Result<web_sys::WebGlProgram, JsValue> {
         let program = self
             .gl
             .create_program()
-            .ok_or_else(|| String::from("Unable to create shader object"))?;
+            .ok_or_else(|| JsValue::from_str("Unable to create program object"))?;
 
         self.gl.attach_shader(&program, vertex_shader);
         self.gl.attach_shader(&program, fragment_shader);
@@ -86,10 +92,12 @@ impl RenderingContext {
         {
             Ok(program)
         } else {
-            Err(self
+            let info = self
                 .gl
                 .get_program_info_log(&program)
-                .unwrap_or_else(|| String::from("Unknown error creating program object")))
+                .unwrap_or_else(|| String::from("unknown error"));
+            log::error!("program error: {}", info);
+            Err(info.into())
         }
     }
 }
