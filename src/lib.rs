@@ -62,13 +62,13 @@ mat4 project(float fov, float near, float far) {
         vec4(scale, 0, 0, 0),
         vec4(0, scale, 0, 0),
         vec4(0, 0, (far + near) * d, -1),
-        vec4(0, 0, far * near * d, 0)
+        vec4(0, 0, 2.0 * far * near * d, 0)
     );
 }
 
 void main() {
     mat4 view = look_at(eye_pos, center_pos, vec3(0, 1, 0));
-    mat4 projection = project(80.0, 0.1, 10.0);
+    mat4 projection = project(110.0, 1.0, 10.0);
     gl_Position = projection * view * model * vec4(position, 1.0);
 }
 "#;
@@ -97,9 +97,9 @@ impl game::Renderer for AnimatedCanvas {
             Some(&model_mat),
             false,
             &[
-                0.5, 0.0, 0.0, 0.0, //br
+                1.0, 0.0, 0.0, 0.0, //br
                 0.0, 0.2, 0.0, 0.0, //br
-                0.0, 0.0, 0.5, 0.0, //br
+                0.0, 0.0, 1.0, 0.0, //br
                 0.0, 0.0, 0.0, 1.0, //br
             ],
         );
@@ -107,7 +107,7 @@ impl game::Renderer for AnimatedCanvas {
             .gl
             .get_uniform_location(&program, "eye_pos")
             .ok_or_else(|| JsValue::from_str("get_uniform_location eye_pos error"))?;
-        ctx.gl.uniform3f(Some(&eye_pos), 0.0, 1.0, -1.0);
+        ctx.gl.uniform3f(Some(&eye_pos), 0.0, 2.0, -1.5);
         let center_pos = ctx
             .gl
             .get_uniform_location(&program, "center_pos")
