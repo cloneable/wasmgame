@@ -5,6 +5,8 @@ extern crate wasm_bindgen;
 extern crate wasm_bindgen_futures;
 extern crate web_sys;
 
+mod math;
+
 use std::boxed::Box;
 use std::cell::RefCell;
 use std::clone::Clone;
@@ -172,68 +174,19 @@ impl Engine {
     }
 }
 
-// TODO: move into math module
-
-#[derive(Copy, Clone)]
-pub struct Vec3 {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
-}
-
-impl Vec3 {
-    pub fn new(x: f32, y: f32, z: f32) -> Self {
-        Self { x, y, z }
-    }
-    pub fn is_zero(&self) -> bool {
-        self.x == 0.0 && self.y == 0.0 && self.z == 0.0
-    }
-}
-
-impl std::ops::Sub for Vec3 {
-    type Output = Vec3;
-    fn sub(self, other: Vec3) -> Vec3 {
-        Vec3 {
-            x: self.x - other.x,
-            y: self.y - other.y,
-            z: self.z - other.z,
-        }
-    }
-}
-
-pub fn cross(a: Vec3, b: Vec3) -> Vec3 {
-    Vec3 {
-        x: a.y * b.z - a.z * b.y,
-        y: a.z * b.x - a.x * b.z,
-        z: a.x * b.y - a.y * b.x,
-    }
-}
-
-pub fn normalize(v: Vec3) -> Vec3 {
-    if v.is_zero() {
-        return v;
-    }
-    let length = (v.x * v.x + v.y * v.y + v.z * v.z).sqrt();
-    Vec3 {
-        x: v.x / length,
-        y: v.y / length,
-        z: v.z / length,
-    }
-}
-
 pub fn interleave_with_normals(indices: &[u8], vertices: &[f32], out: &mut [f32]) {
     // assert_eq!(indices.len() % 3, 0, "indices of wrong length");
     // assert_eq!(indices.len(), out.len() * 6, "bad size");
     let mut idx = 0;
     while idx < indices.len() {
         let ui = indices[idx] as usize * 3;
-        let u = Vec3::new(vertices[ui + 0], vertices[ui + 1], vertices[ui + 2]);
+        let u = math::Vec3::new(vertices[ui + 0], vertices[ui + 1], vertices[ui + 2]);
         let vi = indices[idx + 1] as usize * 3;
-        let v = Vec3::new(vertices[vi + 0], vertices[vi + 1], vertices[vi + 2]);
+        let v = math::Vec3::new(vertices[vi + 0], vertices[vi + 1], vertices[vi + 2]);
         let wi = indices[idx + 2] as usize * 3;
-        let w = Vec3::new(vertices[wi + 0], vertices[wi + 1], vertices[wi + 2]);
+        let w = math::Vec3::new(vertices[wi + 0], vertices[wi + 1], vertices[wi + 2]);
 
-        let n = normalize(cross(v - u, w - u));
+        let n = (v - u).cross(w - u).normalize();
 
         out[idx * 6 + 0] = u.x;
         out[idx * 6 + 1] = u.y;
