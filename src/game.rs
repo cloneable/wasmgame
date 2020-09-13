@@ -5,7 +5,7 @@ extern crate wasm_bindgen;
 extern crate wasm_bindgen_futures;
 extern crate web_sys;
 
-mod math;
+pub mod math;
 
 use std::boxed::Box;
 use std::cell::RefCell;
@@ -18,7 +18,7 @@ use std::option::{Option, Option::None, Option::Some};
 use std::rc::Rc;
 use std::result::{Result, Result::Err, Result::Ok};
 use std::string::String;
-use std::{assert_eq, panic};
+//use std::{assert_eq, panic};
 
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
