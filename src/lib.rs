@@ -50,8 +50,8 @@ void main() {
     gl_Position = mvp * vec4(position, 1.0);
 
     vec3 ambientLightColor = vec3(0.4, 0.4, 0.4);
-    vec3 directionalLightColor = vec3(1, 1, 0.9);
-    vec4 directionalLight = vec4(-0.9, 1, 0.8, 0.0);
+    vec3 directionalLightColor = vec3(1.0, 1.0, 0.8);
+    vec4 directionalLight = vec4(-2, 3, 4, 0.0);
 
     float intensity = max(dot(normals * vec4(normal, 0.0), normalize(directionalLight)), 0.0);
     lighting = ambientLightColor + (directionalLightColor * intensity);
@@ -64,7 +64,7 @@ const FRAGMENT_SHADER: &str = r#"
 varying highp vec3 lighting;
 
 void main() {
-    highp vec4 baseColor = vec4(0.5, 0.5, 0.5, 1.0);
+    highp vec4 baseColor = vec4(0.2, 0.2, 0.2, 1.0);
     gl_FragColor = vec4(baseColor.rgb * lighting, baseColor.a);
 }
 "#;
@@ -85,15 +85,15 @@ impl game::Renderer for AnimatedCanvas {
 
         let mat_model = game::math::Mat4::with_array([
             1.0, 0.0, 0.0, 0.0, //br
-            0.0, 0.5, 0.0, 0.0, //br
+            0.0, 1.0, 0.0, 0.0, //br
             0.0, 0.0, 1.0, 0.0, //br
             0.0, 0.0, 0.0, 1.0, //br
         ]);
-        let eye_pos = game::math::Vec3::new(2.3, 2.0, -2.0);
+        let eye_pos = game::math::Vec3::new(4.0, 3.0, -3.0);
         let center_pos = game::math::Vec3::new(0.0, 0.0, 0.0);
         let up_direction = game::math::Vec3::new(0.0, 1.0, 0.0);
         let mat_view = game::math::look_at(&eye_pos, &center_pos, &up_direction);
-        let mat_projection = game::math::project(90.0, 4.0 / 3.0, 0.1, 100.0);
+        let mat_projection = game::math::project(40.0, 4.0 / 3.0, 0.1, 100.0); // ->90deg
 
         let mat_model_view = &mat_view * &mat_model;
         let mat_mvp = &mat_projection * &mat_model_view;
