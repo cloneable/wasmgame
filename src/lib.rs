@@ -59,11 +59,11 @@ mat4 look_at(const vec3 eye, const vec3 center, in vec3 up) {
     );
 }
 
-mat4 project(float fov, float near, float far) {
+mat4 project(float fov, float aspect, float near, float far) {
     float scale = 1.0 / tan(radians(fov) / 2.0);
     float d = -1.0 / (far - near);
     return mat4(
-        vec4(scale, 0, 0, 0),
+        vec4(scale / aspect, 0, 0, 0),
         vec4(0, scale, 0, 0),
         vec4(0, 0, (far + near) * d, -1),
         vec4(0, 0, 2.0 * far * near * d, 0)
@@ -72,7 +72,7 @@ mat4 project(float fov, float near, float far) {
 
 void main() {
     mat4 view = look_at(eye_pos, center_pos, vec3(0, 1, 0));
-    mat4 projection = project(90.0, 0.1, 100.0);
+    mat4 projection = project(90.0, 4.0/3.0, 0.1, 100.0);
     mat4 model_view = view * model;
     gl_Position = projection * model_view * vec4(position, 1.0);
 
