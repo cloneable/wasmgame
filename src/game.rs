@@ -186,7 +186,7 @@ pub fn interleave_with_normals(indices: &[u8], vertices: &[f32], out: &mut [f32]
         let wi = indices[idx + 2] as usize * 3;
         let w = math::Vec3::new(vertices[wi + 0], vertices[wi + 1], vertices[wi + 2]);
 
-        let n = (v - u).cross(w - u).normalize();
+        let n = (&v - &u).cross(&(&w - &u)).normalize();
 
         out[idx * 6 + 0] = u.x;
         out[idx * 6 + 1] = u.y;
