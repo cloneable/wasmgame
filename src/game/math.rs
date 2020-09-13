@@ -1,5 +1,6 @@
 extern crate std;
 
+use std::option::{Option, Option::None, Option::Some};
 use std::result::Result;
 use std::{panic, unreachable};
 
@@ -203,6 +204,139 @@ impl Mat4 {
 
     pub fn row(&self, i: usize) -> Vec4 {
         Vec4::new(self[0][i], self[1][i], self[2][i], self[3][i])
+    }
+
+    pub fn transpose(&self) -> Mat4 {
+        Mat4::with_vecs(self.row(0), self.row(1), self.row(2), self.row(3))
+    }
+
+    pub fn invert(&self) -> Option<Mat4> {
+        let mut i: [f32; 16] = [0.0; 16];
+        let m = unsafe { &self.buf };
+
+        // Mesa's gluInvertMatrix using the adjugate matrix.
+        // TODO: Rebuild this macros to make it more readable.
+        i[0] = m[5]  * m[10] * m[15] - //br
+             m[5]  * m[11] * m[14] - //br
+             m[9]  * m[6]  * m[15] + //br
+             m[9]  * m[7]  * m[14] +//br
+             m[13] * m[6]  * m[11] - //br
+             m[13] * m[7]  * m[10];
+
+        i[4] = -m[4]  * m[10] * m[15] + //br
+              m[4]  * m[11] * m[14] + //br
+              m[8]  * m[6]  * m[15] - //br
+              m[8]  * m[7]  * m[14] - //br
+              m[12] * m[6]  * m[11] + //br
+              m[12] * m[7]  * m[10];
+
+        i[8] = m[4]  * m[9] * m[15] - //br
+             m[4]  * m[11] * m[13] - //br
+             m[8]  * m[5] * m[15] + //br
+             m[8]  * m[7] * m[13] + //br
+             m[12] * m[5] * m[11] - //br
+             m[12] * m[7] * m[9];
+
+        i[12] = -m[4]  * m[9] * m[14] + //br
+               m[4]  * m[10] * m[13] +//br
+               m[8]  * m[5] * m[14] - //br
+               m[8]  * m[6] * m[13] - //br
+               m[12] * m[5] * m[10] + //br
+               m[12] * m[6] * m[9];
+
+        i[1] = -m[1]  * m[10] * m[15] + //br
+              m[1]  * m[11] * m[14] + //br
+              m[9]  * m[2] * m[15] - //br
+              m[9]  * m[3] * m[14] - //br
+              m[13] * m[2] * m[11] + //br
+              m[13] * m[3] * m[10];
+
+        i[5] = m[0]  * m[10] * m[15] - //br
+             m[0]  * m[11] * m[14] - //br
+             m[8]  * m[2] * m[15] + //br
+             m[8]  * m[3] * m[14] + //br
+             m[12] * m[2] * m[11] - //br
+             m[12] * m[3] * m[10];
+
+        i[9] = -m[0]  * m[9] * m[15] + //br
+              m[0]  * m[11] * m[13] + //br
+              m[8]  * m[1] * m[15] - //br
+              m[8]  * m[3] * m[13] - //br
+              m[12] * m[1] * m[11] + //br
+              m[12] * m[3] * m[9];
+
+        i[13] = m[0]  * m[9] * m[14] - //br
+              m[0]  * m[10] * m[13] - //br
+              m[8]  * m[1] * m[14] + //br
+              m[8]  * m[2] * m[13] + //br
+              m[12] * m[1] * m[10] - //br
+              m[12] * m[2] * m[9];
+
+        i[2] = m[1]  * m[6] * m[15] - //br
+             m[1]  * m[7] * m[14] - //br
+             m[5]  * m[2] * m[15] + //br
+             m[5]  * m[3] * m[14] + //br
+             m[13] * m[2] * m[7] - //br
+             m[13] * m[3] * m[6];
+
+        i[6] = -m[0]  * m[6] * m[15] + //br
+              m[0]  * m[7] * m[14] + //br
+              m[4]  * m[2] * m[15] - //br
+              m[4]  * m[3] * m[14] - //br
+              m[12] * m[2] * m[7] + //br
+              m[12] * m[3] * m[6];
+
+        i[10] = m[0]  * m[5] * m[15] - //br
+              m[0]  * m[7] * m[13] - //br
+              m[4]  * m[1] * m[15] + //br
+              m[4]  * m[3] * m[13] + //br
+              m[12] * m[1] * m[7] - //br
+              m[12] * m[3] * m[5];
+
+        i[14] = -m[0]  * m[5] * m[14] + //br
+               m[0]  * m[6] * m[13] + //br
+               m[4]  * m[1] * m[14] - //br
+               m[4]  * m[2] * m[13] - //br
+               m[12] * m[1] * m[6] + //br
+               m[12] * m[2] * m[5];
+
+        i[3] = -m[1] * m[6] * m[11] + //br
+              m[1] * m[7] * m[10] + //br
+              m[5] * m[2] * m[11] - //br
+              m[5] * m[3] * m[10] - //br
+              m[9] * m[2] * m[7] + //br
+              m[9] * m[3] * m[6];
+
+        i[7] = m[0] * m[6] * m[11] - //br
+             m[0] * m[7] * m[10] - //br
+             m[4] * m[2] * m[11] + //br
+             m[4] * m[3] * m[10] + //br
+             m[8] * m[2] * m[7] - //br
+             m[8] * m[3] * m[6];
+
+        i[11] = -m[0] * m[5] * m[11] + //br
+               m[0] * m[7] * m[9] + //br
+               m[4] * m[1] * m[11] - //br
+               m[4] * m[3] * m[9] - //br
+               m[8] * m[1] * m[7] + //br
+               m[8] * m[3] * m[5];
+
+        i[15] = m[0] * m[5] * m[10] - //br
+              m[0] * m[6] * m[9] - //br
+              m[4] * m[1] * m[10] + //br
+              m[4] * m[2] * m[9] + //br
+              m[8] * m[1] * m[6] - //br
+              m[8] * m[2] * m[5];
+
+        let det = m[0] * i[0] + m[1] * i[4] + m[2] * i[8] + m[3] * i[12];
+        if det == 0.0 {
+            return None;
+        }
+        let det = 1.0 / det;
+        for t in 0..=15 {
+            i[t] *= det;
+        }
+        Some(Mat4 { buf: i })
     }
 }
 
