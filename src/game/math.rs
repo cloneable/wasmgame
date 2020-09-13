@@ -198,6 +198,10 @@ impl Mat4 {
         Mat4 { buf }
     }
 
+    pub fn slice(&self) -> &[f32] {
+        unsafe { &self.buf }
+    }
+
     pub fn column(&self, i: usize) -> Vec4 {
         self[i]
     }

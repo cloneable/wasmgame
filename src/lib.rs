@@ -41,51 +41,19 @@ const VERTEX_SHADER: &str = r#"
 attribute vec3 position;
 attribute vec3 normal;
 
-uniform vec3 eye_pos;
-uniform vec3 center_pos;
-uniform mat4 model;
+uniform mat4 mvp;
+uniform mat4 normals;
 
 varying vec3 lighting;
 
-mat4 look_at(const vec3 eye, const vec3 center, in vec3 up) {
-    vec3 forward = normalize(center - eye);
-    vec3 side = normalize(cross(forward, up));
-    up = cross(side, forward);
-    return mat4(
-        vec4(side.x, up.x, -forward.x, 0),
-        vec4(side.y, up.y, -forward.y, 0),
-        vec4(side.z, up.z, -forward.z, 0),
-        vec4(-dot(side, eye), -dot(up, eye), dot(forward, eye), 1)
-    );
-}
-
-mat4 project(float fov, float aspect, float near, float far) {
-    float scale = 1.0 / tan(radians(fov) / 2.0);
-    float d = -1.0 / (far - near);
-    return mat4(
-        vec4(scale / aspect, 0, 0, 0),
-        vec4(0, scale, 0, 0),
-        vec4(0, 0, (far + near) * d, -1),
-        vec4(0, 0, 2.0 * far * near * d, 0)
-    );
-}
-
 void main() {
-    mat4 view = look_at(eye_pos, center_pos, vec3(0, 1, 0));
-    mat4 projection = project(90.0, 4.0/3.0, 0.1, 100.0);
-    mat4 model_view = view * model;
-    gl_Position = projection * model_view * vec4(position, 1.0);
+    gl_Position = mvp * vec4(position, 1.0);
 
     vec3 ambientLightColor = vec3(0.4, 0.4, 0.4);
     vec3 directionalLightColor = vec3(1, 1, 0.9);
-    vec3 directionalLight = vec3(-0.9, 1, 0.8);
+    vec4 directionalLight = vec4(-0.9, 1, 0.8, 0.0);
 
-    mat3 normals = mat3(
-        model_view[0].xyz,
-        model_view[1].xyz,
-        model_view[2].xyz
-    );
-    float intensity = max(dot(normals * normal, normalize(directionalLight)), 0.0);
+    float intensity = max(dot(normals * vec4(normal, 0.0), normalize(directionalLight)), 0.0);
     lighting = ambientLightColor + (directionalLightColor * intensity);
 }
 "#;
@@ -115,30 +83,43 @@ impl game::Renderer for AnimatedCanvas {
 
         ctx.gl.use_program(Some(&program));
 
-        let model_mat = ctx
+        let mat_model = game::math::Mat4::with_array([
+            1.0, 0.0, 0.0, 0.0, //br
+            0.0, 0.5, 0.0, 0.0, //br
+            0.0, 0.0, 1.0, 0.0, //br
+            0.0, 0.0, 0.0, 1.0, //br
+        ]);
+        let eye_pos = game::math::Vec3::new(2.3, 2.0, -2.0);
+        let center_pos = game::math::Vec3::new(0.0, 0.0, 0.0);
+        let up_direction = game::math::Vec3::new(0.0, 1.0, 0.0);
+        let mat_view = game::math::look_at(&eye_pos, &center_pos, &up_direction);
+        let mat_projection = game::math::project(90.0, 4.0 / 3.0, 0.1, 100.0);
+
+        let mat_model_view = &mat_view * &mat_model;
+        let mat_mvp = &mat_projection * &mat_model_view;
+        let mat_normals = match mat_model_view.invert() {
+            Some(inv) => inv.transpose(),
+            None => {
+                log::error!("mat_model_view not invertible");
+                // TODO: use only 3x3
+                mat_model_view
+            }
+        };
+
+        let mvp = ctx
             .gl
-            .get_uniform_location(&program, "model")
-            .ok_or_else(|| JsValue::from_str("get_uniform_location model error"))?;
-        ctx.gl.uniform_matrix4fv_with_f32_array(
-            Some(&model_mat),
-            false,
-            &[
-                1.0, 0.0, 0.0, 0.0, //br
-                0.0, 0.5, 0.0, 0.0, //br
-                0.0, 0.0, 1.0, 0.0, //br
-                0.0, 0.0, 0.0, 1.0, //br
-            ],
-        );
-        let eye_pos = ctx
+            .get_uniform_location(&program, "mvp")
+            .ok_or_else(|| JsValue::from_str("get_uniform_location mvp error"))?;
+        ctx.gl
+            .uniform_matrix4fv_with_f32_array(Some(&mvp), false, mat_mvp.slice());
+
+        let normals = ctx
             .gl
-            .get_uniform_location(&program, "eye_pos")
-            .ok_or_else(|| JsValue::from_str("get_uniform_location eye_pos error"))?;
-        ctx.gl.uniform3f(Some(&eye_pos), 2.3, 2.0, -2.0);
-        let center_pos = ctx
-            .gl
-            .get_uniform_location(&program, "center_pos")
-            .ok_or_else(|| JsValue::from_str("get_uniform_location center_pos error"))?;
-        ctx.gl.uniform3f(Some(&center_pos), 0.0, 0.0, 0.0);
+            .get_uniform_location(&program, "normals")
+            .ok_or_else(|| JsValue::from_str("get_uniform_location normals error"))?;
+        ctx.gl
+            .uniform_matrix4fv_with_f32_array(Some(&normals), false, mat_normals.slice());
+
         let loc_position = ctx.gl.get_attrib_location(&program, "position");
         if loc_position == -1 {
             return Err(JsValue::from_str("position attribute not defined"));
