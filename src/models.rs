@@ -5,7 +5,7 @@ const HEX_R: f32 = 0.8660254037844386 * 0.5; //((1.0 - 0.5 * 0.5) as f64).sqrt()
 //  d    y    a
 //   \       /
 //    e-----f
-pub static HEXATILE_VERTICES: [f32; 2 * 6 * 3] = [
+pub static HEXATILE_VERTICES: [f32; 3 * (6 + 6)] = [
     // bottom
     0.5, 0.0, 0.0, // 0:a
     0.25, 0.0, -HEX_R, // 1:b
@@ -22,7 +22,7 @@ pub static HEXATILE_VERTICES: [f32; 2 * 6 * 3] = [
     0.25, 0.2, HEX_R, // 11:f
 ];
 
-pub static HEXATILE_INDICES: [u8; 4 * 3 * 2 + 6 * 2 * 3] = [
+pub static HEXATILE_INDICES: [u8; 3 * (4 + 4 + 12)] = [
     // top (CCW fan)
     6, 7, 8, //br
     6, 8, 9, //br

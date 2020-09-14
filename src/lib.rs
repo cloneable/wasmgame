@@ -71,18 +71,6 @@ void main() {
 
 impl game::Renderer for AnimatedCanvas {
     fn setup(&mut self, ctx: &game::RenderingContext) -> Result<(), JsValue> {
-        ctx.gl.enable(web_sys::WebGlRenderingContext::CULL_FACE);
-        ctx.gl.hint(
-            web_sys::WebGlRenderingContext::GENERATE_MIPMAP_HINT,
-            web_sys::WebGlRenderingContext::NICEST,
-        );
-
-        let vertex_shader = ctx.create_vertex_shader(VERTEX_SHADER)?;
-        let fragment_shader = ctx.create_fragment_shader(FRAGMENT_SHADER)?;
-        let program = ctx.link_program(&vertex_shader, &fragment_shader)?;
-
-        ctx.gl.use_program(Some(&program));
-
         let mat_model = game::math::Mat4::with_array([
             1.0, 0.0, 0.0, 0.0, //br
             0.0, 1.0, 0.0, 0.0, //br
@@ -93,7 +81,7 @@ impl game::Renderer for AnimatedCanvas {
         let center_pos = game::math::Vec3::new(0.0, 0.0, 0.0);
         let up_direction = game::math::Vec3::new(0.0, 1.0, 0.0);
         let mat_view = game::math::look_at(&eye_pos, &center_pos, &up_direction);
-        let mat_projection = game::math::project(40.0, 4.0 / 3.0, 0.1, 100.0); // ->90deg
+        let mat_projection = game::math::project(20.0, 4.0 / 3.0, 0.1, 100.0); // ->90deg
 
         let mat_model_view = &mat_view * &mat_model;
         let mat_mvp = &mat_projection * &mat_model_view;
@@ -106,19 +94,42 @@ impl game::Renderer for AnimatedCanvas {
             }
         };
 
-        let mvp = ctx
+        let mut vertices: Vec<f32> = vec![0.0; models::HEXATILE_INDICES.len() * 3];
+        let mut normals: Vec<f32> = vec![0.0; models::HEXATILE_INDICES.len() * 3];
+        game::generate_buffers(
+            &models::HEXATILE_INDICES,
+            &models::HEXATILE_VERTICES,
+            &mut vertices,
+            &mut normals,
+        );
+
+        // ===== OpenGL setup =====
+
+        ctx.gl.enable(web_sys::WebGlRenderingContext::CULL_FACE);
+        ctx.gl.hint(
+            web_sys::WebGlRenderingContext::GENERATE_MIPMAP_HINT,
+            web_sys::WebGlRenderingContext::NICEST,
+        );
+
+        let vertex_shader = ctx.create_vertex_shader(VERTEX_SHADER)?;
+        let fragment_shader = ctx.create_fragment_shader(FRAGMENT_SHADER)?;
+        let program = ctx.link_program(&vertex_shader, &fragment_shader)?;
+
+        ctx.gl.use_program(Some(&program));
+
+        let loc_mvp = ctx
             .gl
             .get_uniform_location(&program, "mvp")
             .ok_or_else(|| JsValue::from_str("get_uniform_location mvp error"))?;
         ctx.gl
-            .uniform_matrix4fv_with_f32_array(Some(&mvp), false, mat_mvp.slice());
+            .uniform_matrix4fv_with_f32_array(Some(&loc_mvp), false, mat_mvp.slice());
 
-        let normals = ctx
+        let loc_normals = ctx
             .gl
             .get_uniform_location(&program, "normals")
             .ok_or_else(|| JsValue::from_str("get_uniform_location normals error"))?;
         ctx.gl
-            .uniform_matrix4fv_with_f32_array(Some(&normals), false, mat_normals.slice());
+            .uniform_matrix4fv_with_f32_array(Some(&loc_normals), false, mat_normals.slice());
 
         let loc_position = ctx.gl.get_attrib_location(&program, "position");
         if loc_position == -1 {
@@ -129,29 +140,27 @@ impl game::Renderer for AnimatedCanvas {
             return Err(JsValue::from_str("normal attribute not defined"));
         }
 
-        let mut interleaved: Vec<f32> = vec![0.0; models::HEXATILE_INDICES.len() * 6];
-        game::interleave_with_normals(
-            &models::HEXATILE_INDICES,
-            &models::HEXATILE_VERTICES,
-            &mut interleaved,
-        );
+        // ===== VAO =====
 
-        let hexatile_vao = ctx
+        let vao_hexatile = ctx
             .vertex_array_object_ext
             .create_vertex_array_oes()
             .ok_or_else(|| JsValue::from_str("create_vertex_array_oes vao error"))?;
         ctx.vertex_array_object_ext
-            .bind_vertex_array_oes(Some(&hexatile_vao));
-        let hexatile_buffer = ctx
+            .bind_vertex_array_oes(Some(&vao_hexatile));
+
+        // ===== vertices =====
+
+        let vbo_vertices = ctx
             .gl
             .create_buffer()
-            .ok_or_else(|| JsValue::from_str("create_buffer hexatile_buffer error"))?;
+            .ok_or_else(|| JsValue::from_str("create_buffer vbo_vertices error"))?;
         ctx.gl.bind_buffer(
             web_sys::WebGlRenderingContext::ARRAY_BUFFER,
-            Some(&hexatile_buffer),
+            Some(&vbo_vertices),
         );
         unsafe {
-            let view = js_sys::Float32Array::view(&interleaved);
+            let view = js_sys::Float32Array::view(&vertices);
             ctx.gl.buffer_data_with_array_buffer_view(
                 web_sys::WebGlRenderingContext::ARRAY_BUFFER,
                 &view,
@@ -163,19 +172,39 @@ impl game::Renderer for AnimatedCanvas {
             3,
             web_sys::WebGlRenderingContext::FLOAT,
             false,
-            4 * 3 * 2,
+            0,
             0,
         );
+        ctx.gl.enable_vertex_attrib_array(loc_position as u32);
+
+        // ===== normals =====
+
+        let vbo_normals = ctx
+            .gl
+            .create_buffer()
+            .ok_or_else(|| JsValue::from_str("create_buffer vbo_normals error"))?;
+        ctx.gl.bind_buffer(
+            web_sys::WebGlRenderingContext::ARRAY_BUFFER,
+            Some(&vbo_normals),
+        );
+        unsafe {
+            let view = js_sys::Float32Array::view(&normals);
+            ctx.gl.buffer_data_with_array_buffer_view(
+                web_sys::WebGlRenderingContext::ARRAY_BUFFER,
+                &view,
+                web_sys::WebGlRenderingContext::STATIC_DRAW,
+            );
+        }
         ctx.gl.vertex_attrib_pointer_with_i32(
             loc_normal as u32,
             3,
             web_sys::WebGlRenderingContext::FLOAT,
             false,
-            4 * 3 * 2,
-            4 * 3,
+            0,
+            0,
         );
-        ctx.gl.enable_vertex_attrib_array(loc_position as u32);
         ctx.gl.enable_vertex_attrib_array(loc_normal as u32);
+
         ctx.gl
             .bind_buffer(web_sys::WebGlRenderingContext::ARRAY_BUFFER, None);
         ctx.vertex_array_object_ext.bind_vertex_array_oes(None);
@@ -189,12 +218,14 @@ impl game::Renderer for AnimatedCanvas {
         // draw
 
         ctx.vertex_array_object_ext
-            .bind_vertex_array_oes(Some(&hexatile_vao));
+            .bind_vertex_array_oes(Some(&vao_hexatile));
+
         ctx.gl.draw_arrays(
             web_sys::WebGlRenderingContext::TRIANGLES,
             0,
             models::HEXATILE_INDICES.len() as i32,
         );
+
         ctx.vertex_array_object_ext.bind_vertex_array_oes(None);
 
         Ok(())
