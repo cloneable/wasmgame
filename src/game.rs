@@ -18,7 +18,7 @@ use std::option::{Option, Option::None, Option::Some};
 use std::rc::Rc;
 use std::result::{Result, Result::Err, Result::Ok};
 use std::string::String;
-//use std::{assert_eq, panic};
+use std::{assert_eq, panic};
 
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
@@ -175,8 +175,8 @@ impl Engine {
 }
 
 pub fn interleave_with_normals(indices: &[u8], vertices: &[f32], out: &mut [f32]) {
-    // assert_eq!(indices.len() % 3, 0, "indices of wrong length");
-    // assert_eq!(indices.len(), out.len() * 6, "bad size");
+    assert_eq!(indices.len() % 3, 0, "indices of wrong length");
+    assert_eq!(out.len(), indices.len() * 6, "bad size");
     let mut idx = 0;
     while idx < indices.len() {
         let ui = indices[idx] as usize * 3;
@@ -214,5 +214,5 @@ pub fn interleave_with_normals(indices: &[u8], vertices: &[f32], out: &mut [f32]
 
         idx += 3;
     }
-    // assert_eq!(idx, indices.len(), "bad idx");
+    assert_eq!(idx, indices.len(), "bad idx");
 }
