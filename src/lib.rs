@@ -10,6 +10,7 @@ extern crate web_sys;
 
 mod game;
 mod models;
+mod scene;
 mod shaders;
 
 use std::cell::RefCell;
@@ -44,14 +45,13 @@ impl game::Renderer for AnimatedCanvas {
             0.0, 0.0, 1.0, 0.0, //br
             0.0, 0.0, 0.0, 1.0, //br
         ]);
-        let eye_pos = game::math::Vec3::new(4.0, 3.0, -3.0);
-        let center_pos = game::math::Vec3::new(0.0, 0.0, 0.0);
-        let up_direction = game::math::Vec3::new(0.0, 1.0, 0.0);
-        let mat_view = game::math::look_at(&eye_pos, &center_pos, &up_direction);
-        let mat_projection = game::math::project(20.0, 4.0 / 3.0, 0.1, 100.0); // ->90deg
+        let mut cam = scene::Camera::new();
+        cam.set_position(4.0, 3.0, -3.0);
+        cam.set_frustrum(20.0, 4.0 / 3.0, 0.1, 100.0);
+        cam.refresh();
 
-        let mat_model_view = &mat_view * &mat_model;
-        let mat_mvp = &mat_projection * &mat_model_view;
+        let mat_model_view = cam.view_matrix() * &mat_model;
+        let mat_mvp = cam.projection_matrix() * &mat_model_view;
         let mat_normals = match mat_model_view.invert() {
             Some(inv) => inv.transpose(),
             None => {
