@@ -124,36 +124,13 @@ impl game::Renderer for AnimatedCanvas {
             .bind_buffer()
             .set_buffer_data(&vertices)
             .set_vertex_attribute_pointer(loc_position)
+            .create_buffer()?
+            .bind_buffer()
+            .set_buffer_data(&normals)
+            .set_vertex_attribute_pointer(loc_normal)
             .build();
 
         ctx.gl.enable_vertex_attrib_array(loc_position as u32);
-
-        // ===== normals =====
-
-        let vbo_normals = ctx
-            .gl
-            .create_buffer()
-            .ok_or_else(|| JsValue::from_str("create_buffer vbo_normals error"))?;
-        ctx.gl.bind_buffer(
-            web_sys::WebGlRenderingContext::ARRAY_BUFFER,
-            Some(&vbo_normals),
-        );
-        unsafe {
-            let view = js_sys::Float32Array::view(&normals);
-            ctx.gl.buffer_data_with_array_buffer_view(
-                web_sys::WebGlRenderingContext::ARRAY_BUFFER,
-                &view,
-                web_sys::WebGlRenderingContext::STATIC_DRAW,
-            );
-        }
-        ctx.gl.vertex_attrib_pointer_with_i32(
-            loc_normal as u32,
-            3,
-            web_sys::WebGlRenderingContext::FLOAT,
-            false,
-            0,
-            0,
-        );
         ctx.gl.enable_vertex_attrib_array(loc_normal as u32);
 
         ctx.gl
