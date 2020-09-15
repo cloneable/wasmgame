@@ -10,6 +10,7 @@ extern crate web_sys;
 
 mod game;
 mod models;
+mod opengl;
 mod scene;
 mod shaders;
 
@@ -38,7 +39,7 @@ impl AnimatedCanvas {
 }
 
 impl game::Renderer for AnimatedCanvas {
-    fn setup(&mut self, ctx: &game::RenderingContext) -> Result<(), JsValue> {
+    fn setup(&mut self, ctx: &opengl::Context) -> Result<(), JsValue> {
         let mat_model = game::math::Mat4::with_array([
             1.0, 0.0, 0.0, 0.0, //br
             0.0, 1.0, 0.0, 0.0, //br
@@ -181,7 +182,7 @@ impl game::Renderer for AnimatedCanvas {
         Ok(())
     }
 
-    fn render(&mut self, _ctx: &game::RenderingContext, millis: f64) -> Result<(), JsValue> {
+    fn render(&mut self, _ctx: &opengl::Context, millis: f64) -> Result<(), JsValue> {
         self.last_render = Duration::from_micros((millis * 1000.0) as u64);
         Ok(())
     }
