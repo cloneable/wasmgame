@@ -15,7 +15,7 @@ void main() {
     // TODO: define uniforms for these.
     highp vec3 ambientLightColor = vec3(0.2, 0.2, 0.2);
     highp vec3 directionalLightColor = vec3(1.0, 1.0, 1.0);
-    highp vec3 directionalLight = normalize(vec3(-2.0, -6.0, 2.0));
+    highp vec3 directionalLight = normalize(vec3(3.0, 4.0, 5.0));
 
     highp vec4 transformedNormal = normals * vec4(normal, 1.0);
     highp float intensity = max(dot(transformedNormal.xyz, directionalLight), 0.0);

@@ -57,7 +57,6 @@ impl game::Renderer for AnimatedCanvas {
             Some(inv) => inv.transpose(),
             None => {
                 log::error!("mat_model_view not invertible");
-                // TODO: use only 3x3
                 mat_model_view
             }
         };

@@ -141,11 +141,11 @@ impl std::ops::IndexMut<usize> for Vec4 {
 
 impl std::fmt::Debug for Vec4 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        f.debug_tuple("Vec4")
-            .field(&self.x)
-            .field(&self.y)
-            .field(&self.z)
-            .field(&self.w)
+        f.debug_list()
+            .entry(&self.x)
+            .entry(&self.y)
+            .entry(&self.z)
+            .entry(&self.w)
             .finish()
     }
 }
@@ -158,14 +158,7 @@ pub union Mat4 {
 
 impl std::fmt::Debug for Mat4 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        unsafe {
-            f.debug_tuple("Mat4")
-                .field(&self.vecs[0])
-                .field(&self.vecs[1])
-                .field(&self.vecs[2])
-                .field(&self.vecs[3])
-                .finish()
-        }
+        unsafe { f.debug_list().entries(&self.vecs).finish() }
     }
 }
 
@@ -212,6 +205,18 @@ impl Mat4 {
 
     pub fn transpose(&self) -> Mat4 {
         Mat4::with_vecs(self.row(0), self.row(1), self.row(2), self.row(3))
+    }
+
+    pub fn to_3x3(&self) -> Mat4 {
+        let mut buf: [f32; 16] = [0.0; 16];
+        unsafe {
+            for c in 0..=2 {
+                for r in 0..=2 {
+                    buf[c * 4 + r] = self.buf[c * 4 + r];
+                }
+            }
+        }
+        Mat4::with_array(buf)
     }
 
     pub fn invert(&self) -> Option<Mat4> {
