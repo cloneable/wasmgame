@@ -46,7 +46,7 @@ impl Camera {
         self.target = math::Vec3::new(x, y, z);
     }
 
-    pub fn set_frustrum(&mut self, fov: f32, aspect: f32, near: f32, far: f32) {
+    pub fn set_frustum(&mut self, fov: f32, aspect: f32, near: f32, far: f32) {
         self.fov = fov;
         self.aspect = aspect;
         self.near = near;

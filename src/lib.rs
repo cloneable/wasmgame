@@ -48,7 +48,7 @@ impl game::Renderer for AnimatedCanvas {
         ]);
         let mut cam = scene::Camera::new();
         cam.set_position(4.0, 3.0, -3.0);
-        cam.set_frustrum(20.0, 4.0 / 3.0, 0.1, 100.0);
+        cam.set_frustum(20.0, 4.0 / 3.0, 0.1, 100.0);
         cam.refresh();
 
         let mat_model_view = cam.view_matrix() * &mat_model;
