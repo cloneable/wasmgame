@@ -74,6 +74,7 @@ impl game::Renderer for AnimatedCanvas {
         // ===== OpenGL setup =====
 
         ctx.gl.enable(web_sys::WebGlRenderingContext::CULL_FACE);
+        ctx.gl.enable(web_sys::WebGlRenderingContext::DEPTH_TEST);
         ctx.gl.hint(
             web_sys::WebGlRenderingContext::GENERATE_MIPMAP_HINT,
             web_sys::WebGlRenderingContext::NICEST,
