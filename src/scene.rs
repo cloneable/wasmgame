@@ -38,19 +38,28 @@ impl Camera {
         }
     }
 
-    pub fn set_position(&mut self, x: f32, y: f32, z: f32) {
+    pub fn set_position(&mut self, x: f32, y: f32, z: f32) -> &mut Self {
         self.position = math::Vec3::new(x, y, z);
+        self
     }
 
-    pub fn set_target(&mut self, x: f32, y: f32, z: f32) {
+    pub fn set_target(&mut self, x: f32, y: f32, z: f32) -> &mut Self {
         self.target = math::Vec3::new(x, y, z);
+        self
     }
 
-    pub fn set_frustum(&mut self, fov: f32, aspect: f32, near: f32, far: f32) {
+    pub fn set_frustum(&mut self, fov: f32, aspect: f32, near: f32, far: f32) -> &mut Self {
         self.fov = fov;
         self.aspect = aspect;
         self.near = near;
         self.far = far;
+        self
+    }
+
+    pub fn refresh(&mut self) -> &mut Self {
+        self.view = math::look_at(&self.position, &self.target, &self.up);
+        self.projection = math::project(self.fov, self.aspect, self.near, self.far);
+        self
     }
 
     pub fn view_matrix(&self) -> &math::Mat4 {
@@ -59,11 +68,6 @@ impl Camera {
 
     pub fn projection_matrix(&self) -> &math::Mat4 {
         &self.projection
-    }
-
-    pub fn refresh(&mut self) {
-        self.view = math::look_at(&self.position, &self.target, &self.up);
-        self.projection = math::project(self.fov, self.aspect, self.near, self.far);
     }
 }
 

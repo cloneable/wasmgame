@@ -53,6 +53,7 @@ impl Engine {
             .unwrap()
             .unwrap()
             .unchecked_into::<web_sys::OesVertexArrayObject>();
+        // TODO: try ANGLEInstancedArrays if ANGLE_instanced_arrays doesn't work.
         let instanced_arrays_ext = gl
             .get_extension("ANGLE_instanced_arrays")
             .unwrap()
