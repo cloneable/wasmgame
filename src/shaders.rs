@@ -7,16 +7,18 @@ attribute vec3 normal;
 uniform mat4 mvp;
 uniform mat4 normals;
 
-varying vec3 lighting;
+varying highp vec3 lighting;
 
 void main() {
     gl_Position = mvp * vec4(position, 1.0);
 
-    vec3 ambientLightColor = vec3(0.2, 0.2, 0.2);
-    vec3 directionalLightColor = vec3(1.0, 1.0, 1.0);
-    vec4 directionalLight = vec4(-2.0, -6.0, 2.0, 0.0);
+    // TODO: define uniforms for these.
+    highp vec3 ambientLightColor = vec3(0.2, 0.2, 0.2);
+    highp vec3 directionalLightColor = vec3(1.0, 1.0, 1.0);
+    highp vec3 directionalLight = normalize(vec3(-2.0, -6.0, 2.0));
 
-    float intensity = max(dot(normals * vec4(normal, 0.0), normalize(directionalLight)), 0.0);
+    highp vec4 transformedNormal = normals * vec4(normal, 1.0);
+    highp float intensity = max(dot(transformedNormal.xyz, directionalLight), 0.0);
     lighting = ambientLightColor + (directionalLightColor * intensity);
 }
 "#;
