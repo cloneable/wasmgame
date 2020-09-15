@@ -16,6 +16,7 @@ mod shaders;
 
 use std::cell::RefCell;
 use std::default::Default;
+use std::mem::drop;
 use std::option::{Option::None, Option::Some};
 use std::rc::Rc;
 use std::result::{Result, Result::Err, Result::Ok};
@@ -172,25 +173,41 @@ impl game::Renderer for AnimatedCanvas {
 #[wasm_bindgen(start)]
 pub fn wasm_main() -> Result<(), JsValue> {
     wasm_logger::init(wasm_logger::Config::default());
-    log::info!("wasmgame loading");
+    log::info!("wasmgame init");
+    Ok(())
+}
 
-    let window = web_sys::window().expect("cannot get window object");
-    let document = window.document().expect("cannot get document object");
+#[wasm_bindgen]
+pub struct Game;
 
-    let canvas = document
-        .get_element_by_id("wasmgame")
-        .expect("cannot find canvas element")
-        .dyn_into::<web_sys::HtmlCanvasElement>()
-        .expect("element not of type canvas");
-    let gl = canvas
-        .get_context("webgl")
-        .expect("getContext failed")
-        .expect("unsupported context type")
-        .dyn_into::<web_sys::WebGlRenderingContext>()
-        .expect("context of unexpected type");
+#[wasm_bindgen]
+impl Game {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Game
+    }
 
-    let r = Rc::new(RefCell::new(AnimatedCanvas::new()));
-    let e = game::Engine::new(gl, r);
-    log::info!("wasmgame starting");
-    e.start()
+    pub fn start(&self) -> Result<(), JsValue> {
+        log::info!("wasmgame loading");
+
+        let window = web_sys::window().expect("cannot get window object");
+        let document = window.document().expect("cannot get document object");
+
+        let canvas = document
+            .get_element_by_id("wasmgame")
+            .expect("cannot find canvas element")
+            .dyn_into::<web_sys::HtmlCanvasElement>()
+            .expect("element not of type canvas");
+        let gl = canvas
+            .get_context("webgl")
+            .expect("getContext failed")
+            .expect("unsupported context type")
+            .dyn_into::<web_sys::WebGlRenderingContext>()
+            .expect("context of unexpected type");
+
+        let r = Rc::new(RefCell::new(AnimatedCanvas::new()));
+        let e = game::Engine::new(gl, r);
+        log::info!("wasmgame starting");
+        e.start()
+    }
 }

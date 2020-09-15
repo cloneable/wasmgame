@@ -3,9 +3,12 @@
   <head>
     <title>wasmgame</title>
     <script type="module">
-      import init from './wasmgame.js';
+      import init, { Game } from './wasmgame.js';
       async function run() {
         await init();
+        const g = new Game();
+        g.start();
+        window.game = g;
       }
       run();
     </script>
