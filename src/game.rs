@@ -7,6 +7,8 @@ extern crate web_sys;
 
 pub mod math;
 
+use crate::scene;
+
 use std::boxed::Box;
 use std::cell::RefCell;
 use std::clone::Clone;
@@ -102,6 +104,11 @@ impl RenderingContext {
             log::error!("program error: {}", info);
             Err(info.into())
         }
+    }
+
+    #[must_use = "ModelBuilder must be finished."]
+    pub fn model_builder(&self) -> scene::ModelBuilder {
+        scene::ModelBuilder::new(&self.gl)
     }
 }
 

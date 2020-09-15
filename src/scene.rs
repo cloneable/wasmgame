@@ -1,4 +1,13 @@
+extern crate js_sys;
+extern crate std;
+extern crate wasm_bindgen;
+extern crate web_sys;
+
+use std::option::{Option, Option::None, Option::Some};
+use std::result::{Result, Result::Ok};
+
 use crate::game::math;
+use wasm_bindgen::JsValue;
 
 pub struct Camera {
     position: math::Vec3,
@@ -55,5 +64,72 @@ impl Camera {
     pub fn refresh(&mut self) {
         self.view = math::look_at(&self.position, &self.target, &self.up);
         self.projection = math::project(self.fov, self.aspect, self.near, self.far);
+    }
+}
+
+pub struct Model {
+    pub buffer: web_sys::WebGlBuffer,
+}
+
+pub struct ModelBuilder<'a> {
+    gl: &'a web_sys::WebGlRenderingContext,
+    buffer: Option<web_sys::WebGlBuffer>,
+}
+
+impl<'a> ModelBuilder<'a> {
+    #[must_use = "ModelBuilder must be finished."]
+    pub fn new(gl: &'a web_sys::WebGlRenderingContext) -> Self {
+        ModelBuilder { gl, buffer: None }
+    }
+
+    #[must_use = "ModelBuilder must be finished."]
+    pub fn create_buffer(&mut self) -> Result<&mut Self, JsValue> {
+        let buffer = self
+            .gl
+            .create_buffer()
+            .ok_or_else(|| JsValue::from_str("create_buffer vbo_vertices error"))?;
+        self.buffer = Some(buffer);
+        Ok(self)
+    }
+
+    #[must_use = "ModelBuilder must be finished."]
+    pub fn bind_buffer(&mut self) -> &mut Self {
+        self.gl.bind_buffer(
+            web_sys::WebGlRenderingContext::ARRAY_BUFFER,
+            Some(self.buffer.as_ref().unwrap()),
+        );
+        self
+    }
+
+    #[must_use = "ModelBuilder must be finished."]
+    pub fn set_buffer_data(&mut self, data: &[f32]) -> &mut Self {
+        unsafe {
+            let view = js_sys::Float32Array::view(data);
+            self.gl.buffer_data_with_array_buffer_view(
+                web_sys::WebGlRenderingContext::ARRAY_BUFFER,
+                &view,
+                web_sys::WebGlRenderingContext::STATIC_DRAW,
+            );
+        }
+        self
+    }
+
+    #[must_use = "ModelBuilder must be finished."]
+    pub fn set_vertex_attribute_pointer(&mut self, location: i32) -> &mut Self {
+        self.gl.vertex_attrib_pointer_with_i32(
+            location as u32,
+            3,
+            web_sys::WebGlRenderingContext::FLOAT,
+            false,
+            0,
+            0,
+        );
+        self
+    }
+
+    pub fn build(&mut self) -> Model {
+        Model {
+            buffer: self.buffer.take().unwrap(),
+        }
     }
 }

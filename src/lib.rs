@@ -118,30 +118,13 @@ impl game::Renderer for AnimatedCanvas {
 
         // ===== vertices =====
 
-        let vbo_vertices = ctx
-            .gl
-            .create_buffer()
-            .ok_or_else(|| JsValue::from_str("create_buffer vbo_vertices error"))?;
-        ctx.gl.bind_buffer(
-            web_sys::WebGlRenderingContext::ARRAY_BUFFER,
-            Some(&vbo_vertices),
-        );
-        unsafe {
-            let view = js_sys::Float32Array::view(&vertices);
-            ctx.gl.buffer_data_with_array_buffer_view(
-                web_sys::WebGlRenderingContext::ARRAY_BUFFER,
-                &view,
-                web_sys::WebGlRenderingContext::STATIC_DRAW,
-            );
-        }
-        ctx.gl.vertex_attrib_pointer_with_i32(
-            loc_position as u32,
-            3,
-            web_sys::WebGlRenderingContext::FLOAT,
-            false,
-            0,
-            0,
-        );
+        ctx.model_builder()
+            .create_buffer()?
+            .bind_buffer()
+            .set_buffer_data(&vertices)
+            .set_vertex_attribute_pointer(loc_position)
+            .build();
+
         ctx.gl.enable_vertex_attrib_array(loc_position as u32);
 
         // ===== normals =====
