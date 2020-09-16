@@ -15,6 +15,7 @@ mod scene;
 mod shaders;
 
 use std::cell::RefCell;
+use std::clone::Clone;
 use std::default::Default;
 use std::mem::drop;
 use std::option::{Option::None, Option::Some};
@@ -178,13 +179,16 @@ pub fn wasm_main() -> Result<(), JsValue> {
 }
 
 #[wasm_bindgen]
-pub struct Game;
+pub struct Game {
+    renderer: Rc<RefCell<dyn game::Renderer>>,
+}
 
 #[wasm_bindgen]
 impl Game {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
-        Game
+        let renderer = Rc::new(RefCell::new(AnimatedCanvas::new()));
+        Game { renderer }
     }
 
     pub fn start(&self) -> Result<(), JsValue> {
@@ -205,8 +209,7 @@ impl Game {
             .dyn_into::<web_sys::WebGlRenderingContext>()
             .expect("context of unexpected type");
 
-        let r = Rc::new(RefCell::new(AnimatedCanvas::new()));
-        let e = game::Engine::new(gl, r);
+        let e = game::Engine::new(gl, self.renderer.clone());
         log::info!("wasmgame starting");
         e.start()
     }
