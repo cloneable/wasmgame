@@ -9,7 +9,7 @@ extern crate wasm_logger;
 extern crate web_sys;
 
 mod game;
-mod models;
+mod meshes;
 mod opengl;
 mod scene;
 mod shaders;
@@ -63,11 +63,11 @@ impl game::Renderer for AnimatedCanvas {
             }
         };
 
-        let mut vertices: Vec<f32> = vec![0.0; models::HEXATILE_INDICES.len() * 3];
-        let mut normals: Vec<f32> = vec![0.0; models::HEXATILE_INDICES.len() * 3];
+        let mut vertices: Vec<f32> = vec![0.0; meshes::HEXATILE_INDICES.len() * 3];
+        let mut normals: Vec<f32> = vec![0.0; meshes::HEXATILE_INDICES.len() * 3];
         game::generate_buffers(
-            &models::HEXATILE_INDICES,
-            &models::HEXATILE_VERTICES,
+            &meshes::HEXATILE_INDICES,
+            &meshes::HEXATILE_VERTICES,
             &mut vertices,
             &mut normals,
         );
@@ -153,7 +153,7 @@ impl game::Renderer for AnimatedCanvas {
         ctx.gl.draw_arrays(
             web_sys::WebGlRenderingContext::TRIANGLES,
             0,
-            models::HEXATILE_INDICES.len() as i32,
+            meshes::HEXATILE_INDICES.len() as i32,
         );
 
         ctx.vertex_array_object_ext.bind_vertex_array_oes(None);
