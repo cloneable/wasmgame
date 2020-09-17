@@ -87,7 +87,6 @@ impl<'a> VertexArrayObject<'a> {
 
 impl<'a> std::ops::Drop for VertexArrayObject<'a> {
     fn drop(&mut self) {
-        // TODO: enable delete once app structure is sorted out.
         log::debug!("deleting vao");
         self.ctx
             .vertex_array_object_ext
@@ -102,8 +101,8 @@ pub struct ArrayBuffer<'a> {
 
 impl<'a> std::ops::Drop for ArrayBuffer<'a> {
     fn drop(&mut self) {
+        log::debug!("deleting buffer (not really)");
         // TODO: enable delete once app structure is sorted out.
-        //log::debug!("deleting buffer");
         //self.ctx.gl.delete_buffer(Some(&self.buffer));
     }
 }
@@ -296,6 +295,13 @@ impl<'a> Program<'a> {
     }
 }
 
+impl<'a> std::ops::Drop for Program<'a> {
+    fn drop(&mut self) {
+        log::debug!("deleting program");
+        self.ctx.gl.delete_program(Some(&self.program));
+    }
+}
+
 pub struct Shader<'a> {
     ctx: &'a Context,
     shader: web_sys::WebGlShader,
@@ -339,5 +345,12 @@ impl<'a> Shader<'a> {
             log::error!("shader error: {}", info);
             Err(info.into())
         }
+    }
+}
+
+impl<'a> std::ops::Drop for Shader<'a> {
+    fn drop(&mut self) {
+        log::debug!("deleting shader");
+        self.ctx.gl.delete_shader(Some(&self.shader));
     }
 }
