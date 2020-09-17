@@ -8,12 +8,8 @@ extern crate wasm_bindgen_macro;
 extern crate wasm_logger;
 extern crate web_sys;
 
+mod engine;
 mod game;
-mod math;
-mod meshes;
-mod opengl;
-mod scene;
-mod shaders;
 
 use std::cell::RefCell;
 use std::clone::Clone;
@@ -27,6 +23,14 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 use wasm_bindgen_macro::wasm_bindgen;
 
+use engine::math::Mat4;
+use engine::opengl::{
+    ArrayBuffer, Context, Program, Shader, ShaderType::Fragment, ShaderType::Vertex,
+    VertexArrayObject,
+};
+use engine::scene::Camera;
+use engine::scene::Model;
+
 struct AnimatedCanvas {
     last_render: Duration,
 }
@@ -39,27 +43,30 @@ impl AnimatedCanvas {
     }
 }
 
-impl game::Renderer for AnimatedCanvas {
-    fn setup(&mut self, ctx: &opengl::Context) -> Result<(), JsValue> {
-        let mut cam = scene::Camera::new();
+impl engine::Renderer for AnimatedCanvas {
+    fn setup(&mut self, ctx: &Context) -> Result<(), JsValue> {
+        let mut cam = Camera::new();
         cam.set_position(0.5, 1.4, 3.0)
             .set_frustum(35.0, 4.0 / 3.0, 0.1, 100.0)
             .refresh();
 
-        let mut hexatile = scene::Model::new(&meshes::HEXATILE_VERTICES, &meshes::HEXATILE_INDICES);
-        hexatile.add_instance(math::Mat4::with_array([
+        let mut hexatile = Model::new(
+            &game::meshes::HEXATILE_VERTICES,
+            &game::meshes::HEXATILE_INDICES,
+        );
+        hexatile.add_instance(Mat4::with_array([
             1.0, 0.0, 0.0, 0.0, //br
             0.0, 3.0, 0.0, 0.0, //br
             0.0, 0.0, 1.0, 0.0, //br
             -0.6, 0.0, 0.0, 1.0, //br
         ]));
-        hexatile.add_instance(math::Mat4::with_array([
+        hexatile.add_instance(Mat4::with_array([
             1.0, 0.0, 0.0, 0.0, //br
             0.0, 2.0, 0.0, 0.0, //br
             0.0, 0.0, 1.0, 0.0, //br
             0.0, 0.0, 0.0, 1.0, //br
         ]));
-        hexatile.add_instance(math::Mat4::with_array([
+        hexatile.add_instance(Mat4::with_array([
             1.0, 0.0, 0.0, 0.0, //br
             0.0, 1.0, 0.0, 0.0, //br
             0.0, 0.0, 1.0, 0.0, //br
@@ -69,12 +76,12 @@ impl game::Renderer for AnimatedCanvas {
 
         // ===== OpenGL setup =====
 
-        let mut vertex_shader = opengl::Shader::create(ctx, opengl::ShaderType::Vertex)?;
-        vertex_shader.compile_source(shaders::HEXATILE_VERTEX_SHADER)?;
-        let mut fragment_shader = opengl::Shader::create(ctx, opengl::ShaderType::Fragment)?;
-        fragment_shader.compile_source(shaders::HEXATILE_FRAGMENT_SHADER)?;
+        let mut vertex_shader = Shader::create(ctx, Vertex)?;
+        vertex_shader.compile_source(game::shaders::HEXATILE_VERTEX_SHADER)?;
+        let mut fragment_shader = Shader::create(ctx, Fragment)?;
+        fragment_shader.compile_source(game::shaders::HEXATILE_FRAGMENT_SHADER)?;
 
-        let mut program = opengl::Program::create(ctx)?;
+        let mut program = Program::create(ctx)?;
         program.attach_shader(&vertex_shader);
         program.attach_shader(&fragment_shader);
         program.link()?;
@@ -96,28 +103,28 @@ impl game::Renderer for AnimatedCanvas {
 
         // ===== VAO =====
 
-        let mut vao_hexatile = opengl::VertexArrayObject::create(ctx)?;
+        let mut vao_hexatile = VertexArrayObject::create(ctx)?;
         vao_hexatile.bind();
 
         // ===== vertices =====
 
-        let _ = opengl::ArrayBuffer::create(ctx)?
+        let _ = ArrayBuffer::create(ctx)?
             .bind()
             .set_buffer_data(&hexatile.vertices)
             .set_vertex_attribute_pointer_vec3(&loc_position)
             .unbind();
-        let _ = opengl::ArrayBuffer::create(ctx)?
+        let _ = ArrayBuffer::create(ctx)?
             .bind()
             .set_buffer_data(&hexatile.normals)
             .set_vertex_attribute_pointer_vec3(&loc_normal)
             .unbind();
-        let _ = opengl::ArrayBuffer::create(ctx)?
+        let _ = ArrayBuffer::create(ctx)?
             .bind()
             .set_buffer_data(&hexatile.instance_model_data)
             .set_vertex_attribute_pointer_mat4(&loc_model)
             .set_vertex_attrib_divisor_mat4(&loc_model, 1)
             .unbind();
-        let _ = opengl::ArrayBuffer::create(ctx)?
+        let _ = ArrayBuffer::create(ctx)?
             .bind()
             .set_buffer_data(&hexatile.instance_normals_data)
             .set_vertex_attribute_pointer_mat4(&loc_normals)
@@ -153,7 +160,7 @@ impl game::Renderer for AnimatedCanvas {
         Ok(())
     }
 
-    fn render(&mut self, _ctx: &opengl::Context, millis: f64) -> Result<(), JsValue> {
+    fn render(&mut self, _ctx: &Context, millis: f64) -> Result<(), JsValue> {
         self.last_render = Duration::from_micros((millis * 1000.0) as u64);
         Ok(())
     }
@@ -172,7 +179,7 @@ pub fn wasm_main() -> Result<(), JsValue> {
 
 #[wasm_bindgen]
 pub struct Game {
-    renderer: Rc<RefCell<dyn game::Renderer>>,
+    renderer: Rc<RefCell<dyn engine::Renderer>>,
 }
 
 #[wasm_bindgen]
@@ -194,8 +201,8 @@ impl Game {
             .dyn_into::<web_sys::HtmlCanvasElement>()
             .expect("element not of type canvas");
 
-        let ctx = opengl::Context::from_canvas(&canvas)?;
-        let e = game::Engine::new(ctx, self.renderer.clone());
+        let ctx = Context::from_canvas(&canvas)?;
+        let e = engine::Engine::new(ctx, self.renderer.clone());
         log::info!("wasmgame starting");
         e.start()
     }

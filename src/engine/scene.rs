@@ -7,8 +7,8 @@ extern crate web_sys;
 use std::option::{Option::None, Option::Some};
 use std::{vec, vec::Vec};
 
-use crate::game;
-use crate::math;
+use crate::engine;
+use crate::engine::math;
 
 pub struct Camera {
     position: math::Vec3,
@@ -86,7 +86,7 @@ impl Model {
     pub fn new(indexed_vertices: &'static [f32], indices: &'static [u8]) -> Self {
         let mut vertices: Vec<f32> = vec![0.0; indices.len() * 3];
         let mut normals: Vec<f32> = vec![0.0; indices.len() * 3];
-        game::generate_buffers(indices, indexed_vertices, &mut vertices, &mut normals);
+        engine::generate_buffers(indices, indexed_vertices, &mut vertices, &mut normals);
         Model {
             vertices,
             normals,
