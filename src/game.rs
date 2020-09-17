@@ -24,11 +24,11 @@ use engine::opengl::{
 use engine::scene::Camera;
 use engine::scene::Model;
 
-pub struct AnimatedCanvas {
+pub struct Game {
     last_render: Duration,
 }
 
-impl AnimatedCanvas {
+impl Game {
     pub fn new() -> Self {
         Self {
             last_render: Duration::from_secs(0),
@@ -36,7 +36,7 @@ impl AnimatedCanvas {
     }
 }
 
-impl engine::Renderer for AnimatedCanvas {
+impl engine::Renderer for Game {
     fn setup(&mut self, ctx: &Context) -> Result<(), JsValue> {
         let mut cam = Camera::new();
         cam.set_position(0.5, 1.4, 3.0)

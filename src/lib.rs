@@ -23,6 +23,7 @@ use wasm_bindgen::JsValue;
 use wasm_bindgen_macro::wasm_bindgen;
 
 use engine::opengl::Context;
+use game::Game;
 
 #[wasm_bindgen(start)]
 pub fn wasm_main() -> Result<(), JsValue> {
@@ -32,16 +33,16 @@ pub fn wasm_main() -> Result<(), JsValue> {
 }
 
 #[wasm_bindgen]
-pub struct Game {
-    renderer: Rc<RefCell<dyn engine::Renderer>>,
+pub struct Console {
+    game: Rc<RefCell<Game>>,
 }
 
 #[wasm_bindgen]
-impl Game {
+impl Console {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
-        let renderer = Rc::new(RefCell::new(game::AnimatedCanvas::new()));
-        Game { renderer }
+        let game = Rc::new(RefCell::new(Game::new()));
+        Console { game }
     }
 
     pub fn start(&self) -> Result<(), JsValue> {
@@ -56,7 +57,7 @@ impl Game {
             .expect("element not of type canvas");
 
         let ctx = Context::from_canvas(&canvas)?;
-        let e = engine::Engine::new(ctx, self.renderer.clone());
+        let e = engine::Engine::new(ctx, self.game.clone());
         log::info!("wasmgame starting");
         e.start()
     }
