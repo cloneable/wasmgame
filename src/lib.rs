@@ -19,7 +19,7 @@ use std::cell::RefCell;
 use std::clone::Clone;
 use std::default::Default;
 use std::mem::drop;
-use std::option::{Option::None, Option::Some};
+use std::option::{Option::Some};
 use std::rc::Rc;
 use std::result::{Result, Result::Err, Result::Ok};
 use std::time::Duration;
@@ -115,32 +115,28 @@ impl game::Renderer for AnimatedCanvas {
 
         // ===== VAO =====
 
-        let vao_hexatile = ctx
-            .vertex_array_object_ext
-            .create_vertex_array_oes()
-            .ok_or_else(|| JsValue::from_str("create_vertex_array_oes vao error"))?;
-        ctx.vertex_array_object_ext
-            .bind_vertex_array_oes(Some(&vao_hexatile));
+        let mut vao_hexatile = opengl::VertexArrayObject::create(ctx)?;
+        vao_hexatile.bind();
 
         // ===== vertices =====
 
-        let _ = opengl::ArrayBuffer::new(ctx)?
+        let _ = opengl::ArrayBuffer::create(ctx)?
             .bind()
             .set_buffer_data(&hexatile.vertices)
             .set_vertex_attribute_pointer_vec3(loc_position)
             .unbind();
-        let _ = opengl::ArrayBuffer::new(ctx)?
+        let _ = opengl::ArrayBuffer::create(ctx)?
             .bind()
             .set_buffer_data(&hexatile.normals)
             .set_vertex_attribute_pointer_vec3(loc_normal)
             .unbind();
-        let _ = opengl::ArrayBuffer::new(ctx)?
+        let _ = opengl::ArrayBuffer::create(ctx)?
             .bind()
             .set_buffer_data(&hexatile.instance_model_data)
             .set_vertex_attribute_pointer_mat4(loc_model)
             .set_vertex_attrib_divisor_mat4(loc_model, 1)
             .unbind();
-        let _ = opengl::ArrayBuffer::new(ctx)?
+        let _ = opengl::ArrayBuffer::create(ctx)?
             .bind()
             .set_buffer_data(&hexatile.instance_normals_data)
             .set_vertex_attribute_pointer_mat4(loc_normals)
@@ -154,7 +150,7 @@ impl game::Renderer for AnimatedCanvas {
             ctx.gl.enable_vertex_attrib_array(loc_normals as u32 + i);
         }
 
-        ctx.vertex_array_object_ext.bind_vertex_array_oes(None);
+        vao_hexatile.unbind();
 
         // clear
 
@@ -164,8 +160,7 @@ impl game::Renderer for AnimatedCanvas {
 
         // draw
 
-        ctx.vertex_array_object_ext
-            .bind_vertex_array_oes(Some(&vao_hexatile));
+        vao_hexatile.bind();
 
         ctx.instanced_arrays_ext.draw_arrays_instanced_angle(
             web_sys::WebGlRenderingContext::TRIANGLES,
@@ -174,7 +169,7 @@ impl game::Renderer for AnimatedCanvas {
             hexatile.instances.len() as i32,
         );
 
-        ctx.vertex_array_object_ext.bind_vertex_array_oes(None);
+        vao_hexatile.unbind();
 
         Ok(())
     }

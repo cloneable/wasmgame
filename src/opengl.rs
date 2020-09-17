@@ -121,14 +121,59 @@ impl Context {
     }
 }
 
+pub struct VertexArrayObject<'a> {
+    ctx: &'a Context,
+    vao: web_sys::WebGlVertexArrayObject,
+}
+
+impl<'a> VertexArrayObject<'a> {
+    pub fn create(ctx: &'a Context) -> Result<Self, JsValue> {
+        let vao = ctx
+            .vertex_array_object_ext
+            .create_vertex_array_oes()
+            .ok_or_else(|| JsValue::from_str("create_vertex_array_oes vao error"))?;
+        Ok(VertexArrayObject { ctx, vao })
+    }
+
+    pub fn bind(&mut self) -> &mut Self {
+        // TODO: track binding and debug_assert
+        self.ctx
+            .vertex_array_object_ext
+            .bind_vertex_array_oes(Some(&self.vao));
+        self
+    }
+
+    pub fn unbind(&mut self) -> &mut Self {
+        self.ctx.vertex_array_object_ext.bind_vertex_array_oes(None);
+        self
+    }
+}
+
+impl<'a> std::ops::Drop for VertexArrayObject<'a> {
+    fn drop(&mut self) {
+        // TODO: enable delete once app structure is sorted out.
+        log::debug!("deleting vao");
+        self.ctx
+            .vertex_array_object_ext
+            .delete_vertex_array_oes(Some(&self.vao));
+    }
+}
+
 pub struct ArrayBuffer<'a> {
     ctx: &'a Context,
-
     buffer: web_sys::WebGlBuffer,
 }
 
+impl<'a> std::ops::Drop for ArrayBuffer<'a> {
+    fn drop(&mut self) {
+        // TODO: enable delete once app structure is sorted out.
+        //log::debug!("deleting buffer");
+        //self.ctx.gl.delete_buffer(Some(&self.buffer));
+    }
+}
+
 impl<'a> ArrayBuffer<'a> {
-    pub fn new(ctx: &'a Context) -> Result<Self, JsValue> {
+    pub fn create(ctx: &'a Context) -> Result<Self, JsValue> {
         let buffer = ctx
             .gl
             .create_buffer()
