@@ -108,7 +108,7 @@ impl Model {
         self.instance_model_data.clear();
         self.instance_normals_data.clear();
         for instance in &mut self.instances {
-            let mat_model_view = camera.view_matrix() * &instance.model;
+            let mat_model_view = (camera.view_matrix() * &instance.model).to_3x3();
             instance.normals = match mat_model_view.invert() {
                 Some(inv) => inv.transpose(),
                 None => {
