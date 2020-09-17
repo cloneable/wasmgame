@@ -88,37 +88,6 @@ impl Context {
             Err(info.into())
         }
     }
-
-    pub fn link_program(
-        &self,
-        vertex_shader: &web_sys::WebGlShader,
-        fragment_shader: &web_sys::WebGlShader,
-    ) -> Result<web_sys::WebGlProgram, JsValue> {
-        let program = self
-            .gl
-            .create_program()
-            .ok_or_else(|| JsValue::from_str("Unable to create program object"))?;
-
-        self.gl.attach_shader(&program, vertex_shader);
-        self.gl.attach_shader(&program, fragment_shader);
-        self.gl.link_program(&program);
-
-        if self
-            .gl
-            .get_program_parameter(&program, web_sys::WebGlRenderingContext::LINK_STATUS)
-            .as_bool()
-            .unwrap_or(false)
-        {
-            Ok(program)
-        } else {
-            let info = self
-                .gl
-                .get_program_info_log(&program)
-                .unwrap_or_else(|| String::from("unknown error"));
-            log::error!("program error: {}", info);
-            Err(info.into())
-        }
-    }
 }
 
 pub struct VertexArrayObject<'a> {
@@ -254,7 +223,7 @@ pub struct Uniform<'a> {
 }
 
 impl<'a> Uniform<'a> {
-    pub fn find(
+    fn find(
         ctx: &'a Context,
         program: &web_sys::WebGlProgram,
         name: &str,
@@ -281,7 +250,7 @@ pub struct Attribute<'a> {
 }
 
 impl<'a> Attribute<'a> {
-    pub fn find(
+    fn find(
         ctx: &'a Context,
         program: &web_sys::WebGlProgram,
         name: &str,
@@ -305,5 +274,57 @@ impl<'a> Attribute<'a> {
                 .gl
                 .enable_vertex_attrib_array(self.location + i as u32);
         }
+    }
+}
+
+pub struct Program<'a> {
+    ctx: &'a Context,
+    program: web_sys::WebGlProgram,
+}
+
+impl<'a> Program<'a> {
+    pub fn create(ctx: &'a Context) -> Result<Self, JsValue> {
+        let program = ctx
+            .gl
+            .create_program()
+            .ok_or_else(|| JsValue::from_str("Unable to create program object"))?;
+        Ok(Program { ctx, program })
+    }
+
+    pub fn attach_shader(&mut self, shader: &web_sys::WebGlShader) {
+        self.ctx.gl.attach_shader(&self.program, &shader);
+    }
+
+    pub fn link(&mut self) -> Result<(), JsValue> {
+        self.ctx.gl.link_program(&self.program);
+        if self
+            .ctx
+            .gl
+            .get_program_parameter(&self.program, web_sys::WebGlRenderingContext::LINK_STATUS)
+            .as_bool()
+            .unwrap_or(false)
+        {
+            Ok(())
+        } else {
+            let info = self
+                .ctx
+                .gl
+                .get_program_info_log(&self.program)
+                .unwrap_or_else(|| String::from("unknown error"));
+            log::error!("program error: {}", info);
+            Err(info.into())
+        }
+    }
+
+    pub fn r#use(&self) {
+        self.ctx.gl.use_program(Some(&self.program));
+    }
+
+    pub fn find_attribute(&self, name: &str, slots: usize) -> Result<Attribute, JsValue> {
+        Attribute::find(self.ctx, &self.program, name, slots)
+    }
+
+    pub fn find_uniform(&self, name: &str) -> Result<Uniform, JsValue> {
+        Uniform::find(self.ctx, &self.program, name)
     }
 }

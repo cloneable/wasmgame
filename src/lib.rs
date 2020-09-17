@@ -19,7 +19,6 @@ use std::cell::RefCell;
 use std::clone::Clone;
 use std::default::Default;
 use std::mem::drop;
-use std::option::Option::Some;
 use std::rc::Rc;
 use std::result::{Result, Result::Ok};
 use std::time::Duration;
@@ -72,23 +71,26 @@ impl game::Renderer for AnimatedCanvas {
 
         let vertex_shader = ctx.create_vertex_shader(shaders::HEXATILE_VERTEX_SHADER)?;
         let fragment_shader = ctx.create_fragment_shader(shaders::HEXATILE_FRAGMENT_SHADER)?;
-        let program = ctx.link_program(&vertex_shader, &fragment_shader)?;
 
-        ctx.gl.use_program(Some(&program));
+        let mut program = opengl::Program::create(ctx)?;
+        program.attach_shader(&vertex_shader);
+        program.attach_shader(&fragment_shader);
+        program.link()?;
+        program.r#use();
 
         // ===== Uniforms =====
 
-        let mut loc_view = opengl::Uniform::find(ctx, &program, "view")?;
+        let mut loc_view = program.find_uniform("view")?;
         loc_view.set_mat4(cam.view_matrix().slice());
-        let mut loc_projection = opengl::Uniform::find(ctx, &program, "projection")?;
+        let mut loc_projection = program.find_uniform("projection")?;
         loc_projection.set_mat4(cam.projection_matrix().slice());
 
         // ===== Attributes =====
 
-        let mut loc_position = opengl::Attribute::find(ctx, &program, "position", 1)?;
-        let mut loc_normal = opengl::Attribute::find(ctx, &program, "normal", 1)?;
-        let mut loc_model = opengl::Attribute::find(ctx, &program, "model", 4)?;
-        let mut loc_normals = opengl::Attribute::find(ctx, &program, "normals", 4)?;
+        let mut loc_position = program.find_attribute("position", 1)?;
+        let mut loc_normal = program.find_attribute("normal", 1)?;
+        let mut loc_model = program.find_attribute("model", 4)?;
+        let mut loc_normals = program.find_attribute("normals", 4)?;
 
         // ===== VAO =====
 
