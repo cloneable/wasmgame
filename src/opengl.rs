@@ -55,39 +55,6 @@ impl Context {
             instanced_arrays_ext,
         })
     }
-
-    pub fn create_vertex_shader(&self, glsl: &str) -> Result<web_sys::WebGlShader, JsValue> {
-        self.create_shader(glsl, web_sys::WebGlRenderingContext::VERTEX_SHADER)
-    }
-
-    pub fn create_fragment_shader(&self, glsl: &str) -> Result<web_sys::WebGlShader, JsValue> {
-        self.create_shader(glsl, web_sys::WebGlRenderingContext::FRAGMENT_SHADER)
-    }
-
-    fn create_shader(&self, glsl: &str, type_: u32) -> Result<web_sys::WebGlShader, JsValue> {
-        let shader = self
-            .gl
-            .create_shader(type_)
-            .ok_or_else(|| JsValue::from_str("create_shader failed"))?;
-        self.gl.shader_source(&shader, glsl);
-        self.gl.compile_shader(&shader);
-
-        if self
-            .gl
-            .get_shader_parameter(&shader, web_sys::WebGlRenderingContext::COMPILE_STATUS)
-            .as_bool()
-            .unwrap_or(false)
-        {
-            Ok(shader)
-        } else {
-            let info = self
-                .gl
-                .get_shader_info_log(&shader)
-                .unwrap_or_else(|| String::from("unknown error"));
-            log::error!("shader error: {}", info);
-            Err(info.into())
-        }
-    }
 }
 
 pub struct VertexArrayObject<'a> {
@@ -291,8 +258,8 @@ impl<'a> Program<'a> {
         Ok(Program { ctx, program })
     }
 
-    pub fn attach_shader(&mut self, shader: &web_sys::WebGlShader) {
-        self.ctx.gl.attach_shader(&self.program, &shader);
+    pub fn attach_shader(&mut self, shader: &Shader) {
+        self.ctx.gl.attach_shader(&self.program, &shader.shader);
     }
 
     pub fn link(&mut self) -> Result<(), JsValue> {
@@ -326,5 +293,51 @@ impl<'a> Program<'a> {
 
     pub fn find_uniform(&self, name: &str) -> Result<Uniform, JsValue> {
         Uniform::find(self.ctx, &self.program, name)
+    }
+}
+
+pub struct Shader<'a> {
+    ctx: &'a Context,
+    shader: web_sys::WebGlShader,
+}
+
+pub enum ShaderType {
+    Vertex,
+    Fragment,
+}
+
+impl<'a> Shader<'a> {
+    pub fn create(ctx: &'a Context, type_: ShaderType) -> Result<Self, JsValue> {
+        let pt = match type_ {
+            ShaderType::Vertex => web_sys::WebGlRenderingContext::VERTEX_SHADER,
+            ShaderType::Fragment => web_sys::WebGlRenderingContext::FRAGMENT_SHADER,
+        };
+        let shader = ctx
+            .gl
+            .create_shader(pt)
+            .ok_or_else(|| JsValue::from_str("create_shader failed"))?;
+        Ok(Shader { ctx, shader })
+    }
+
+    pub fn compile_source(&mut self, glsl: &str) -> Result<(), JsValue> {
+        self.ctx.gl.shader_source(&self.shader, glsl);
+        self.ctx.gl.compile_shader(&self.shader);
+        if self
+            .ctx
+            .gl
+            .get_shader_parameter(&self.shader, web_sys::WebGlRenderingContext::COMPILE_STATUS)
+            .as_bool()
+            .unwrap_or(false)
+        {
+            Ok(())
+        } else {
+            let info = self
+                .ctx
+                .gl
+                .get_shader_info_log(&self.shader)
+                .unwrap_or_else(|| String::from("unknown error"));
+            log::error!("shader error: {}", info);
+            Err(info.into())
+        }
     }
 }

@@ -69,8 +69,10 @@ impl game::Renderer for AnimatedCanvas {
 
         // ===== OpenGL setup =====
 
-        let vertex_shader = ctx.create_vertex_shader(shaders::HEXATILE_VERTEX_SHADER)?;
-        let fragment_shader = ctx.create_fragment_shader(shaders::HEXATILE_FRAGMENT_SHADER)?;
+        let mut vertex_shader = opengl::Shader::create(ctx, opengl::ShaderType::Vertex)?;
+        vertex_shader.compile_source(shaders::HEXATILE_VERTEX_SHADER)?;
+        let mut fragment_shader = opengl::Shader::create(ctx, opengl::ShaderType::Fragment)?;
+        fragment_shader.compile_source(shaders::HEXATILE_FRAGMENT_SHADER)?;
 
         let mut program = opengl::Program::create(ctx)?;
         program.attach_shader(&vertex_shader);
