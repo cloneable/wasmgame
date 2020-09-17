@@ -235,10 +235,10 @@ function getArrayF32FromWasm0(ptr, len) {
 }
 /**
 */
-export class Game {
+export class Console {
 
     static __wrap(ptr) {
-        const obj = Object.create(Game.prototype);
+        const obj = Object.create(Console.prototype);
         obj.ptr = ptr;
 
         return obj;
@@ -248,18 +248,18 @@ export class Game {
         const ptr = this.ptr;
         this.ptr = 0;
 
-        wasm.__wbg_game_free(ptr);
+        wasm.__wbg_console_free(ptr);
     }
     /**
     */
     constructor() {
-        var ret = wasm.game_new();
-        return Game.__wrap(ret);
+        var ret = wasm.console_new();
+        return Console.__wrap(ret);
     }
     /**
     */
     start() {
-        wasm.game_start(this.ptr);
+        wasm.console_start(this.ptr);
     }
 }
 
