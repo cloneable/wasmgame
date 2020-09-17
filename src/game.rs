@@ -44,29 +44,8 @@ pub struct Engine {
 }
 
 impl Engine {
-    pub fn new(
-        gl: web_sys::WebGlRenderingContext,
-        renderer: Rc<RefCell<dyn Renderer>>,
-    ) -> Rc<Self> {
-        let vertex_array_object_ext = gl
-            .get_extension("OES_vertex_array_object")
-            .unwrap()
-            .unwrap()
-            .unchecked_into::<web_sys::OesVertexArrayObject>();
-        // TODO: try ANGLEInstancedArrays if ANGLE_instanced_arrays doesn't work.
-        let instanced_arrays_ext = gl
-            .get_extension("ANGLE_instanced_arrays")
-            .unwrap()
-            .unwrap()
-            .unchecked_into::<web_sys::AngleInstancedArrays>();
-        Rc::new(Self {
-            ctx: opengl::Context {
-                gl,
-                vertex_array_object_ext,
-                instanced_arrays_ext,
-            },
-            renderer,
-        })
+    pub fn new(ctx: opengl::Context, renderer: Rc<RefCell<dyn Renderer>>) -> Rc<Self> {
+        Rc::new(Self { ctx, renderer })
     }
 
     pub fn start(self: Rc<Self>) -> Result<(), JsValue> {

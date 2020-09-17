@@ -10,6 +10,7 @@ use std::convert::Into;
 use std::result::{Result, Result::Err, Result::Ok};
 use std::string::String;
 
+use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 
 use crate::scene;
@@ -24,6 +25,38 @@ pub struct Context {
 }
 
 impl Context {
+    pub fn from_canvas(canvas: &web_sys::HtmlCanvasElement) -> Result<Self, JsValue> {
+        let gl = canvas
+            .get_context("webgl")
+            .expect("getContext failed")
+            .expect("unsupported context type")
+            .dyn_into::<web_sys::WebGlRenderingContext>()
+            .expect("context of unexpected type");
+        let vertex_array_object_ext = gl
+            .get_extension("OES_vertex_array_object")
+            .unwrap()
+            .unwrap()
+            .unchecked_into::<web_sys::OesVertexArrayObject>();
+        // TODO: try ANGLEInstancedArrays if ANGLE_instanced_arrays doesn't work.
+        let instanced_arrays_ext = gl
+            .get_extension("ANGLE_instanced_arrays")
+            .unwrap()
+            .unwrap()
+            .unchecked_into::<web_sys::AngleInstancedArrays>();
+        // TODO: find better place for this. some init func?
+        gl.enable(web_sys::WebGlRenderingContext::CULL_FACE);
+        gl.enable(web_sys::WebGlRenderingContext::DEPTH_TEST);
+        gl.hint(
+            web_sys::WebGlRenderingContext::GENERATE_MIPMAP_HINT,
+            web_sys::WebGlRenderingContext::NICEST,
+        );
+        Ok(Context {
+            gl,
+            vertex_array_object_ext,
+            instanced_arrays_ext,
+        })
+    }
+
     pub fn create_vertex_shader(&self, glsl: &str) -> Result<web_sys::WebGlShader, JsValue> {
         self.create_shader(glsl, web_sys::WebGlRenderingContext::VERTEX_SHADER)
     }

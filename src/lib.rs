@@ -69,13 +69,6 @@ impl game::Renderer for AnimatedCanvas {
 
         // ===== OpenGL setup =====
 
-        ctx.gl.enable(web_sys::WebGlRenderingContext::CULL_FACE);
-        ctx.gl.enable(web_sys::WebGlRenderingContext::DEPTH_TEST);
-        ctx.gl.hint(
-            web_sys::WebGlRenderingContext::GENERATE_MIPMAP_HINT,
-            web_sys::WebGlRenderingContext::NICEST,
-        );
-
         let vertex_shader = ctx.create_vertex_shader(shaders::HEXATILE_VERTEX_SHADER)?;
         let fragment_shader = ctx.create_fragment_shader(shaders::HEXATILE_FRAGMENT_SHADER)?;
         let program = ctx.link_program(&vertex_shader, &fragment_shader)?;
@@ -218,20 +211,14 @@ impl Game {
 
         let window = web_sys::window().expect("cannot get window object");
         let document = window.document().expect("cannot get document object");
-
         let canvas = document
             .get_element_by_id("wasmgame")
             .expect("cannot find canvas element")
             .dyn_into::<web_sys::HtmlCanvasElement>()
             .expect("element not of type canvas");
-        let gl = canvas
-            .get_context("webgl")
-            .expect("getContext failed")
-            .expect("unsupported context type")
-            .dyn_into::<web_sys::WebGlRenderingContext>()
-            .expect("context of unexpected type");
 
-        let e = game::Engine::new(gl, self.renderer.clone());
+        let ctx = opengl::Context::from_canvas(&canvas)?;
+        let e = game::Engine::new(ctx, self.renderer.clone());
         log::info!("wasmgame starting");
         e.start()
     }
