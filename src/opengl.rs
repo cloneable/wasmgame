@@ -88,8 +88,8 @@ impl Context {
         }
     }
 
-    #[must_use = "ModelBuilder must be finished."]
-    pub fn model_builder(&self) -> scene::ModelBuilder {
-        scene::ModelBuilder::new(&self.gl)
+    #[must_use = "BufferBuilder must be finished."]
+    pub fn buffer_builder(&self) -> scene::BufferBuilder {
+        scene::BufferBuilder::new(&self)
     }
 }

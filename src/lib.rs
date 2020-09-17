@@ -22,7 +22,6 @@ use std::option::{Option::None, Option::Some};
 use std::rc::Rc;
 use std::result::{Result, Result::Err, Result::Ok};
 use std::time::Duration;
-use std::{vec, vec::Vec};
 
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
@@ -42,35 +41,31 @@ impl AnimatedCanvas {
 
 impl game::Renderer for AnimatedCanvas {
     fn setup(&mut self, ctx: &opengl::Context) -> Result<(), JsValue> {
-        let mat_model = game::math::Mat4::with_array([
+        let mut cam = scene::Camera::new();
+        cam.set_position(0.5, 1.4, 3.0)
+            .set_frustum(35.0, 4.0 / 3.0, 0.1, 100.0)
+            .refresh();
+
+        let mut hexatile = scene::Model::new(&meshes::HEXATILE_VERTICES, &meshes::HEXATILE_INDICES);
+        hexatile.add_instance(game::math::Mat4::with_array([
+            1.0, 0.0, 0.0, 0.0, //br
+            0.0, 3.0, 0.0, 0.0, //br
+            0.0, 0.0, 1.0, 0.0, //br
+            -0.8, 0.0, 0.0, 1.0, //br
+        ]));
+        hexatile.add_instance(game::math::Mat4::with_array([
+            1.0, 0.0, 0.0, 0.0, //br
+            0.0, 2.0, 0.0, 0.0, //br
+            0.0, 0.0, 1.0, 0.0, //br
+            0.0, 0.0, 0.0, 1.0, //br
+        ]));
+        hexatile.add_instance(game::math::Mat4::with_array([
             1.0, 0.0, 0.0, 0.0, //br
             0.0, 1.0, 0.0, 0.0, //br
             0.0, 0.0, 1.0, 0.0, //br
-            0.0, 0.0, 0.0, 1.0, //br
-        ]);
-        let mut cam = scene::Camera::new();
-        cam.set_position(4.0, 3.0, -3.0)
-            .set_frustum(20.0, 4.0 / 3.0, 0.1, 100.0)
-            .refresh();
-
-        let mat_model_view = cam.view_matrix() * &mat_model;
-        let mat_mvp = cam.projection_matrix() * &mat_model_view;
-        let mat_normals = match mat_model_view.invert() {
-            Some(inv) => inv.transpose(),
-            None => {
-                log::error!("mat_model_view not invertible");
-                mat_model_view
-            }
-        };
-
-        let mut vertices: Vec<f32> = vec![0.0; meshes::HEXATILE_INDICES.len() * 3];
-        let mut normals: Vec<f32> = vec![0.0; meshes::HEXATILE_INDICES.len() * 3];
-        game::generate_buffers(
-            &meshes::HEXATILE_INDICES,
-            &meshes::HEXATILE_VERTICES,
-            &mut vertices,
-            &mut normals,
-        );
+            0.8, 0.0, 0.0, 1.0, //br
+        ]));
+        hexatile.update_normals(&cam);
 
         // ===== OpenGL setup =====
 
@@ -87,19 +82,25 @@ impl game::Renderer for AnimatedCanvas {
 
         ctx.gl.use_program(Some(&program));
 
-        let loc_mvp = ctx
-            .gl
-            .get_uniform_location(&program, "mvp")
-            .ok_or_else(|| JsValue::from_str("get_uniform_location mvp error"))?;
-        ctx.gl
-            .uniform_matrix4fv_with_f32_array(Some(&loc_mvp), false, mat_mvp.slice());
+        // ===== Uniforms =====
 
-        let loc_normals = ctx
+        let loc_view = ctx
             .gl
-            .get_uniform_location(&program, "normals")
-            .ok_or_else(|| JsValue::from_str("get_uniform_location normals error"))?;
+            .get_uniform_location(&program, "view")
+            .ok_or_else(|| JsValue::from_str("get_uniform_location error: view"))?;
         ctx.gl
-            .uniform_matrix4fv_with_f32_array(Some(&loc_normals), false, mat_normals.slice());
+            .uniform_matrix4fv_with_f32_array(Some(&loc_view), false, cam.view_matrix().slice());
+        let loc_projection = ctx
+            .gl
+            .get_uniform_location(&program, "projection")
+            .ok_or_else(|| JsValue::from_str("get_uniform_location error: projection"))?;
+        ctx.gl.uniform_matrix4fv_with_f32_array(
+            Some(&loc_projection),
+            false,
+            cam.projection_matrix().slice(),
+        );
+
+        // ===== Attributes =====
 
         let loc_position = ctx.gl.get_attrib_location(&program, "position");
         if loc_position == -1 {
@@ -108,6 +109,14 @@ impl game::Renderer for AnimatedCanvas {
         let loc_normal = ctx.gl.get_attrib_location(&program, "normal");
         if loc_normal == -1 {
             return Err(JsValue::from_str("normal attribute not defined"));
+        }
+        let loc_model = ctx.gl.get_attrib_location(&program, "model");
+        if loc_model == -1 {
+            return Err(JsValue::from_str("model attribute not defined"));
+        }
+        let loc_normals = ctx.gl.get_attrib_location(&program, "normals");
+        if loc_normals == -1 {
+            return Err(JsValue::from_str("normals attribute not defined"));
         }
 
         // ===== VAO =====
@@ -121,22 +130,34 @@ impl game::Renderer for AnimatedCanvas {
 
         // ===== vertices =====
 
-        ctx.model_builder()
+        ctx.buffer_builder()
             .create_buffer()?
             .bind_buffer()
-            .set_buffer_data(&vertices)
-            .set_vertex_attribute_pointer(loc_position)
+            .set_buffer_data(&hexatile.vertices)
+            .set_vertex_attribute_pointer_vec3(loc_position)
             .create_buffer()?
             .bind_buffer()
-            .set_buffer_data(&normals)
-            .set_vertex_attribute_pointer(loc_normal)
-            .build();
+            .set_buffer_data(&hexatile.normals)
+            .set_vertex_attribute_pointer_vec3(loc_normal)
+            .create_buffer()?
+            .bind_buffer()
+            .set_buffer_data(&hexatile.instance_model_data)
+            .set_vertex_attribute_pointer_mat4(loc_model)
+            .set_vertex_attrib_divisor_mat4(loc_model, 1)
+            .create_buffer()?
+            .bind_buffer()
+            .set_buffer_data(&hexatile.instance_normals_data)
+            .set_vertex_attribute_pointer_mat4(loc_normals)
+            .set_vertex_attrib_divisor_mat4(loc_normals, 1)
+            .finish();
 
         ctx.gl.enable_vertex_attrib_array(loc_position as u32);
         ctx.gl.enable_vertex_attrib_array(loc_normal as u32);
+        for i in 0..=3 {
+            ctx.gl.enable_vertex_attrib_array(loc_model as u32 + i);
+            ctx.gl.enable_vertex_attrib_array(loc_normals as u32 + i);
+        }
 
-        ctx.gl
-            .bind_buffer(web_sys::WebGlRenderingContext::ARRAY_BUFFER, None);
         ctx.vertex_array_object_ext.bind_vertex_array_oes(None);
 
         // clear
@@ -150,10 +171,11 @@ impl game::Renderer for AnimatedCanvas {
         ctx.vertex_array_object_ext
             .bind_vertex_array_oes(Some(&vao_hexatile));
 
-        ctx.gl.draw_arrays(
+        ctx.instanced_arrays_ext.draw_arrays_instanced_angle(
             web_sys::WebGlRenderingContext::TRIANGLES,
             0,
-            meshes::HEXATILE_INDICES.len() as i32,
+            hexatile.vertices.len() as i32 / 3,
+            hexatile.instances.len() as i32,
         );
 
         ctx.vertex_array_object_ext.bind_vertex_array_oes(None);

@@ -1,16 +1,20 @@
 pub const HEXATILE_VERTEX_SHADER: &str = r#"
 #version 100
 
+// per vertex
 attribute vec3 position;
 attribute vec3 normal;
+// per instance
+attribute mat4 model;
+attribute mat4 normals;
 
-uniform mat4 mvp;
-uniform mat4 normals;
+uniform mat4 view;
+uniform mat4 projection;
 
 varying highp vec3 lighting;
 
 void main() {
-    gl_Position = mvp * vec4(position, 1.0);
+    gl_Position = projection * view * model * vec4(position, 1.0);
 
     // TODO: define uniforms for these.
     highp vec3 ambientLightColor = vec3(0.2, 0.2, 0.2);
