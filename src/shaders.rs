@@ -21,7 +21,7 @@ void main() {
     highp vec3 directionalLightColor = vec3(1.0, 1.0, 1.0);
     highp vec3 directionalLight = normalize(vec3(3.0, 4.0, 5.0));
 
-    highp vec4 transformedNormal = normals * vec4(normal, 1.0);
+    highp vec4 transformedNormal = normalize(normals * vec4(normal, 1.0));
     highp float intensity = max(dot(transformedNormal.xyz, directionalLight), 0.0);
     lighting = ambientLightColor + (directionalLightColor * intensity);
 }
