@@ -51,7 +51,7 @@ impl game::Renderer for AnimatedCanvas {
             1.0, 0.0, 0.0, 0.0, //br
             0.0, 3.0, 0.0, 0.0, //br
             0.0, 0.0, 1.0, 0.0, //br
-            -0.8, 0.0, 0.0, 1.0, //br
+            -0.6, 0.0, 0.0, 1.0, //br
         ]));
         hexatile.add_instance(game::math::Mat4::with_array([
             1.0, 0.0, 0.0, 0.0, //br
@@ -63,7 +63,7 @@ impl game::Renderer for AnimatedCanvas {
             1.0, 0.0, 0.0, 0.0, //br
             0.0, 1.0, 0.0, 0.0, //br
             0.0, 0.0, 1.0, 0.0, //br
-            0.8, 0.0, 0.0, 1.0, //br
+            0.6, 0.0, 0.0, 1.0, //br
         ]));
         hexatile.update_normals(&cam);
 
@@ -162,7 +162,7 @@ impl game::Renderer for AnimatedCanvas {
 
         // clear
 
-        ctx.gl.clear_color(0.9, 0.9, 0.9, 1.0);
+        ctx.gl.clear_color(0.7, 0.7, 0.7, 1.0);
         ctx.gl
             .clear(web_sys::WebGlRenderingContext::COLOR_BUFFER_BIT);
 
