@@ -243,3 +243,28 @@ impl<'a> ArrayBuffer<'a> {
         self
     }
 }
+
+pub struct Uniform<'a> {
+    ctx: &'a Context,
+    location: web_sys::WebGlUniformLocation,
+}
+
+impl<'a> Uniform<'a> {
+    pub fn find(
+        ctx: &'a Context,
+        program: &web_sys::WebGlProgram,
+        name: &str,
+    ) -> Result<Self, JsValue> {
+        let location = ctx
+            .gl
+            .get_uniform_location(&program, name)
+            .ok_or_else(|| JsValue::from_str("get_uniform_location error: view"))?;
+        Ok(Uniform { ctx, location })
+    }
+
+    pub fn set_mat4(&mut self, data: &[f32]) {
+        self.ctx
+            .gl
+            .uniform_matrix4fv_with_f32_array(Some(&self.location), false, data);
+    }
+}

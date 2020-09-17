@@ -19,7 +19,7 @@ use std::cell::RefCell;
 use std::clone::Clone;
 use std::default::Default;
 use std::mem::drop;
-use std::option::{Option::Some};
+use std::option::Option::Some;
 use std::rc::Rc;
 use std::result::{Result, Result::Err, Result::Ok};
 use std::time::Duration;
@@ -78,21 +78,10 @@ impl game::Renderer for AnimatedCanvas {
 
         // ===== Uniforms =====
 
-        let loc_view = ctx
-            .gl
-            .get_uniform_location(&program, "view")
-            .ok_or_else(|| JsValue::from_str("get_uniform_location error: view"))?;
-        ctx.gl
-            .uniform_matrix4fv_with_f32_array(Some(&loc_view), false, cam.view_matrix().slice());
-        let loc_projection = ctx
-            .gl
-            .get_uniform_location(&program, "projection")
-            .ok_or_else(|| JsValue::from_str("get_uniform_location error: projection"))?;
-        ctx.gl.uniform_matrix4fv_with_f32_array(
-            Some(&loc_projection),
-            false,
-            cam.projection_matrix().slice(),
-        );
+        let mut loc_view = opengl::Uniform::find(ctx, &program, "view")?;
+        loc_view.set_mat4(cam.view_matrix().slice());
+        let mut loc_projection = opengl::Uniform::find(ctx, &program, "projection")?;
+        loc_projection.set_mat4(cam.projection_matrix().slice());
 
         // ===== Attributes =====
 
