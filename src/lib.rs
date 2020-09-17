@@ -9,6 +9,7 @@ extern crate wasm_logger;
 extern crate web_sys;
 
 mod game;
+mod math;
 mod meshes;
 mod opengl;
 mod scene;
@@ -47,19 +48,19 @@ impl game::Renderer for AnimatedCanvas {
             .refresh();
 
         let mut hexatile = scene::Model::new(&meshes::HEXATILE_VERTICES, &meshes::HEXATILE_INDICES);
-        hexatile.add_instance(game::math::Mat4::with_array([
+        hexatile.add_instance(math::Mat4::with_array([
             1.0, 0.0, 0.0, 0.0, //br
             0.0, 3.0, 0.0, 0.0, //br
             0.0, 0.0, 1.0, 0.0, //br
             -0.6, 0.0, 0.0, 1.0, //br
         ]));
-        hexatile.add_instance(game::math::Mat4::with_array([
+        hexatile.add_instance(math::Mat4::with_array([
             1.0, 0.0, 0.0, 0.0, //br
             0.0, 2.0, 0.0, 0.0, //br
             0.0, 0.0, 1.0, 0.0, //br
             0.0, 0.0, 0.0, 1.0, //br
         ]));
-        hexatile.add_instance(game::math::Mat4::with_array([
+        hexatile.add_instance(math::Mat4::with_array([
             1.0, 0.0, 0.0, 0.0, //br
             0.0, 1.0, 0.0, 0.0, //br
             0.0, 0.0, 1.0, 0.0, //br

@@ -4,12 +4,11 @@ extern crate std;
 extern crate wasm_bindgen;
 extern crate web_sys;
 
-use crate::game;
-
 use std::option::{Option::None, Option::Some};
 use std::{vec, vec::Vec};
 
-use crate::game::math;
+use crate::game;
+use crate::math;
 
 pub struct Camera {
     position: math::Vec3,

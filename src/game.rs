@@ -5,9 +5,8 @@ extern crate wasm_bindgen;
 extern crate wasm_bindgen_futures;
 extern crate web_sys;
 
-pub mod math;
-
 use crate::opengl;
+use crate::math;
 
 use std::boxed::Box;
 use std::cell::RefCell;
