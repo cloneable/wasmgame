@@ -208,9 +208,9 @@ impl<'a> ArrayBuffer<'a> {
         self
     }
 
-    pub fn set_vertex_attribute_pointer_vec3(&mut self, location: i32) -> &mut Self {
+    pub fn set_vertex_attribute_pointer_vec3(&mut self, attribute: &Attribute) -> &mut Self {
         self.ctx.gl.vertex_attrib_pointer_with_i32(
-            location as u32,
+            attribute.location,
             3,
             web_sys::WebGlRenderingContext::FLOAT,
             false,
@@ -220,25 +220,29 @@ impl<'a> ArrayBuffer<'a> {
         self
     }
 
-    pub fn set_vertex_attribute_pointer_mat4(&mut self, location: i32) -> &mut Self {
+    pub fn set_vertex_attribute_pointer_mat4(&mut self, attribute: &Attribute) -> &mut Self {
         for i in 0..=3 {
             self.ctx.gl.vertex_attrib_pointer_with_i32(
-                (location + i) as u32,
+                attribute.location + i,
                 4,
                 web_sys::WebGlRenderingContext::FLOAT,
                 false,
                 16 * 4,
-                i * 4 * 4,
+                i as i32 * 4 * 4,
             );
         }
         self
     }
 
-    pub fn set_vertex_attrib_divisor_mat4(&mut self, location: i32, divisor: usize) -> &mut Self {
+    pub fn set_vertex_attrib_divisor_mat4(
+        &mut self,
+        attribute: &Attribute,
+        divisor: usize,
+    ) -> &mut Self {
         for i in 0..=3 {
             self.ctx
                 .instanced_arrays_ext
-                .vertex_attrib_divisor_angle(location as u32 + i, divisor as u32);
+                .vertex_attrib_divisor_angle(attribute.location + i, divisor as u32);
         }
         self
     }
@@ -266,5 +270,40 @@ impl<'a> Uniform<'a> {
         self.ctx
             .gl
             .uniform_matrix4fv_with_f32_array(Some(&self.location), false, data);
+    }
+}
+
+pub struct Attribute<'a> {
+    ctx: &'a Context,
+    location: u32,
+    // TODO: use generic type instead of slots.
+    slots: usize,
+}
+
+impl<'a> Attribute<'a> {
+    pub fn find(
+        ctx: &'a Context,
+        program: &web_sys::WebGlProgram,
+        name: &str,
+        slots: usize,
+    ) -> Result<Self, JsValue> {
+        let location = ctx.gl.get_attrib_location(&program, name);
+        if location == -1 {
+            // TODO: add attribute name
+            return Err(JsValue::from_str("attribute not found"));
+        }
+        Ok(Attribute {
+            ctx,
+            location: location as u32,
+            slots,
+        })
+    }
+
+    pub fn enable(&mut self) {
+        for i in 0..self.slots {
+            self.ctx
+                .gl
+                .enable_vertex_attrib_array(self.location + i as u32);
+        }
     }
 }

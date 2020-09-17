@@ -21,7 +21,7 @@ use std::default::Default;
 use std::mem::drop;
 use std::option::Option::Some;
 use std::rc::Rc;
-use std::result::{Result, Result::Err, Result::Ok};
+use std::result::{Result, Result::Ok};
 use std::time::Duration;
 
 use wasm_bindgen::JsCast;
@@ -85,22 +85,10 @@ impl game::Renderer for AnimatedCanvas {
 
         // ===== Attributes =====
 
-        let loc_position = ctx.gl.get_attrib_location(&program, "position");
-        if loc_position == -1 {
-            return Err(JsValue::from_str("position attribute not defined"));
-        }
-        let loc_normal = ctx.gl.get_attrib_location(&program, "normal");
-        if loc_normal == -1 {
-            return Err(JsValue::from_str("normal attribute not defined"));
-        }
-        let loc_model = ctx.gl.get_attrib_location(&program, "model");
-        if loc_model == -1 {
-            return Err(JsValue::from_str("model attribute not defined"));
-        }
-        let loc_normals = ctx.gl.get_attrib_location(&program, "normals");
-        if loc_normals == -1 {
-            return Err(JsValue::from_str("normals attribute not defined"));
-        }
+        let mut loc_position = opengl::Attribute::find(ctx, &program, "position", 1)?;
+        let mut loc_normal = opengl::Attribute::find(ctx, &program, "normal", 1)?;
+        let mut loc_model = opengl::Attribute::find(ctx, &program, "model", 4)?;
+        let mut loc_normals = opengl::Attribute::find(ctx, &program, "normals", 4)?;
 
         // ===== VAO =====
 
@@ -112,32 +100,30 @@ impl game::Renderer for AnimatedCanvas {
         let _ = opengl::ArrayBuffer::create(ctx)?
             .bind()
             .set_buffer_data(&hexatile.vertices)
-            .set_vertex_attribute_pointer_vec3(loc_position)
+            .set_vertex_attribute_pointer_vec3(&loc_position)
             .unbind();
         let _ = opengl::ArrayBuffer::create(ctx)?
             .bind()
             .set_buffer_data(&hexatile.normals)
-            .set_vertex_attribute_pointer_vec3(loc_normal)
+            .set_vertex_attribute_pointer_vec3(&loc_normal)
             .unbind();
         let _ = opengl::ArrayBuffer::create(ctx)?
             .bind()
             .set_buffer_data(&hexatile.instance_model_data)
-            .set_vertex_attribute_pointer_mat4(loc_model)
-            .set_vertex_attrib_divisor_mat4(loc_model, 1)
+            .set_vertex_attribute_pointer_mat4(&loc_model)
+            .set_vertex_attrib_divisor_mat4(&loc_model, 1)
             .unbind();
         let _ = opengl::ArrayBuffer::create(ctx)?
             .bind()
             .set_buffer_data(&hexatile.instance_normals_data)
-            .set_vertex_attribute_pointer_mat4(loc_normals)
-            .set_vertex_attrib_divisor_mat4(loc_normals, 1)
+            .set_vertex_attribute_pointer_mat4(&loc_normals)
+            .set_vertex_attrib_divisor_mat4(&loc_normals, 1)
             .unbind();
 
-        ctx.gl.enable_vertex_attrib_array(loc_position as u32);
-        ctx.gl.enable_vertex_attrib_array(loc_normal as u32);
-        for i in 0..=3 {
-            ctx.gl.enable_vertex_attrib_array(loc_model as u32 + i);
-            ctx.gl.enable_vertex_attrib_array(loc_normals as u32 + i);
-        }
+        loc_position.enable();
+        loc_normal.enable();
+        loc_model.enable();
+        loc_normals.enable();
 
         vao_hexatile.unbind();
 
