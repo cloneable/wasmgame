@@ -7,13 +7,12 @@ extern crate web_sys;
 
 use std::convert::From;
 use std::convert::Into;
+use std::option::{Option::None, Option::Some};
 use std::result::{Result, Result::Err, Result::Ok};
 use std::string::String;
 
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
-
-use crate::scene;
 
 pub struct Context {
     /// https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.WebGlRenderingContext.html
@@ -120,9 +119,82 @@ impl Context {
             Err(info.into())
         }
     }
+}
 
-    #[must_use = "BufferBuilder must be finished."]
-    pub fn buffer_builder(&self) -> scene::BufferBuilder {
-        scene::BufferBuilder::new(&self)
+pub struct ArrayBuffer<'a> {
+    ctx: &'a Context,
+
+    buffer: web_sys::WebGlBuffer,
+}
+
+impl<'a> ArrayBuffer<'a> {
+    pub fn new(ctx: &'a Context) -> Result<Self, JsValue> {
+        let buffer = ctx
+            .gl
+            .create_buffer()
+            .ok_or_else(|| JsValue::from_str("create_buffer vbo_vertices error"))?;
+        Ok(ArrayBuffer { ctx, buffer })
+    }
+
+    pub fn bind(&mut self) -> &mut Self {
+        // TODO: track binding and debug_assert
+        self.ctx.gl.bind_buffer(
+            web_sys::WebGlRenderingContext::ARRAY_BUFFER,
+            Some(&self.buffer),
+        );
+        self
+    }
+
+    pub fn unbind(&mut self) {
+        self.ctx
+            .gl
+            .bind_buffer(web_sys::WebGlRenderingContext::ARRAY_BUFFER, None);
+    }
+
+    pub fn set_buffer_data(&mut self, data: &[f32]) -> &mut Self {
+        unsafe {
+            let view = js_sys::Float32Array::view(data);
+            self.ctx.gl.buffer_data_with_array_buffer_view(
+                web_sys::WebGlRenderingContext::ARRAY_BUFFER,
+                &view,
+                web_sys::WebGlRenderingContext::STATIC_DRAW,
+            );
+        }
+        self
+    }
+
+    pub fn set_vertex_attribute_pointer_vec3(&mut self, location: i32) -> &mut Self {
+        self.ctx.gl.vertex_attrib_pointer_with_i32(
+            location as u32,
+            3,
+            web_sys::WebGlRenderingContext::FLOAT,
+            false,
+            0,
+            0,
+        );
+        self
+    }
+
+    pub fn set_vertex_attribute_pointer_mat4(&mut self, location: i32) -> &mut Self {
+        for i in 0..=3 {
+            self.ctx.gl.vertex_attrib_pointer_with_i32(
+                (location + i) as u32,
+                4,
+                web_sys::WebGlRenderingContext::FLOAT,
+                false,
+                16 * 4,
+                i * 4 * 4,
+            );
+        }
+        self
+    }
+
+    pub fn set_vertex_attrib_divisor_mat4(&mut self, location: i32, divisor: usize) -> &mut Self {
+        for i in 0..=3 {
+            self.ctx
+                .instanced_arrays_ext
+                .vertex_attrib_divisor_angle(location as u32 + i, divisor as u32);
+        }
+        self
     }
 }

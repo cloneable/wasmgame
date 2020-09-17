@@ -5,14 +5,11 @@ extern crate wasm_bindgen;
 extern crate web_sys;
 
 use crate::game;
-use crate::opengl;
 
-use std::option::{Option, Option::None, Option::Some};
-use std::result::{Result, Result::Ok};
+use std::option::{Option::None, Option::Some};
 use std::{vec, vec::Vec};
 
 use crate::game::math;
-use wasm_bindgen::JsValue;
 
 pub struct Camera {
     position: math::Vec3,
@@ -135,96 +132,5 @@ impl Instance {
             model: model,
             normals: math::Mat4::IDENTITY,
         }
-    }
-}
-
-pub struct BufferBuilder<'a> {
-    ctx: &'a opengl::Context,
-
-    buffer: Option<web_sys::WebGlBuffer>,
-}
-
-impl<'a> BufferBuilder<'a> {
-    #[must_use = "BufferBuilder must be finished."]
-    pub fn new(ctx: &'a opengl::Context) -> Self {
-        BufferBuilder { ctx, buffer: None }
-    }
-
-    #[must_use = "BufferBuilder must be finished."]
-    pub fn create_buffer(&mut self) -> Result<&mut Self, JsValue> {
-        let buffer = self
-            .ctx
-            .gl
-            .create_buffer()
-            .ok_or_else(|| JsValue::from_str("create_buffer vbo_vertices error"))?;
-        self.buffer = Some(buffer);
-        Ok(self)
-    }
-
-    #[must_use = "BufferBuilder must be finished."]
-    pub fn bind_buffer(&mut self) -> &mut Self {
-        self.ctx.gl.bind_buffer(
-            web_sys::WebGlRenderingContext::ARRAY_BUFFER,
-            Some(self.buffer.as_ref().unwrap()),
-        );
-        self
-    }
-
-    #[must_use = "BufferBuilder must be finished."]
-    pub fn set_buffer_data(&mut self, data: &[f32]) -> &mut Self {
-        unsafe {
-            let view = js_sys::Float32Array::view(data);
-            self.ctx.gl.buffer_data_with_array_buffer_view(
-                web_sys::WebGlRenderingContext::ARRAY_BUFFER,
-                &view,
-                web_sys::WebGlRenderingContext::STATIC_DRAW,
-            );
-        }
-        self
-    }
-
-    #[must_use = "BufferBuilder must be finished."]
-    pub fn set_vertex_attribute_pointer_vec3(&mut self, location: i32) -> &mut Self {
-        self.ctx.gl.vertex_attrib_pointer_with_i32(
-            location as u32,
-            3,
-            web_sys::WebGlRenderingContext::FLOAT,
-            false,
-            0,
-            0,
-        );
-        self
-    }
-
-    #[must_use = "BufferBuilder must be finished."]
-    pub fn set_vertex_attribute_pointer_mat4(&mut self, location: i32) -> &mut Self {
-        for i in 0..=3 {
-            self.ctx.gl.vertex_attrib_pointer_with_i32(
-                (location + i) as u32,
-                4,
-                web_sys::WebGlRenderingContext::FLOAT,
-                false,
-                16 * 4,
-                i * 4 * 4,
-            );
-        }
-        self
-    }
-
-    #[must_use = "BufferBuilder must be finished."]
-    pub fn set_vertex_attrib_divisor_mat4(&mut self, location: i32, divisor: usize) -> &mut Self {
-        for i in 0..=3 {
-            self.ctx
-                .instanced_arrays_ext
-                .vertex_attrib_divisor_angle(location as u32 + i, divisor as u32);
-        }
-        self
-    }
-
-    pub fn finish(&mut self) {
-        self.buffer = None;
-        self.ctx
-            .gl
-            .bind_buffer(web_sys::WebGlRenderingContext::ARRAY_BUFFER, None);
     }
 }

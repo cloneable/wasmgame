@@ -123,26 +123,28 @@ impl game::Renderer for AnimatedCanvas {
 
         // ===== vertices =====
 
-        ctx.buffer_builder()
-            .create_buffer()?
-            .bind_buffer()
+        let _ = opengl::ArrayBuffer::new(ctx)?
+            .bind()
             .set_buffer_data(&hexatile.vertices)
             .set_vertex_attribute_pointer_vec3(loc_position)
-            .create_buffer()?
-            .bind_buffer()
+            .unbind();
+        let _ = opengl::ArrayBuffer::new(ctx)?
+            .bind()
             .set_buffer_data(&hexatile.normals)
             .set_vertex_attribute_pointer_vec3(loc_normal)
-            .create_buffer()?
-            .bind_buffer()
+            .unbind();
+        let _ = opengl::ArrayBuffer::new(ctx)?
+            .bind()
             .set_buffer_data(&hexatile.instance_model_data)
             .set_vertex_attribute_pointer_mat4(loc_model)
             .set_vertex_attrib_divisor_mat4(loc_model, 1)
-            .create_buffer()?
-            .bind_buffer()
+            .unbind();
+        let _ = opengl::ArrayBuffer::new(ctx)?
+            .bind()
             .set_buffer_data(&hexatile.instance_normals_data)
             .set_vertex_attribute_pointer_mat4(loc_normals)
             .set_vertex_attrib_divisor_mat4(loc_normals, 1)
-            .finish();
+            .unbind();
 
         ctx.gl.enable_vertex_attrib_array(loc_position as u32);
         ctx.gl.enable_vertex_attrib_array(loc_normal as u32);
