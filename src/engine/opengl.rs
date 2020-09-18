@@ -189,14 +189,10 @@ pub struct Uniform<'a> {
 }
 
 impl<'a> Uniform<'a> {
-    fn find(
-        ctx: &'a Context,
-        program: &web_sys::WebGlProgram,
-        name: &str,
-    ) -> Result<Self, JsValue> {
+    pub fn find<'b>(ctx: &'a Context, program: &'b Program, name: &str) -> Result<Self, JsValue> {
         let location = ctx
             .gl
-            .get_uniform_location(&program, name)
+            .get_uniform_location(&program.program, name)
             .ok_or_else(|| JsValue::from_str("get_uniform_location error: view"))?;
         Ok(Uniform { ctx, location })
     }
@@ -216,13 +212,14 @@ pub struct Attribute<'a> {
 }
 
 impl<'a> Attribute<'a> {
-    fn find(
+    #[allow(dead_code)]
+    pub fn find<'b>(
         ctx: &'a Context,
-        program: &web_sys::WebGlProgram,
+        program: &'b Program,
         name: &str,
         slots: usize,
     ) -> Result<Self, JsValue> {
-        let location = ctx.gl.get_attrib_location(&program, name);
+        let location = ctx.gl.get_attrib_location(&program.program, name);
         if location == -1 {
             // TODO: add attribute name
             return Err(JsValue::from_str("attribute not found"));
@@ -230,6 +227,22 @@ impl<'a> Attribute<'a> {
         Ok(Attribute {
             ctx,
             location: location as u32,
+            slots,
+        })
+    }
+
+    pub fn bind<'b>(
+        ctx: &'a Context,
+        program: &'b Program,
+        location: u32,
+        name: &str,
+        slots: usize,
+    ) -> Result<Self, JsValue> {
+        ctx.gl
+            .bind_attrib_location(&program.program, location, name);
+        Ok(Attribute {
+            ctx,
+            location,
             slots,
         })
     }
@@ -245,7 +258,7 @@ impl<'a> Attribute<'a> {
 
 pub struct Program<'a> {
     ctx: &'a Context,
-    program: web_sys::WebGlProgram,
+    pub program: web_sys::WebGlProgram,
 }
 
 impl<'a> Program<'a> {
@@ -282,16 +295,8 @@ impl<'a> Program<'a> {
         }
     }
 
-    pub fn r#use(&self) {
+    pub fn r#use(&mut self) {
         self.ctx.gl.use_program(Some(&self.program));
-    }
-
-    pub fn find_attribute(&self, name: &str, slots: usize) -> Result<Attribute, JsValue> {
-        Attribute::find(self.ctx, &self.program, name, slots)
-    }
-
-    pub fn find_uniform(&self, name: &str) -> Result<Uniform, JsValue> {
-        Uniform::find(self.ctx, &self.program, name)
     }
 }
 
