@@ -5,11 +5,13 @@ extern crate wasm_bindgen;
 extern crate wasm_bindgen_futures;
 extern crate web_sys;
 
+use std::cell::RefCell;
 use std::convert::From;
 use std::convert::Into;
 use std::option::{Option::None, Option::Some};
 use std::result::{Result, Result::Err, Result::Ok};
 use std::string::String;
+use std::{assert_eq, assert_ne, panic};
 
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
@@ -21,6 +23,10 @@ pub struct Context {
     pub vertex_array_object_ext: web_sys::OesVertexArrayObject,
     /// https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.AngleInstancedArrays.html
     pub instanced_arrays_ext: web_sys::AngleInstancedArrays,
+
+    next_object_id: RefCell<u32>,
+    bound_array_buffer: RefCell<u32>,
+    bound_framebuffer: RefCell<u32>,
 }
 
 impl Context {
@@ -53,7 +59,16 @@ impl Context {
             gl,
             vertex_array_object_ext,
             instanced_arrays_ext,
+            next_object_id: RefCell::new(1),
+            bound_array_buffer: RefCell::new(0),
+            bound_framebuffer: RefCell::new(0),
         })
+    }
+
+    pub fn next_object_id(&self) -> u32 {
+        let id = *self.next_object_id.borrow();
+        *self.next_object_id.borrow_mut() = id + 1;
+        id
     }
 }
 
@@ -96,11 +111,13 @@ impl<'a> std::ops::Drop for VertexArrayObject<'a> {
 
 pub struct ArrayBuffer<'a> {
     ctx: &'a Context,
+    id: u32,
     buffer: web_sys::WebGlBuffer,
 }
 
 impl<'a> std::ops::Drop for ArrayBuffer<'a> {
     fn drop(&mut self) {
+        self.assert_unbound();
         log::debug!("deleting buffer (not really)");
         // TODO: enable delete once app structure is sorted out.
         //self.ctx.gl.delete_buffer(Some(&self.buffer));
@@ -113,11 +130,12 @@ impl<'a> ArrayBuffer<'a> {
             .gl
             .create_buffer()
             .ok_or_else(|| JsValue::from_str("create_buffer vbo_vertices error"))?;
-        Ok(ArrayBuffer { ctx, buffer })
+        let id = ctx.next_object_id();
+        Ok(ArrayBuffer { ctx, id, buffer })
     }
 
     pub fn bind(&mut self) -> &mut Self {
-        // TODO: track binding and debug_assert
+        self.assert_unbound_and_bind();
         self.ctx.gl.bind_buffer(
             web_sys::WebGlRenderingContext::ARRAY_BUFFER,
             Some(&self.buffer),
@@ -126,12 +144,14 @@ impl<'a> ArrayBuffer<'a> {
     }
 
     pub fn unbind(&mut self) {
+        self.assert_bound_and_unbind();
         self.ctx
             .gl
             .bind_buffer(web_sys::WebGlRenderingContext::ARRAY_BUFFER, None);
     }
 
     pub fn set_buffer_data(&mut self, data: &[f32]) -> &mut Self {
+        self.assert_bound();
         unsafe {
             let view = js_sys::Float32Array::view(data);
             self.ctx.gl.buffer_data_with_array_buffer_view(
@@ -144,6 +164,7 @@ impl<'a> ArrayBuffer<'a> {
     }
 
     pub fn set_vertex_attribute_pointer_vec3(&mut self, attribute: &Attribute) -> &mut Self {
+        self.assert_bound();
         self.ctx.gl.vertex_attrib_pointer_with_i32(
             attribute.location,
             3,
@@ -156,6 +177,7 @@ impl<'a> ArrayBuffer<'a> {
     }
 
     pub fn set_vertex_attribute_pointer_mat4(&mut self, attribute: &Attribute) -> &mut Self {
+        self.assert_bound();
         for i in 0..=3 {
             self.ctx.gl.vertex_attrib_pointer_with_i32(
                 attribute.location + i,
@@ -174,12 +196,31 @@ impl<'a> ArrayBuffer<'a> {
         attribute: &Attribute,
         divisor: usize,
     ) -> &mut Self {
+        self.assert_bound();
         for i in 0..=3 {
             self.ctx
                 .instanced_arrays_ext
                 .vertex_attrib_divisor_angle(attribute.location + i, divisor as u32);
         }
         self
+    }
+
+    fn assert_bound(&self) {
+        assert_eq!(*self.ctx.bound_array_buffer.borrow(), self.id);
+    }
+
+    fn assert_bound_and_unbind(&mut self) {
+        assert_eq!(*self.ctx.bound_array_buffer.borrow(), self.id);
+        *self.ctx.bound_array_buffer.borrow_mut() = 0;
+    }
+
+    fn assert_unbound(&self) {
+        assert_ne!(*self.ctx.bound_array_buffer.borrow(), self.id);
+    }
+
+    fn assert_unbound_and_bind(&mut self) {
+        assert_ne!(*self.ctx.bound_array_buffer.borrow(), self.id);
+        *self.ctx.bound_array_buffer.borrow_mut() = self.id;
     }
 }
 
@@ -357,5 +398,86 @@ impl<'a> std::ops::Drop for Shader<'a> {
     fn drop(&mut self) {
         log::debug!("deleting shader");
         self.ctx.gl.delete_shader(Some(&self.shader));
+    }
+}
+
+pub struct Framebuffer<'a> {
+    ctx: &'a Context,
+    id: u32,
+    buffer: web_sys::WebGlFramebuffer,
+}
+
+impl<'a> Framebuffer<'a> {
+    pub fn create(ctx: &'a Context) -> Result<Self, JsValue> {
+        let buffer = ctx
+            .gl
+            .create_framebuffer()
+            .ok_or_else(|| JsValue::from_str("create_framebuffer error"))?;
+        let id = ctx.next_object_id();
+        Ok(Framebuffer { ctx, id, buffer })
+    }
+
+    pub fn bind(&mut self) {
+        self.assert_unbound_and_bind();
+        self.ctx.gl.bind_framebuffer(
+            web_sys::WebGlRenderingContext::FRAMEBUFFER,
+            Some(&self.buffer),
+        )
+    }
+
+    pub fn unbind(&mut self) {
+        self.assert_bound_and_unbind();
+        self.ctx
+            .gl
+            .bind_framebuffer(web_sys::WebGlRenderingContext::FRAMEBUFFER, None)
+    }
+
+    pub fn check_status(&self) -> u32 {
+        self.assert_bound();
+        self.ctx
+            .gl
+            .check_framebuffer_status(web_sys::WebGlRenderingContext::FRAMEBUFFER)
+    }
+
+    pub fn read_pixels(
+        &self,
+        x: i32,
+        y: i32,
+        width: i32,
+        height: i32,
+        format: u32,
+        type_: u32,
+        pixels: &mut [u8],
+    ) -> Result<(), JsValue> {
+        self.assert_bound();
+        self.ctx
+            .gl
+            .read_pixels_with_opt_u8_array(x, y, width, height, format, type_, Some(pixels))
+    }
+
+    fn assert_bound(&self) {
+        assert_eq!(*self.ctx.bound_framebuffer.borrow(), self.id);
+    }
+
+    fn assert_bound_and_unbind(&mut self) {
+        assert_eq!(*self.ctx.bound_framebuffer.borrow(), self.id);
+        *self.ctx.bound_framebuffer.borrow_mut() = 0;
+    }
+
+    fn assert_unbound(&self) {
+        assert_ne!(*self.ctx.bound_framebuffer.borrow(), self.id);
+    }
+
+    fn assert_unbound_and_bind(&mut self) {
+        assert_ne!(*self.ctx.bound_framebuffer.borrow(), self.id);
+        *self.ctx.bound_framebuffer.borrow_mut() = self.id;
+    }
+}
+
+impl<'a> std::ops::Drop for Framebuffer<'a> {
+    fn drop(&mut self) {
+        self.assert_unbound();
+        log::debug!("deleting framebuffer");
+        self.ctx.gl.delete_framebuffer(Some(&self.buffer));
     }
 }

@@ -33,6 +33,7 @@ features = [
   'Window',
   # WebGL
   'WebGlBuffer',
+  'WebGlFramebuffer',
   'WebGlProgram',
   'WebGlRenderingContext',
   'WebGlShader',
