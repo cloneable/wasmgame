@@ -140,8 +140,9 @@ impl engine::Renderer for Game {
     }
 }
 
-impl engine::OnClickEventHandler for Game {
-    fn on_click(&mut self, millis: f64, event: &web_sys::MouseEvent) {
+// TODO: use const generic for event type name.
+impl engine::EventHandler<web_sys::MouseEvent> for Game {
+    fn handle(&mut self, millis: f64, event: &web_sys::MouseEvent) {
         // TODO: Experiment with a #[wasm_bindgen(inline_js) function
         //       that does most calls in JS.
         let r = event

@@ -54,16 +54,16 @@ impl Engine {
         })
     }
 
-    pub fn register_on_click_event_listener(
+    pub fn register_event_handler<T: wasm_bindgen::JsCast + 'static>(
         self: &Rc<Self>,
-        listener: Rc<RefCell<dyn OnClickEventHandler>>,
+        type_: &'static str,
+        listener: Rc<RefCell<dyn EventHandler<T>>>,
     ) -> Result<(), JsValue> {
         let c = Rc::new(RefCell::new(Closure::wrap(
             Box::new(move |event: &web_sys::Event| {
-                listener.borrow_mut().on_click(
-                    event.time_stamp(),
-                    event.dyn_ref::<web_sys::MouseEvent>().unwrap(),
-                );
+                listener
+                    .borrow_mut()
+                    .handle(event.time_stamp(), event.dyn_ref::<T>().unwrap());
             }) as Box<dyn FnMut(&web_sys::Event) + 'static>,
         )));
         {
@@ -73,7 +73,7 @@ impl Engine {
                 .canvas()
                 .unwrap()
                 .unchecked_ref::<web_sys::HtmlCanvasElement>()
-                .add_event_listener_with_callback("click", handler.as_ref().unchecked_ref())?;
+                .add_event_listener_with_callback(type_, handler.as_ref().unchecked_ref())?;
         }
         self.callbacks.borrow_mut().push(c.clone());
         Ok(())
@@ -111,8 +111,8 @@ impl Engine {
     }
 }
 
-pub trait OnClickEventHandler {
-    fn on_click(&mut self, millis: f64, event: &web_sys::MouseEvent);
+pub trait EventHandler<T: wasm_bindgen::JsCast + 'static> {
+    fn handle(&mut self, millis: f64, event: &T);
 }
 
 pub type EventCallback = Closure<dyn FnMut(&web_sys::Event) + 'static>;

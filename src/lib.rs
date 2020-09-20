@@ -60,7 +60,7 @@ impl Console {
     pub fn start(&mut self) -> Result<(), JsValue> {
         log::info!("wasmgame starting");
         self.engine
-            .register_on_click_event_listener(self.game.clone())?;
+            .register_event_handler("click", self.game.clone())?;
         self.engine.start()
     }
 }
