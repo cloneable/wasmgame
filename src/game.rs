@@ -14,6 +14,7 @@ use crate::engine;
 use std::result::{Result, Result::Ok};
 use std::time::Duration;
 
+use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 
 use engine::math::Mat4;
@@ -136,5 +137,20 @@ impl engine::Renderer for Game {
 
     fn done(&self) -> bool {
         self.last_render >= Duration::from_secs(3)
+    }
+}
+
+impl engine::OnClickEventHandler for Game {
+    fn on_click(&mut self, millis: f64, event: &web_sys::MouseEvent) {
+        // TODO: Experiment with a #[wasm_bindgen(inline_js) function
+        //       that does most calls in JS.
+        let r = event
+            .target()
+            .unwrap()
+            .unchecked_ref::<web_sys::Element>()
+            .get_bounding_client_rect();
+        let x = event.client_x() - r.left() as i32;
+        let y = event.client_y() - r.top() as i32;
+        log::debug!("Clicked at {}: {},{}", millis, x, y);
     }
 }

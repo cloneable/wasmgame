@@ -34,20 +34,15 @@ pub fn wasm_main() -> Result<(), JsValue> {
 
 #[wasm_bindgen]
 pub struct Console {
+    engine: Rc<engine::Engine>,
     game: Rc<RefCell<Game>>,
 }
 
 #[wasm_bindgen]
 impl Console {
     #[wasm_bindgen(constructor)]
-    pub fn new() -> Self {
-        let game = Rc::new(RefCell::new(Game::new()));
-        Console { game }
-    }
-
-    pub fn start(&self) -> Result<(), JsValue> {
+    pub fn new() -> Result<Console, JsValue> {
         log::info!("wasmgame loading");
-
         let window = web_sys::window().expect("cannot get window object");
         let document = window.document().expect("cannot get document object");
         let canvas = document
@@ -57,8 +52,15 @@ impl Console {
             .expect("element not of type canvas");
 
         let ctx = Context::from_canvas(&canvas)?;
-        let e = engine::Engine::new(ctx, self.game.clone());
+        let game = Rc::new(RefCell::new(Game::new()));
+        let engine = engine::Engine::new(ctx, game.clone());
+        Ok(Console { engine, game })
+    }
+
+    pub fn start(&mut self) -> Result<(), JsValue> {
         log::info!("wasmgame starting");
-        e.start()
+        self.engine
+            .register_on_click_event_listener(self.game.clone())?;
+        self.engine.start()
     }
 }

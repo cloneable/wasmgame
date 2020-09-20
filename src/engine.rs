@@ -5,8 +5,8 @@ extern crate wasm_bindgen;
 extern crate wasm_bindgen_futures;
 extern crate web_sys;
 
-pub mod opengl;
 pub mod math;
+pub mod opengl;
 pub mod scene;
 pub mod util;
 
@@ -18,6 +18,7 @@ use std::ops::FnMut;
 use std::option::{Option, Option::None, Option::Some};
 use std::rc::Rc;
 use std::result::{Result, Result::Ok};
+use std::vec::Vec;
 
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
@@ -41,14 +42,44 @@ fn request_animation_frame_helper(callback: Option<&RequestAnimationFrameCallbac
 pub struct Engine {
     pub ctx: opengl::Context,
     renderer: Rc<RefCell<dyn Renderer>>,
+    callbacks: RefCell<Vec<Rc<RefCell<EventCallback>>>>,
 }
 
 impl Engine {
     pub fn new(ctx: opengl::Context, renderer: Rc<RefCell<dyn Renderer>>) -> Rc<Self> {
-        Rc::new(Self { ctx, renderer })
+        Rc::new(Engine {
+            ctx,
+            renderer,
+            callbacks: RefCell::new(Vec::new()),
+        })
     }
 
-    pub fn start(self: Rc<Self>) -> Result<(), JsValue> {
+    pub fn register_on_click_event_listener(
+        self: &Rc<Self>,
+        listener: Rc<RefCell<dyn OnClickEventHandler>>,
+    ) -> Result<(), JsValue> {
+        let c = Rc::new(RefCell::new(Closure::wrap(
+            Box::new(move |event: &web_sys::Event| {
+                listener.borrow_mut().on_click(
+                    event.time_stamp(),
+                    event.dyn_ref::<web_sys::MouseEvent>().unwrap(),
+                );
+            }) as Box<dyn FnMut(&web_sys::Event) + 'static>,
+        )));
+        {
+            let handler = c.as_ref().borrow();
+            self.ctx
+                .gl
+                .canvas()
+                .unwrap()
+                .unchecked_ref::<web_sys::HtmlCanvasElement>()
+                .add_event_listener_with_callback("click", handler.as_ref().unchecked_ref())?;
+        }
+        self.callbacks.borrow_mut().push(c.clone());
+        Ok(())
+    }
+
+    pub fn start(self: &Rc<Self>) -> Result<(), JsValue> {
         self.renderer.borrow_mut().setup(&self.ctx)?;
         // Part of this is taken from the wasm-bindgen guide.
         // This kinda works for now, but needs to be checked for
@@ -57,16 +88,18 @@ impl Engine {
         // TODO: See if there's a better/cleaner way to do this.
         let callback = Rc::new(RefCell::new(None as Option<RequestAnimationFrameCallback>));
         let c = callback.clone();
+        let self0 = self.clone();
         *callback.borrow_mut() = Some(Closure::wrap(Box::new(move |millis: f64| {
-            if self.renderer.borrow().done() {
+            if self0.renderer.borrow().done() {
                 let _ = c.borrow_mut().take();
                 log::info!("wasmgame ending");
                 return;
             }
 
-            self.renderer
+            self0
+                .renderer
                 .borrow_mut()
-                .render(&self.ctx, millis)
+                .render(&self0.ctx, millis)
                 .unwrap();
 
             let c0 = c.clone();
@@ -77,3 +110,9 @@ impl Engine {
         Ok(())
     }
 }
+
+pub trait OnClickEventHandler {
+    fn on_click(&mut self, millis: f64, event: &web_sys::MouseEvent);
+}
+
+pub type EventCallback = Closure<dyn FnMut(&web_sys::Event) + 'static>;
