@@ -120,3 +120,13 @@ pub trait EventHandler<T: wasm_bindgen::JsCast + 'static> {
 }
 
 pub type EventCallback = Closure<dyn FnMut(&web_sys::Event) + 'static>;
+
+pub mod attrib {
+    use crate::engine::opengl::Attribute;
+
+    pub const POSITION: Attribute = Attribute(0, 1);
+    pub const NORMAL: Attribute = Attribute(1, 1);
+    pub const INSTANCE_ID: Attribute = Attribute(3, 1);
+    pub const MODEL: Attribute = Attribute(4, 4);
+    pub const NORMALS: Attribute = Attribute(8, 4);
+}

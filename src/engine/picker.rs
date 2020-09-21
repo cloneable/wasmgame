@@ -6,20 +6,15 @@ use std::result::{Result, Result::Ok};
 
 use wasm_bindgen::JsValue;
 
+use super::attrib;
 use super::math::Mat4;
-use super::opengl::{
-    Attribute, Context, Program, Shader, ShaderType::Fragment, ShaderType::Vertex, Uniform,
-};
+use super::opengl::{Context, Program, Shader, ShaderType::Fragment, ShaderType::Vertex, Uniform};
 
 pub struct PickerProgram {
     program: Program,
 
     view: Uniform,
     projection: Uniform,
-
-    pub position: Attribute,
-    pub instance_id: Attribute,
-    pub model: Attribute,
 }
 
 impl PickerProgram {
@@ -33,9 +28,9 @@ impl PickerProgram {
         program.attach_shader(&vertex_shader);
         program.attach_shader(&fragment_shader);
 
-        let position = Attribute::bind(ctx, &program, 0, "position", 1)?;
-        let instance_id = Attribute::bind(ctx, &program, 3, "instance_id", 1)?;
-        let model = Attribute::bind(ctx, &program, 4, "model", 4)?;
+        attrib::POSITION.bind(ctx, &program, "position");
+        attrib::INSTANCE_ID.bind(ctx, &program, "instance_id");
+        attrib::MODEL.bind(ctx, &program, "model");
 
         program.link()?;
 
@@ -46,9 +41,6 @@ impl PickerProgram {
             program,
             view,
             projection,
-            position,
-            instance_id,
-            model,
         })
     }
 

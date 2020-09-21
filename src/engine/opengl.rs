@@ -176,10 +176,10 @@ impl ArrayBuffer {
         self
     }
 
-    pub fn set_vertex_attribute_pointer_vec3(&mut self, attribute: &Attribute) -> &mut Self {
+    pub fn set_vertex_attribute_pointer_vec3(&mut self, attribute: Attribute) -> &mut Self {
         self.assert_bound();
         self.ctx.gl.vertex_attrib_pointer_with_i32(
-            attribute.location,
+            attribute.0,
             3,
             web_sys::WebGlRenderingContext::FLOAT,
             false,
@@ -189,11 +189,11 @@ impl ArrayBuffer {
         self
     }
 
-    pub fn set_vertex_attribute_pointer_mat4(&mut self, attribute: &Attribute) -> &mut Self {
+    pub fn set_vertex_attribute_pointer_mat4(&mut self, attribute: Attribute) -> &mut Self {
         self.assert_bound();
-        for i in 0..=3 {
+        for i in 0..attribute.1 {
             self.ctx.gl.vertex_attrib_pointer_with_i32(
-                attribute.location + i,
+                attribute.0 + i as u32,
                 4,
                 web_sys::WebGlRenderingContext::FLOAT,
                 false,
@@ -204,28 +204,12 @@ impl ArrayBuffer {
         self
     }
 
-    pub fn set_vertex_attrib_divisor(
-        &mut self,
-        attribute: &Attribute,
-        divisor: usize,
-    ) -> &mut Self {
+    pub fn set_vertex_attrib_divisor(&mut self, attribute: Attribute, divisor: usize) -> &mut Self {
         self.assert_bound();
-        self.ctx
-            .instanced_arrays_ext
-            .vertex_attrib_divisor_angle(attribute.location, divisor as u32);
-        self
-    }
-
-    pub fn set_vertex_attrib_divisor_mat4(
-        &mut self,
-        attribute: &Attribute,
-        divisor: usize,
-    ) -> &mut Self {
-        self.assert_bound();
-        for i in 0..=3 {
+        for i in 0..attribute.1 {
             self.ctx
                 .instanced_arrays_ext
-                .vertex_attrib_divisor_angle(attribute.location + i, divisor as u32);
+                .vertex_attrib_divisor_angle(attribute.0 + i as u32, divisor as u32);
         }
         self
     }
@@ -273,54 +257,23 @@ impl Uniform {
     }
 }
 
-pub struct Attribute {
-    ctx: Rc<Context>,
-    location: u32,
-    // TODO: use generic type instead of slots.
-    slots: usize,
-}
+#[derive(Copy, Clone)]
+pub struct Attribute(pub u32, pub usize);
 
 impl Attribute {
-    #[allow(dead_code)]
-    pub fn find<'b>(
-        ctx: &Rc<Context>,
-        program: &'b Program,
-        name: &str,
-        slots: usize,
-    ) -> Result<Self, JsValue> {
-        let location = ctx.gl.get_attrib_location(&program.program, name);
-        if location == -1 {
-            // TODO: add attribute name
-            return Err(JsValue::from_str("attribute not found"));
+    pub fn bind(&self, ctx: &Rc<Context>, program: &Program, name: &str) {
+        ctx.gl.bind_attrib_location(&program.program, self.0, name)
+    }
+
+    pub fn enable(&self, ctx: &Rc<Context>) {
+        for i in 0..self.1 {
+            ctx.gl.enable_vertex_attrib_array(self.0 + i as u32);
         }
-        Ok(Attribute {
-            ctx: ctx.clone(),
-            location: location as u32,
-            slots,
-        })
     }
 
-    pub fn bind<'a>(
-        ctx: &Rc<Context>,
-        program: &'a Program,
-        location: u32,
-        name: &str,
-        slots: usize,
-    ) -> Result<Self, JsValue> {
-        ctx.gl
-            .bind_attrib_location(&program.program, location, name);
-        Ok(Attribute {
-            ctx: ctx.clone(),
-            location,
-            slots,
-        })
-    }
-
-    pub fn enable(&mut self) {
-        for i in 0..self.slots {
-            self.ctx
-                .gl
-                .enable_vertex_attrib_array(self.location + i as u32);
+    pub fn disable(&self, ctx: &Rc<Context>) {
+        for i in 0..self.1 {
+            ctx.gl.disable_vertex_attrib_array(self.0 + i as u32);
         }
     }
 }

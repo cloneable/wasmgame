@@ -6,9 +6,10 @@ use std::result::{Result, Result::Ok};
 
 use wasm_bindgen::JsValue;
 
+use crate::engine::attrib;
 use crate::engine::math::Mat4;
 use crate::engine::opengl::{
-    Attribute, Context, Program, Shader, ShaderType::Fragment, ShaderType::Vertex, Uniform,
+    Context, Program, Shader, ShaderType::Fragment, ShaderType::Vertex, Uniform,
 };
 
 pub struct HexatileProgram {
@@ -16,11 +17,6 @@ pub struct HexatileProgram {
 
     view: Uniform,
     projection: Uniform,
-
-    pub position: Attribute,
-    pub normal: Attribute,
-    pub model: Attribute,
-    pub normals: Attribute,
 }
 
 impl HexatileProgram {
@@ -34,10 +30,10 @@ impl HexatileProgram {
         program.attach_shader(&vertex_shader);
         program.attach_shader(&fragment_shader);
 
-        let position = Attribute::bind(ctx, &program, 0, "position", 1)?;
-        let normal = Attribute::bind(ctx, &program, 1, "normal", 1)?;
-        let model = Attribute::bind(ctx, &program, 4, "model", 4)?;
-        let normals = Attribute::bind(ctx, &program, 8, "normals", 4)?;
+        attrib::POSITION.bind(ctx, &program, "position");
+        attrib::NORMAL.bind(ctx, &program, "normal");
+        attrib::MODEL.bind(ctx, &program, "model");
+        attrib::NORMALS.bind(ctx, &program, "normals");
 
         program.link()?;
 
@@ -48,10 +44,6 @@ impl HexatileProgram {
             program,
             view,
             projection,
-            position,
-            normal,
-            model,
-            normals,
         })
     }
 
