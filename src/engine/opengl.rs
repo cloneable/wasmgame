@@ -32,7 +32,7 @@ pub struct Context {
 impl Context {
     pub fn from_canvas(canvas: &web_sys::HtmlCanvasElement) -> Result<Self, JsValue> {
         let gl = canvas
-            .get_context("webgl")
+            .get_context_with_context_options("webgl", &web_sys::WebGlContextAttributes::new())
             .expect("getContext failed")
             .expect("unsupported context type")
             .dyn_into::<web_sys::WebGlRenderingContext>()
@@ -170,7 +170,7 @@ impl<'a> ArrayBuffer<'a> {
             3,
             web_sys::WebGlRenderingContext::FLOAT,
             false,
-            0,
+            3 * 4,
             0,
         );
         self
@@ -188,6 +188,18 @@ impl<'a> ArrayBuffer<'a> {
                 i as i32 * 4 * 4,
             );
         }
+        self
+    }
+
+    pub fn set_vertex_attrib_divisor(
+        &mut self,
+        attribute: &Attribute,
+        divisor: usize,
+    ) -> &mut Self {
+        self.assert_bound();
+        self.ctx
+            .instanced_arrays_ext
+            .vertex_attrib_divisor_angle(attribute.location, divisor as u32);
         self
     }
 
