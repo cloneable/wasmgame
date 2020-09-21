@@ -7,6 +7,7 @@ extern crate web_sys;
 
 pub mod math;
 pub mod opengl;
+pub mod picker;
 pub mod scene;
 pub mod util;
 
@@ -59,11 +60,12 @@ impl Engine {
         type_: &'static str,
         listener: Rc<RefCell<dyn EventHandler<T>>>,
     ) -> Result<(), JsValue> {
+        let self0 = self.clone();
         let c = Rc::new(RefCell::new(Closure::wrap(
             Box::new(move |event: &web_sys::Event| {
                 listener
                     .borrow_mut()
-                    .handle(event.time_stamp(), event.dyn_ref::<T>().unwrap());
+                    .handle(&self0.ctx, event.time_stamp(), event.dyn_ref::<T>().unwrap());
             }) as Box<dyn FnMut(&web_sys::Event) + 'static>,
         )));
         {
@@ -112,7 +114,7 @@ impl Engine {
 }
 
 pub trait EventHandler<T: wasm_bindgen::JsCast + 'static> {
-    fn handle(&mut self, millis: f64, event: &T);
+    fn handle(&mut self, ctx: &opengl::Context, millis: f64, event: &T);
 }
 
 pub type EventCallback = Closure<dyn FnMut(&web_sys::Event) + 'static>;

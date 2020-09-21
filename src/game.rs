@@ -11,6 +11,7 @@ extern crate web_sys;
 
 use crate::engine;
 
+use std::option::{Option::None, Option::Some};
 use std::result::{Result, Result::Ok};
 use std::time::Duration;
 
@@ -18,7 +19,9 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 
 use engine::math::Mat4;
-use engine::opengl::{ArrayBuffer, Context, VertexArrayObject};
+use engine::opengl::{
+    ArrayBuffer, Context, Framebuffer, Renderbuffer, Texture2D, VertexArrayObject,
+};
 use engine::scene::Camera;
 use engine::scene::Model;
 
@@ -64,9 +67,13 @@ impl engine::Renderer for Game {
 
         // ===== Program setup =====
 
+        let mut picker_program = engine::picker::PickerProgram::new(ctx)?;
+        picker_program.activate();
+        picker_program.set_view(cam.view_matrix());
+        picker_program.set_projection(cam.projection_matrix());
+
         let mut program = shaders::HexatileProgram::new(ctx)?;
         program.activate();
-
         program.set_view(cam.view_matrix());
         program.set_projection(cam.projection_matrix());
 
@@ -89,6 +96,12 @@ impl engine::Renderer for Game {
             .unbind();
         let _ = ArrayBuffer::create(ctx)?
             .bind()
+            .set_buffer_data(&hexatile.instance_id)
+            .set_vertex_attribute_pointer_vec3(&picker_program.instance_id)
+            .set_vertex_attrib_divisor(&picker_program.instance_id, 1)
+            .unbind();
+        let _ = ArrayBuffer::create(ctx)?
+            .bind()
             .set_buffer_data(&hexatile.instance_model_data)
             .set_vertex_attribute_pointer_mat4(&program.model)
             .set_vertex_attrib_divisor_mat4(&program.model, 1)
@@ -104,20 +117,53 @@ impl engine::Renderer for Game {
         program.normal.enable();
         program.model.enable();
         program.normals.enable();
+        picker_program.instance_id.enable();
 
         vao_hexatile.unbind();
 
+        let mut fb_colorbuffer = Texture2D::create(ctx)?;
+        fb_colorbuffer.bind();
+        fb_colorbuffer.tex_image_2d(400, 300, None)?;
+        fb_colorbuffer.unbind();
+
+        let mut fb_depthbuffer = Renderbuffer::create(ctx)?;
+        fb_depthbuffer.bind();
+        fb_depthbuffer.storage_for_depth(400, 300);
+        fb_depthbuffer.unbind();
+
+        let mut fb = Framebuffer::create(ctx)?;
+        fb.bind();
+        fb.texture2d_as_colorbuffer(&fb_colorbuffer);
+        fb.renderbuffer_as_depthbuffer(&fb_depthbuffer);
+        {
+            let fb_status = fb.check_status();
+            if fb_status != web_sys::WebGlRenderingContext::FRAMEBUFFER_COMPLETE {
+                log::error!("framebuffer incomplete: {}", fb_status)
+            }
+        }
+        fb.unbind();
+
         // clear
 
-        ctx.gl.clear_color(0.7, 0.7, 0.7, 1.0);
+        ctx.gl.clear_color(0.0, 0.0, 0.0, 0.0);
         ctx.gl
             .clear(web_sys::WebGlRenderingContext::COLOR_BUFFER_BIT);
 
         // draw
 
-        program.activate();
         vao_hexatile.bind();
 
+        picker_program.activate();
+        fb.bind();
+        ctx.instanced_arrays_ext.draw_arrays_instanced_angle(
+            web_sys::WebGlRenderingContext::TRIANGLES,
+            0,
+            hexatile.vertices.len() as i32 / 3,
+            hexatile.instances.len() as i32,
+        );
+        fb.unbind();
+
+        program.activate();
         ctx.instanced_arrays_ext.draw_arrays_instanced_angle(
             web_sys::WebGlRenderingContext::TRIANGLES,
             0,
@@ -126,6 +172,9 @@ impl engine::Renderer for Game {
         );
 
         vao_hexatile.unbind();
+
+        // TODO: for read_pixels.
+        //fb.bind();
 
         Ok(())
     }
@@ -142,7 +191,7 @@ impl engine::Renderer for Game {
 
 // TODO: use const generic for event type name.
 impl engine::EventHandler<web_sys::MouseEvent> for Game {
-    fn handle(&mut self, millis: f64, event: &web_sys::MouseEvent) {
+    fn handle(&mut self, ctx: &Context, millis: f64, event: &web_sys::MouseEvent) {
         // TODO: Experiment with a #[wasm_bindgen(inline_js) function
         //       that does most calls in JS.
         let r = event
@@ -152,6 +201,27 @@ impl engine::EventHandler<web_sys::MouseEvent> for Game {
             .get_bounding_client_rect();
         let x = event.client_x() - r.left() as i32;
         let y = event.client_y() - r.top() as i32;
-        log::debug!("Clicked at {}: {},{}", millis, x, y);
+        let rgba: &mut [u8] = &mut [0, 0, 0, 0];
+        ctx.gl
+            .read_pixels_with_opt_u8_array(
+                x,
+                r.height() as i32 - y,
+                1,
+                1,
+                web_sys::WebGlRenderingContext::RGBA,
+                web_sys::WebGlRenderingContext::UNSIGNED_BYTE,
+                Some(rgba),
+            )
+            .unwrap();
+        log::debug!(
+            "Clicked at {}: {},{}; rgba = {} {} {} {}",
+            millis,
+            x,
+            y,
+            rgba[0],
+            rgba[1],
+            rgba[2],
+            rgba[3]
+        );
     }
 }

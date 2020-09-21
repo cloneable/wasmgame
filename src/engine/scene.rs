@@ -78,6 +78,7 @@ pub struct Model {
     pub instances: Vec<Instance>,
 
     // TODO: make this more efficient
+    pub instance_id: Vec<f32>,
     pub instance_model_data: Vec<f32>,
     pub instance_normals_data: Vec<f32>,
 }
@@ -91,6 +92,7 @@ impl Model {
             vertices,
             normals,
             instances: Vec::new(),
+            instance_id: Vec::new(),
             instance_model_data: Vec::new(),
             instance_normals_data: Vec::new(),
         }
@@ -103,6 +105,7 @@ impl Model {
     pub fn update_normals(&mut self, camera: &Camera) {
         self.instance_model_data.clear();
         self.instance_normals_data.clear();
+        let mut i: i32 = 1;
         for instance in &mut self.instances {
             let mat_model_view = (camera.view_matrix() * &instance.model).to_3x3();
             instance.normals = match mat_model_view.invert() {
@@ -112,10 +115,14 @@ impl Model {
                     mat_model_view
                 }
             };
+            self.instance_id.push(i as f32 / 255.0);
+            self.instance_id.push(1.0);
+            self.instance_id.push(1.0);
             self.instance_model_data
                 .extend_from_slice(instance.model.slice());
             self.instance_normals_data
                 .extend_from_slice(instance.normals.slice());
+            i += 1;
         }
     }
 }
