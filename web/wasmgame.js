@@ -396,12 +396,27 @@ async function init(input) {
     imports.wbg.__wbg_bindFramebuffer_b19d5935fc47b348 = function(arg0, arg1, arg2) {
         getObject(arg0).bindFramebuffer(arg1 >>> 0, getObject(arg2));
     };
+    imports.wbg.__wbg_framebufferTexture2D_6c87f5db70715017 = function(arg0, arg1, arg2, arg3, arg4, arg5) {
+        getObject(arg0).framebufferTexture2D(arg1 >>> 0, arg2 >>> 0, arg3 >>> 0, getObject(arg4), arg5);
+    };
     imports.wbg.__wbg_deleteFramebuffer_dd72acd01947ff96 = function(arg0, arg1) {
         getObject(arg0).deleteFramebuffer(getObject(arg1));
+    };
+    imports.wbg.__wbg_bindRenderbuffer_82771447def5291d = function(arg0, arg1, arg2) {
+        getObject(arg0).bindRenderbuffer(arg1 >>> 0, getObject(arg2));
+    };
+    imports.wbg.__wbg_renderbufferStorage_8d6a514ce754ca3b = function(arg0, arg1, arg2, arg3, arg4) {
+        getObject(arg0).renderbufferStorage(arg1 >>> 0, arg2 >>> 0, arg3, arg4);
     };
     imports.wbg.__wbg_deleteRenderbuffer_5351ffe6acc8bb24 = function(arg0, arg1) {
         getObject(arg0).deleteRenderbuffer(getObject(arg1));
     };
+    imports.wbg.__wbg_bindTexture_c00656e6f0530ee7 = function(arg0, arg1, arg2) {
+        getObject(arg0).bindTexture(arg1 >>> 0, getObject(arg2));
+    };
+    imports.wbg.__wbg_texImage2D_8d677a54ab75452c = handleError(function(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10) {
+        getObject(arg0).texImage2D(arg1 >>> 0, arg2, arg3, arg4, arg5, arg6, arg7 >>> 0, arg8 >>> 0, arg9 === 0 ? undefined : getArrayU8FromWasm0(arg9, arg10));
+    });
     imports.wbg.__wbg_deleteTexture_69cdd9674b9207ce = function(arg0, arg1) {
         getObject(arg0).deleteTexture(getObject(arg1));
     };
@@ -524,28 +539,13 @@ async function init(input) {
         var ret = getObject(arg0).createTexture();
         return isLikeNone(ret) ? 0 : addHeapObject(ret);
     };
-    imports.wbg.__wbg_bindTexture_c00656e6f0530ee7 = function(arg0, arg1, arg2) {
-        getObject(arg0).bindTexture(arg1 >>> 0, getObject(arg2));
-    };
-    imports.wbg.__wbg_texImage2D_8d677a54ab75452c = handleError(function(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10) {
-        getObject(arg0).texImage2D(arg1 >>> 0, arg2, arg3, arg4, arg5, arg6, arg7 >>> 0, arg8 >>> 0, arg9 === 0 ? undefined : getArrayU8FromWasm0(arg9, arg10));
-    });
     imports.wbg.__wbg_createRenderbuffer_3679a9bed32f5a48 = function(arg0) {
         var ret = getObject(arg0).createRenderbuffer();
         return isLikeNone(ret) ? 0 : addHeapObject(ret);
     };
-    imports.wbg.__wbg_bindRenderbuffer_82771447def5291d = function(arg0, arg1, arg2) {
-        getObject(arg0).bindRenderbuffer(arg1 >>> 0, getObject(arg2));
-    };
-    imports.wbg.__wbg_renderbufferStorage_8d6a514ce754ca3b = function(arg0, arg1, arg2, arg3, arg4) {
-        getObject(arg0).renderbufferStorage(arg1 >>> 0, arg2 >>> 0, arg3, arg4);
-    };
     imports.wbg.__wbg_createFramebuffer_07cd44b63bccc697 = function(arg0) {
         var ret = getObject(arg0).createFramebuffer();
         return isLikeNone(ret) ? 0 : addHeapObject(ret);
-    };
-    imports.wbg.__wbg_framebufferTexture2D_6c87f5db70715017 = function(arg0, arg1, arg2, arg3, arg4, arg5) {
-        getObject(arg0).framebufferTexture2D(arg1 >>> 0, arg2 >>> 0, arg3 >>> 0, getObject(arg4), arg5);
     };
     imports.wbg.__wbg_framebufferRenderbuffer_301e7f687f95779c = function(arg0, arg1, arg2, arg3, arg4) {
         getObject(arg0).framebufferRenderbuffer(arg1 >>> 0, arg2 >>> 0, arg3 >>> 0, getObject(arg4));
@@ -654,11 +654,11 @@ async function init(input) {
     imports.wbg.__wbg_addEventListener_9e7b0c3f65ebc0d7 = handleError(function(arg0, arg1, arg2, arg3) {
         getObject(arg0).addEventListener(getStringFromWasm0(arg1, arg2), getObject(arg3));
     });
-    imports.wbg.__wbindgen_closure_wrapper675 = function(arg0, arg1, arg2) {
+    imports.wbg.__wbindgen_closure_wrapper683 = function(arg0, arg1, arg2) {
         var ret = makeMutClosure(arg0, arg1, 32, __wbg_adapter_22);
         return addHeapObject(ret);
     };
-    imports.wbg.__wbindgen_closure_wrapper676 = function(arg0, arg1, arg2) {
+    imports.wbg.__wbindgen_closure_wrapper684 = function(arg0, arg1, arg2) {
         var ret = makeMutClosure(arg0, arg1, 32, __wbg_adapter_25);
         return addHeapObject(ret);
     };
