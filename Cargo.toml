@@ -39,6 +39,7 @@ features = [
   'WebGlRenderbuffer',
   'WebGlRenderingContext',
   'WebGlShader',
+  'WebGlTexture',
   'WebGlUniformLocation',
   'WebGlVertexArrayObject',
   # WebGL extensions

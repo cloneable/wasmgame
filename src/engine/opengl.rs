@@ -8,7 +8,7 @@ extern crate web_sys;
 use std::cell::RefCell;
 use std::convert::From;
 use std::convert::Into;
-use std::option::{Option::None, Option::Some};
+use std::option::{Option, Option::None, Option::Some};
 use std::result::{Result, Result::Err, Result::Ok};
 use std::string::String;
 use std::{assert_eq, assert_ne, panic};
@@ -28,6 +28,7 @@ pub struct Context {
     bound_array_buffer: RefCell<u32>,
     bound_framebuffer: RefCell<u32>,
     bound_renderbuffer: RefCell<u32>,
+    bound_texture: RefCell<u32>,
 }
 
 impl Context {
@@ -64,6 +65,7 @@ impl Context {
             bound_array_buffer: RefCell::new(0),
             bound_framebuffer: RefCell::new(0),
             bound_renderbuffer: RefCell::new(0),
+            bound_texture: RefCell::new(0),
         })
     }
 
@@ -453,13 +455,14 @@ impl<'a> Framebuffer<'a> {
             .check_framebuffer_status(web_sys::WebGlRenderingContext::FRAMEBUFFER)
     }
 
-    pub fn renderbuffer_as_colorbuffer(&mut self, buffer: &Renderbuffer) {
+    pub fn texture2d_as_colorbuffer(&mut self, texture: &Texture2D) {
         self.assert_bound();
-        self.ctx.gl.framebuffer_renderbuffer(
+        self.ctx.gl.framebuffer_texture_2d(
             web_sys::WebGlRenderingContext::FRAMEBUFFER,
             web_sys::WebGlRenderingContext::COLOR_ATTACHMENT0,
-            web_sys::WebGlRenderingContext::RENDERBUFFER,
-            Some(&buffer.buffer),
+            web_sys::WebGlRenderingContext::TEXTURE_2D,
+            Some(&texture.texture),
+            0,
         )
     }
 
@@ -547,16 +550,6 @@ impl<'a> Renderbuffer<'a> {
             .bind_renderbuffer(web_sys::WebGlRenderingContext::RENDERBUFFER, None)
     }
 
-    pub fn storage_for_color(&mut self, width: i32, height: i32) {
-        self.assert_bound();
-        self.ctx.gl.renderbuffer_storage(
-            web_sys::WebGlRenderingContext::RENDERBUFFER,
-            web_sys::WebGlRenderingContext::RGBA4,
-            width,
-            height,
-        )
-    }
-
     pub fn storage_for_depth(&mut self, width: i32, height: i32) {
         self.assert_bound();
         self.ctx.gl.renderbuffer_storage(
@@ -591,5 +584,85 @@ impl<'a> std::ops::Drop for Renderbuffer<'a> {
         self.assert_unbound();
         log::debug!("deleting renderbuffer");
         self.ctx.gl.delete_renderbuffer(Some(&self.buffer));
+    }
+}
+
+pub struct Texture2D<'a> {
+    ctx: &'a Context,
+    id: u32,
+    texture: web_sys::WebGlTexture,
+}
+
+impl<'a> Texture2D<'a> {
+    pub fn create(ctx: &'a Context) -> Result<Self, JsValue> {
+        let texture = ctx
+            .gl
+            .create_texture()
+            .ok_or_else(|| JsValue::from_str("create_texture error"))?;
+        let id = ctx.next_object_id();
+        Ok(Texture2D { ctx, id, texture })
+    }
+
+    pub fn bind(&mut self) {
+        self.assert_unbound_and_bind();
+        self.ctx.gl.bind_texture(
+            web_sys::WebGlRenderingContext::TEXTURE_2D,
+            Some(&self.texture),
+        )
+    }
+
+    pub fn unbind(&mut self) {
+        self.assert_bound_and_unbind();
+        self.ctx
+            .gl
+            .bind_texture(web_sys::WebGlRenderingContext::TEXTURE_2D, None)
+    }
+
+    pub fn tex_image_2d(
+        &mut self,
+        width: i32,
+        height: i32,
+        pixels: Option<&[u8]>,
+    ) -> Result<(), JsValue> {
+        self.assert_bound();
+        self.ctx
+            .gl
+            .tex_image_2d_with_i32_and_i32_and_i32_and_format_and_type_and_opt_u8_array(
+                web_sys::WebGlRenderingContext::TEXTURE_2D,
+                0,
+                web_sys::WebGlRenderingContext::RGBA as i32,
+                width,
+                height,
+                0,
+                web_sys::WebGlRenderingContext::RGBA,
+                web_sys::WebGlRenderingContext::UNSIGNED_BYTE,
+                pixels,
+            )
+    }
+
+    fn assert_bound(&self) {
+        assert_eq!(*self.ctx.bound_texture.borrow(), self.id);
+    }
+
+    fn assert_bound_and_unbind(&mut self) {
+        assert_eq!(*self.ctx.bound_texture.borrow(), self.id);
+        *self.ctx.bound_texture.borrow_mut() = 0;
+    }
+
+    fn assert_unbound(&self) {
+        assert_ne!(*self.ctx.bound_texture.borrow(), self.id);
+    }
+
+    fn assert_unbound_and_bind(&mut self) {
+        assert_ne!(*self.ctx.bound_texture.borrow(), self.id);
+        *self.ctx.bound_texture.borrow_mut() = self.id;
+    }
+}
+
+impl<'a> std::ops::Drop for Texture2D<'a> {
+    fn drop(&mut self) {
+        self.assert_unbound();
+        log::debug!("deleting texture");
+        self.ctx.gl.delete_texture(Some(&self.texture));
     }
 }
