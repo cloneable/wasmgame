@@ -32,10 +32,10 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new() -> Self {
-        Self {
+    pub fn new(ctx: &Rc<Context>) -> Result<Self, JsValue> {
+        Ok(Self {
             last_render: Duration::from_secs(0),
-        }
+        })
     }
 }
 

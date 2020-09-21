@@ -51,9 +51,9 @@ impl Console {
             .dyn_into::<web_sys::HtmlCanvasElement>()
             .expect("element not of type canvas");
 
-        let ctx = Context::from_canvas(&canvas)?;
-        let game = Rc::new(RefCell::new(Game::new()));
-        let engine = engine::Engine::new(ctx, game.clone());
+        let ctx = Rc::new(Context::from_canvas(&canvas)?);
+        let game = Rc::new(RefCell::new(Game::new(&ctx)?));
+        let engine = engine::Engine::new(&ctx, game.clone());
         Ok(Console { engine, game })
     }
 

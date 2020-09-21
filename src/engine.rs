@@ -47,9 +47,9 @@ pub struct Engine {
 }
 
 impl Engine {
-    pub fn new(ctx: opengl::Context, renderer: Rc<RefCell<dyn Renderer>>) -> Rc<Self> {
+    pub fn new(ctx: &Rc<opengl::Context>, renderer: Rc<RefCell<dyn Renderer>>) -> Rc<Self> {
         Rc::new(Engine {
-            ctx: Rc::new(ctx),
+            ctx: ctx.clone(),
             renderer,
             callbacks: RefCell::new(Vec::new()),
         })
