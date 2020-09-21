@@ -6,9 +6,11 @@ extern crate wasm_bindgen_futures;
 extern crate web_sys;
 
 use std::cell::RefCell;
+use std::clone::Clone;
 use std::convert::From;
 use std::convert::Into;
 use std::option::{Option, Option::None, Option::Some};
+use std::rc::Rc;
 use std::result::{Result, Result::Err, Result::Ok};
 use std::string::String;
 use std::{assert_eq, assert_ne, panic};
@@ -76,18 +78,21 @@ impl Context {
     }
 }
 
-pub struct VertexArrayObject<'a> {
-    ctx: &'a Context,
+pub struct VertexArrayObject {
+    ctx: Rc<Context>,
     vao: web_sys::WebGlVertexArrayObject,
 }
 
-impl<'a> VertexArrayObject<'a> {
-    pub fn create(ctx: &'a Context) -> Result<Self, JsValue> {
+impl VertexArrayObject {
+    pub fn create(ctx: &Rc<Context>) -> Result<Self, JsValue> {
         let vao = ctx
             .vertex_array_object_ext
             .create_vertex_array_oes()
             .ok_or_else(|| JsValue::from_str("create_vertex_array_oes vao error"))?;
-        Ok(VertexArrayObject { ctx, vao })
+        Ok(VertexArrayObject {
+            ctx: ctx.clone(),
+            vao,
+        })
     }
 
     pub fn bind(&mut self) -> &mut Self {
@@ -104,7 +109,7 @@ impl<'a> VertexArrayObject<'a> {
     }
 }
 
-impl<'a> std::ops::Drop for VertexArrayObject<'a> {
+impl std::ops::Drop for VertexArrayObject {
     fn drop(&mut self) {
         log::debug!("deleting vao");
         self.ctx
@@ -113,13 +118,13 @@ impl<'a> std::ops::Drop for VertexArrayObject<'a> {
     }
 }
 
-pub struct ArrayBuffer<'a> {
-    ctx: &'a Context,
+pub struct ArrayBuffer {
+    ctx: Rc<Context>,
     id: u32,
     buffer: web_sys::WebGlBuffer,
 }
 
-impl<'a> std::ops::Drop for ArrayBuffer<'a> {
+impl std::ops::Drop for ArrayBuffer {
     fn drop(&mut self) {
         self.assert_unbound();
         log::debug!("deleting buffer (not really)");
@@ -128,14 +133,18 @@ impl<'a> std::ops::Drop for ArrayBuffer<'a> {
     }
 }
 
-impl<'a> ArrayBuffer<'a> {
-    pub fn create(ctx: &'a Context) -> Result<Self, JsValue> {
+impl ArrayBuffer {
+    pub fn create(ctx: &Rc<Context>) -> Result<Self, JsValue> {
         let buffer = ctx
             .gl
             .create_buffer()
             .ok_or_else(|| JsValue::from_str("create_buffer vbo_vertices error"))?;
         let id = ctx.next_object_id();
-        Ok(ArrayBuffer { ctx, id, buffer })
+        Ok(ArrayBuffer {
+            ctx: ctx.clone(),
+            id,
+            buffer,
+        })
     }
 
     pub fn bind(&mut self) -> &mut Self {
@@ -240,18 +249,21 @@ impl<'a> ArrayBuffer<'a> {
     }
 }
 
-pub struct Uniform<'a> {
-    ctx: &'a Context,
+pub struct Uniform {
+    ctx: Rc<Context>,
     location: web_sys::WebGlUniformLocation,
 }
 
-impl<'a> Uniform<'a> {
-    pub fn find<'b>(ctx: &'a Context, program: &'b Program, name: &str) -> Result<Self, JsValue> {
+impl Uniform {
+    pub fn find<'b>(ctx: &Rc<Context>, program: &'b Program, name: &str) -> Result<Self, JsValue> {
         let location = ctx
             .gl
             .get_uniform_location(&program.program, name)
             .ok_or_else(|| JsValue::from_str("get_uniform_location error: view"))?;
-        Ok(Uniform { ctx, location })
+        Ok(Uniform {
+            ctx: ctx.clone(),
+            location,
+        })
     }
 
     pub fn set_mat4(&mut self, data: &[f32]) {
@@ -261,17 +273,17 @@ impl<'a> Uniform<'a> {
     }
 }
 
-pub struct Attribute<'a> {
-    ctx: &'a Context,
+pub struct Attribute {
+    ctx: Rc<Context>,
     location: u32,
     // TODO: use generic type instead of slots.
     slots: usize,
 }
 
-impl<'a> Attribute<'a> {
+impl Attribute {
     #[allow(dead_code)]
     pub fn find<'b>(
-        ctx: &'a Context,
+        ctx: &Rc<Context>,
         program: &'b Program,
         name: &str,
         slots: usize,
@@ -282,15 +294,15 @@ impl<'a> Attribute<'a> {
             return Err(JsValue::from_str("attribute not found"));
         }
         Ok(Attribute {
-            ctx,
+            ctx: ctx.clone(),
             location: location as u32,
             slots,
         })
     }
 
-    pub fn bind<'b>(
-        ctx: &'a Context,
-        program: &'b Program,
+    pub fn bind<'a>(
+        ctx: &Rc<Context>,
+        program: &'a Program,
         location: u32,
         name: &str,
         slots: usize,
@@ -298,7 +310,7 @@ impl<'a> Attribute<'a> {
         ctx.gl
             .bind_attrib_location(&program.program, location, name);
         Ok(Attribute {
-            ctx,
+            ctx: ctx.clone(),
             location,
             slots,
         })
@@ -313,18 +325,21 @@ impl<'a> Attribute<'a> {
     }
 }
 
-pub struct Program<'a> {
-    ctx: &'a Context,
+pub struct Program {
+    ctx: Rc<Context>,
     pub program: web_sys::WebGlProgram,
 }
 
-impl<'a> Program<'a> {
-    pub fn create(ctx: &'a Context) -> Result<Self, JsValue> {
+impl Program {
+    pub fn create(ctx: &Rc<Context>) -> Result<Self, JsValue> {
         let program = ctx
             .gl
             .create_program()
             .ok_or_else(|| JsValue::from_str("Unable to create program object"))?;
-        Ok(Program { ctx, program })
+        Ok(Program {
+            ctx: ctx.clone(),
+            program,
+        })
     }
 
     pub fn attach_shader(&mut self, shader: &Shader) {
@@ -357,15 +372,15 @@ impl<'a> Program<'a> {
     }
 }
 
-impl<'a> std::ops::Drop for Program<'a> {
+impl<'a> std::ops::Drop for Program {
     fn drop(&mut self) {
         log::debug!("deleting program");
         self.ctx.gl.delete_program(Some(&self.program));
     }
 }
 
-pub struct Shader<'a> {
-    ctx: &'a Context,
+pub struct Shader {
+    ctx: Rc<Context>,
     shader: web_sys::WebGlShader,
 }
 
@@ -374,8 +389,8 @@ pub enum ShaderType {
     Fragment,
 }
 
-impl<'a> Shader<'a> {
-    pub fn create(ctx: &'a Context, type_: ShaderType) -> Result<Self, JsValue> {
+impl Shader {
+    pub fn create(ctx: &Rc<Context>, type_: ShaderType) -> Result<Self, JsValue> {
         let pt = match type_ {
             ShaderType::Vertex => web_sys::WebGlRenderingContext::VERTEX_SHADER,
             ShaderType::Fragment => web_sys::WebGlRenderingContext::FRAGMENT_SHADER,
@@ -384,7 +399,10 @@ impl<'a> Shader<'a> {
             .gl
             .create_shader(pt)
             .ok_or_else(|| JsValue::from_str("create_shader failed"))?;
-        Ok(Shader { ctx, shader })
+        Ok(Shader {
+            ctx: ctx.clone(),
+            shader,
+        })
     }
 
     pub fn compile_source(&mut self, glsl: &str) -> Result<(), JsValue> {
@@ -410,27 +428,31 @@ impl<'a> Shader<'a> {
     }
 }
 
-impl<'a> std::ops::Drop for Shader<'a> {
+impl std::ops::Drop for Shader {
     fn drop(&mut self) {
         log::debug!("deleting shader");
         self.ctx.gl.delete_shader(Some(&self.shader));
     }
 }
 
-pub struct Framebuffer<'a> {
-    ctx: &'a Context,
+pub struct Framebuffer {
+    ctx: Rc<Context>,
     id: u32,
     buffer: web_sys::WebGlFramebuffer,
 }
 
-impl<'a> Framebuffer<'a> {
-    pub fn create(ctx: &'a Context) -> Result<Self, JsValue> {
+impl Framebuffer {
+    pub fn create(ctx: &Rc<Context>) -> Result<Self, JsValue> {
         let buffer = ctx
             .gl
             .create_framebuffer()
             .ok_or_else(|| JsValue::from_str("create_framebuffer error"))?;
         let id = ctx.next_object_id();
-        Ok(Framebuffer { ctx, id, buffer })
+        Ok(Framebuffer {
+            ctx: ctx.clone(),
+            id,
+            buffer,
+        })
     }
 
     pub fn bind(&mut self) {
@@ -511,7 +533,7 @@ impl<'a> Framebuffer<'a> {
     }
 }
 
-impl<'a> std::ops::Drop for Framebuffer<'a> {
+impl std::ops::Drop for Framebuffer {
     fn drop(&mut self) {
         self.assert_unbound();
         log::debug!("deleting framebuffer");
@@ -519,20 +541,24 @@ impl<'a> std::ops::Drop for Framebuffer<'a> {
     }
 }
 
-pub struct Renderbuffer<'a> {
-    ctx: &'a Context,
+pub struct Renderbuffer {
+    ctx: Rc<Context>,
     id: u32,
     buffer: web_sys::WebGlRenderbuffer,
 }
 
-impl<'a> Renderbuffer<'a> {
-    pub fn create(ctx: &'a Context) -> Result<Self, JsValue> {
+impl Renderbuffer {
+    pub fn create(ctx: &Rc<Context>) -> Result<Self, JsValue> {
         let buffer = ctx
             .gl
             .create_renderbuffer()
             .ok_or_else(|| JsValue::from_str("create_renderbuffer error"))?;
         let id = ctx.next_object_id();
-        Ok(Renderbuffer { ctx, id, buffer })
+        Ok(Renderbuffer {
+            ctx: ctx.clone(),
+            id,
+            buffer,
+        })
     }
 
     pub fn bind(&mut self) {
@@ -579,7 +605,7 @@ impl<'a> Renderbuffer<'a> {
     }
 }
 
-impl<'a> std::ops::Drop for Renderbuffer<'a> {
+impl<'a> std::ops::Drop for Renderbuffer {
     fn drop(&mut self) {
         self.assert_unbound();
         log::debug!("deleting renderbuffer");
@@ -587,20 +613,24 @@ impl<'a> std::ops::Drop for Renderbuffer<'a> {
     }
 }
 
-pub struct Texture2D<'a> {
-    ctx: &'a Context,
+pub struct Texture2D {
+    ctx: Rc<Context>,
     id: u32,
     texture: web_sys::WebGlTexture,
 }
 
-impl<'a> Texture2D<'a> {
-    pub fn create(ctx: &'a Context) -> Result<Self, JsValue> {
+impl Texture2D {
+    pub fn create(ctx: &Rc<Context>) -> Result<Self, JsValue> {
         let texture = ctx
             .gl
             .create_texture()
             .ok_or_else(|| JsValue::from_str("create_texture error"))?;
         let id = ctx.next_object_id();
-        Ok(Texture2D { ctx, id, texture })
+        Ok(Texture2D {
+            ctx: ctx.clone(),
+            id,
+            texture,
+        })
     }
 
     pub fn bind(&mut self) {
@@ -659,7 +689,7 @@ impl<'a> Texture2D<'a> {
     }
 }
 
-impl<'a> std::ops::Drop for Texture2D<'a> {
+impl std::ops::Drop for Texture2D {
     fn drop(&mut self) {
         self.assert_unbound();
         log::debug!("deleting texture");

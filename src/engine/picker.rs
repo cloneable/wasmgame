@@ -1,26 +1,29 @@
 extern crate std;
 extern crate wasm_bindgen;
 
+use std::rc::Rc;
+use std::result::{Result, Result::Ok};
+
+use wasm_bindgen::JsValue;
+
 use super::math::Mat4;
 use super::opengl::{
     Attribute, Context, Program, Shader, ShaderType::Fragment, ShaderType::Vertex, Uniform,
 };
-use std::result::{Result, Result::Ok};
-use wasm_bindgen::JsValue;
 
-pub struct PickerProgram<'a> {
-    program: Program<'a>,
+pub struct PickerProgram {
+    program: Program,
 
-    view: Uniform<'a>,
-    projection: Uniform<'a>,
+    view: Uniform,
+    projection: Uniform,
 
-    pub position: Attribute<'a>,
-    pub instance_id: Attribute<'a>,
-    pub model: Attribute<'a>,
+    pub position: Attribute,
+    pub instance_id: Attribute,
+    pub model: Attribute,
 }
 
-impl<'a> PickerProgram<'a> {
-    pub fn new(ctx: &'a Context) -> Result<Self, JsValue> {
+impl PickerProgram {
+    pub fn new(ctx: &Rc<Context>) -> Result<Self, JsValue> {
         let mut vertex_shader = Shader::create(ctx, Vertex)?;
         vertex_shader.compile_source(PICKER_VERTEX_SHADER)?;
         let mut fragment_shader = Shader::create(ctx, Fragment)?;

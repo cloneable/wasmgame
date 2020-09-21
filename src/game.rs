@@ -12,6 +12,7 @@ extern crate web_sys;
 use crate::engine;
 
 use std::option::{Option::None, Option::Some};
+use std::rc::Rc;
 use std::result::{Result, Result::Ok};
 use std::time::Duration;
 
@@ -38,7 +39,7 @@ impl Game {
 }
 
 impl engine::Renderer for Game {
-    fn setup(&mut self, ctx: &Context) -> Result<(), JsValue> {
+    fn setup(&mut self, ctx: &Rc<Context>) -> Result<(), JsValue> {
         let mut cam = Camera::new();
         cam.set_position(0.5, 1.4, 3.0)
             .set_frustum(35.0, 4.0 / 3.0, 0.1, 100.0)
@@ -179,7 +180,7 @@ impl engine::Renderer for Game {
         Ok(())
     }
 
-    fn render(&mut self, _ctx: &Context, millis: f64) -> Result<(), JsValue> {
+    fn render(&mut self, _ctx: &Rc<Context>, millis: f64) -> Result<(), JsValue> {
         self.last_render = Duration::from_micros((millis * 1000.0) as u64);
         Ok(())
     }

@@ -1,27 +1,30 @@
 extern crate std;
 extern crate wasm_bindgen;
 
+use std::rc::Rc;
+use std::result::{Result, Result::Ok};
+
+use wasm_bindgen::JsValue;
+
 use crate::engine::math::Mat4;
 use crate::engine::opengl::{
     Attribute, Context, Program, Shader, ShaderType::Fragment, ShaderType::Vertex, Uniform,
 };
-use std::result::{Result, Result::Ok};
-use wasm_bindgen::JsValue;
 
-pub struct HexatileProgram<'a> {
-    program: Program<'a>,
+pub struct HexatileProgram {
+    program: Program,
 
-    view: Uniform<'a>,
-    projection: Uniform<'a>,
+    view: Uniform,
+    projection: Uniform,
 
-    pub position: Attribute<'a>,
-    pub normal: Attribute<'a>,
-    pub model: Attribute<'a>,
-    pub normals: Attribute<'a>,
+    pub position: Attribute,
+    pub normal: Attribute,
+    pub model: Attribute,
+    pub normals: Attribute,
 }
 
-impl<'a> HexatileProgram<'a> {
-    pub fn new(ctx: &'a Context) -> Result<Self, JsValue> {
+impl HexatileProgram {
+    pub fn new(ctx: &Rc<Context>) -> Result<Self, JsValue> {
         let mut vertex_shader = Shader::create(ctx, Vertex)?;
         vertex_shader.compile_source(HEXATILE_VERTEX_SHADER)?;
         let mut fragment_shader = Shader::create(ctx, Fragment)?;

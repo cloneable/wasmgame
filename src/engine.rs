@@ -26,8 +26,8 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 
 pub trait Renderer {
-    fn setup(&mut self, ctx: &opengl::Context) -> Result<(), JsValue>;
-    fn render(&mut self, ctx: &opengl::Context, millis: f64) -> Result<(), JsValue>;
+    fn setup(&mut self, ctx: &Rc<opengl::Context>) -> Result<(), JsValue>;
+    fn render(&mut self, ctx: &Rc<opengl::Context>, millis: f64) -> Result<(), JsValue>;
     fn done(&self) -> bool;
 }
 
@@ -41,7 +41,7 @@ fn request_animation_frame_helper(callback: Option<&RequestAnimationFrameCallbac
 }
 
 pub struct Engine {
-    pub ctx: opengl::Context,
+    pub ctx: Rc<opengl::Context>,
     renderer: Rc<RefCell<dyn Renderer>>,
     callbacks: RefCell<Vec<Rc<RefCell<EventCallback>>>>,
 }
@@ -49,7 +49,7 @@ pub struct Engine {
 impl Engine {
     pub fn new(ctx: opengl::Context, renderer: Rc<RefCell<dyn Renderer>>) -> Rc<Self> {
         Rc::new(Engine {
-            ctx,
+            ctx: Rc::new(ctx),
             renderer,
             callbacks: RefCell::new(Vec::new()),
         })
@@ -63,9 +63,11 @@ impl Engine {
         let self0 = self.clone();
         let c = Rc::new(RefCell::new(Closure::wrap(
             Box::new(move |event: &web_sys::Event| {
-                listener
-                    .borrow_mut()
-                    .handle(&self0.ctx, event.time_stamp(), event.dyn_ref::<T>().unwrap());
+                listener.borrow_mut().handle(
+                    &self0.ctx,
+                    event.time_stamp(),
+                    event.dyn_ref::<T>().unwrap(),
+                );
             }) as Box<dyn FnMut(&web_sys::Event) + 'static>,
         )));
         {
