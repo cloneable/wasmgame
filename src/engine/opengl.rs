@@ -453,11 +453,21 @@ impl<'a> Framebuffer<'a> {
             .check_framebuffer_status(web_sys::WebGlRenderingContext::FRAMEBUFFER)
     }
 
-    pub fn renderbuffer(&mut self, buffer: &Renderbuffer) {
+    pub fn renderbuffer_as_colorbuffer(&mut self, buffer: &Renderbuffer) {
         self.assert_bound();
         self.ctx.gl.framebuffer_renderbuffer(
             web_sys::WebGlRenderingContext::FRAMEBUFFER,
             web_sys::WebGlRenderingContext::COLOR_ATTACHMENT0,
+            web_sys::WebGlRenderingContext::RENDERBUFFER,
+            Some(&buffer.buffer),
+        )
+    }
+
+    pub fn renderbuffer_as_depthbuffer(&mut self, buffer: &Renderbuffer) {
+        self.assert_bound();
+        self.ctx.gl.framebuffer_renderbuffer(
+            web_sys::WebGlRenderingContext::FRAMEBUFFER,
+            web_sys::WebGlRenderingContext::DEPTH_ATTACHMENT,
             web_sys::WebGlRenderingContext::RENDERBUFFER,
             Some(&buffer.buffer),
         )
@@ -537,11 +547,21 @@ impl<'a> Renderbuffer<'a> {
             .bind_renderbuffer(web_sys::WebGlRenderingContext::RENDERBUFFER, None)
     }
 
-    pub fn storage(&mut self, width: i32, height: i32) {
+    pub fn storage_for_color(&mut self, width: i32, height: i32) {
         self.assert_bound();
         self.ctx.gl.renderbuffer_storage(
             web_sys::WebGlRenderingContext::RENDERBUFFER,
-            web_sys::WebGlRenderingContext::RGBA,
+            web_sys::WebGlRenderingContext::RGBA4,
+            width,
+            height,
+        )
+    }
+
+    pub fn storage_for_depth(&mut self, width: i32, height: i32) {
+        self.assert_bound();
+        self.ctx.gl.renderbuffer_storage(
+            web_sys::WebGlRenderingContext::RENDERBUFFER,
+            web_sys::WebGlRenderingContext::DEPTH_COMPONENT16,
             width,
             height,
         )
