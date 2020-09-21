@@ -6,9 +6,19 @@ extern crate web_sys;
 
 use std::option::{Option::None, Option::Some};
 use std::{vec, vec::Vec};
+use std::rc::Rc;
 
 use super::math::{look_at, project, Mat4, Vec3, Vec4};
 use super::util;
+use super::opengl::Context;
+
+pub trait Drawable {
+    fn init(&mut self, ctx: &Rc<Context>, camera: &Camera);
+    fn update(&mut self, ctx: &Rc<Context>, camera: &Camera);
+    fn stage(&mut self, ctx: &Rc<Context>);
+    fn draw(&self, ctx: &Rc<Context>);
+    fn unstage(&mut self, ctx: &Rc<Context>);
+}
 
 pub struct Camera {
     position: Vec3,

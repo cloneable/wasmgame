@@ -20,7 +20,7 @@ use wasm_bindgen::JsValue;
 
 use crate::engine;
 use engine::opengl::Context;
-use engine::scene::Camera;
+use engine::scene::{Camera, Drawable};
 
 struct Scene {
     hexatile: models::Hexatile,
@@ -76,36 +76,46 @@ impl engine::Renderer for Game {
     fn setup(&mut self, ctx: &Rc<Context>) -> Result<(), JsValue> {
         // TODO: refactor why camera is pulled in.
         self.scene.hexatile.init(ctx, &self.scene.camera);
+        self.offscreen.activate();
+        Ok(())
+    }
 
-        // clear
+    fn render(&mut self, ctx: &Rc<Context>, millis: f64) -> Result<(), JsValue> {
+        self.last_render = Duration::from_micros((millis * 1000.0) as u64);
 
-        // TODO: sort out clearing of both canvas and offscreen.
-        ctx.gl.clear_color(0.0, 0.0, 0.0, 0.0);
-        ctx.gl
-            .clear(web_sys::WebGlRenderingContext::COLOR_BUFFER_BIT);
+        self.scene.hexatile.update(ctx, &self.scene.camera);
+
+        self.offscreen.deactivate();
 
         // draw
 
         self.scene.hexatile.stage(ctx);
 
         self.program.activate();
+        ctx.gl.clear_color(0.8, 0.7, 0.6, 1.0);
+        ctx.gl.clear(
+            web_sys::WebGlRenderingContext::COLOR_BUFFER_BIT
+                | web_sys::WebGlRenderingContext::DEPTH_BUFFER_BIT,
+        );
         self.scene.hexatile.draw(ctx);
 
         // for read_pixels.
         self.picker_program.activate();
         self.offscreen.activate();
+        ctx.gl.clear_color(0.0, 0.0, 0.0, 0.0);
+        ctx.gl.clear(
+            web_sys::WebGlRenderingContext::COLOR_BUFFER_BIT
+                | web_sys::WebGlRenderingContext::DEPTH_BUFFER_BIT,
+        );
         self.scene.hexatile.draw(ctx);
 
-        Ok(())
-    }
+        self.scene.hexatile.unstage(ctx);
 
-    fn render(&mut self, _ctx: &Rc<Context>, millis: f64) -> Result<(), JsValue> {
-        self.last_render = Duration::from_micros((millis * 1000.0) as u64);
         Ok(())
     }
 
     fn done(&self) -> bool {
-        self.last_render >= Duration::from_secs(3)
+        self.last_render >= Duration::from_secs(10)
     }
 }
 

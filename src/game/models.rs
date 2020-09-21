@@ -47,8 +47,10 @@ impl Hexatile {
             vbo_instance_normals: ArrayBuffer::create(ctx)?,
         })
     }
+}
 
-    pub fn init(&mut self, ctx: &Rc<Context>, camera: &engine::scene::Camera) {
+impl engine::scene::Drawable for Hexatile {
+    fn init(&mut self, ctx: &Rc<Context>, camera: &engine::scene::Camera) {
         // lightpink: #ffb6c1
         // lightskyblue: #87cefa
         // midnightblue: #191970
@@ -127,16 +129,22 @@ impl Hexatile {
         self.vao.unbind();
     }
 
-    pub fn stage(&mut self, ctx: &Rc<Context>) {
+    fn update(&mut self, _ctx: &Rc<Context>, _camera: &engine::scene::Camera) {}
+
+    fn stage(&mut self, _ctx: &Rc<Context>) {
         self.vao.bind();
     }
 
-    pub fn draw(&self, ctx: &Rc<Context>) {
+    fn draw(&self, ctx: &Rc<Context>) {
         ctx.instanced_arrays_ext.draw_arrays_instanced_angle(
             web_sys::WebGlRenderingContext::TRIANGLES,
             0,
             self.model.vertices.len() as i32 / 3,
             self.model.instances.len() as i32,
         );
+    }
+
+    fn unstage(&mut self, _ctx: &Rc<Context>) {
+        self.vao.unbind();
     }
 }
