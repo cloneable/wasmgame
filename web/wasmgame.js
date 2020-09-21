@@ -554,10 +554,6 @@ async function init(input) {
         var ret = getObject(arg0).checkFramebufferStatus(arg1 >>> 0);
         return ret;
     };
-    imports.wbg.__wbg_createVertexArrayOES_e430ded3ba919d50 = function(arg0) {
-        var ret = getObject(arg0).createVertexArrayOES();
-        return isLikeNone(ret) ? 0 : addHeapObject(ret);
-    };
     imports.wbg.__wbg_deleteVertexArrayOES_6b57bb46ff0c7688 = function(arg0, arg1) {
         getObject(arg0).deleteVertexArrayOES(getObject(arg1));
     };
@@ -610,6 +606,10 @@ async function init(input) {
     imports.wbg.__wbg_readPixels_6e64315badad1596 = handleError(function(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
         getObject(arg0).readPixels(arg1, arg2, arg3, arg4, arg5 >>> 0, arg6 >>> 0, arg7 === 0 ? undefined : getArrayU8FromWasm0(arg7, arg8));
     });
+    imports.wbg.__wbg_createVertexArrayOES_e430ded3ba919d50 = function(arg0) {
+        var ret = getObject(arg0).createVertexArrayOES();
+        return isLikeNone(ret) ? 0 : addHeapObject(ret);
+    };
     imports.wbg.__wbg_error_7f083efc6bc6752c = function(arg0) {
         console.error(getObject(arg0));
     };
