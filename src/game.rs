@@ -19,6 +19,7 @@ use std::time::Duration;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 
+use engine::attrib;
 use engine::math::Mat4;
 use engine::opengl::{
     ArrayBuffer, Context, Framebuffer, Renderbuffer, Texture2D, VertexArrayObject,
@@ -88,37 +89,37 @@ impl engine::Renderer for Game {
         let _ = ArrayBuffer::create(ctx)?
             .bind()
             .set_buffer_data(&hexatile.vertices)
-            .set_vertex_attribute_pointer_vec3(&program.position)
+            .set_vertex_attribute_pointer_vec3(attrib::POSITION)
             .unbind();
         let _ = ArrayBuffer::create(ctx)?
             .bind()
             .set_buffer_data(&hexatile.normals)
-            .set_vertex_attribute_pointer_vec3(&program.normal)
+            .set_vertex_attribute_pointer_vec3(attrib::NORMAL)
             .unbind();
         let _ = ArrayBuffer::create(ctx)?
             .bind()
             .set_buffer_data(&hexatile.instance_id)
-            .set_vertex_attribute_pointer_vec3(&picker_program.instance_id)
-            .set_vertex_attrib_divisor(&picker_program.instance_id, 1)
+            .set_vertex_attribute_pointer_vec3(attrib::INSTANCE_ID)
+            .set_vertex_attrib_divisor(attrib::INSTANCE_ID, 1)
             .unbind();
         let _ = ArrayBuffer::create(ctx)?
             .bind()
             .set_buffer_data(&hexatile.instance_model_data)
-            .set_vertex_attribute_pointer_mat4(&program.model)
-            .set_vertex_attrib_divisor_mat4(&program.model, 1)
+            .set_vertex_attribute_pointer_mat4(attrib::MODEL)
+            .set_vertex_attrib_divisor(attrib::MODEL, 1)
             .unbind();
         let _ = ArrayBuffer::create(ctx)?
             .bind()
             .set_buffer_data(&hexatile.instance_normals_data)
-            .set_vertex_attribute_pointer_mat4(&program.normals)
-            .set_vertex_attrib_divisor_mat4(&program.normals, 1)
+            .set_vertex_attribute_pointer_mat4(attrib::NORMALS)
+            .set_vertex_attrib_divisor(attrib::NORMALS, 1)
             .unbind();
 
-        program.position.enable();
-        program.normal.enable();
-        program.model.enable();
-        program.normals.enable();
-        picker_program.instance_id.enable();
+        attrib::POSITION.enable(ctx);
+        attrib::NORMAL.enable(ctx);
+        attrib::MODEL.enable(ctx);
+        attrib::NORMALS.enable(ctx);
+        attrib::INSTANCE_ID.enable(ctx);
 
         vao_hexatile.unbind();
 
