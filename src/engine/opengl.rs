@@ -124,15 +124,6 @@ pub struct ArrayBuffer {
     buffer: web_sys::WebGlBuffer,
 }
 
-impl std::ops::Drop for ArrayBuffer {
-    fn drop(&mut self) {
-        self.assert_unbound();
-        log::debug!("deleting buffer (not really)");
-        // TODO: enable delete once app structure is sorted out.
-        //self.ctx.gl.delete_buffer(Some(&self.buffer));
-    }
-}
-
 impl ArrayBuffer {
     pub fn create(ctx: &Rc<Context>) -> Result<Self, JsValue> {
         let buffer = ctx
@@ -230,6 +221,14 @@ impl ArrayBuffer {
     fn assert_unbound_and_bind(&mut self) {
         assert_ne!(*self.ctx.bound_array_buffer.borrow(), self.id);
         *self.ctx.bound_array_buffer.borrow_mut() = self.id;
+    }
+}
+
+impl std::ops::Drop for ArrayBuffer {
+    fn drop(&mut self) {
+        self.assert_unbound();
+        log::debug!("deleting buffer");
+        self.ctx.gl.delete_buffer(Some(&self.buffer));
     }
 }
 
