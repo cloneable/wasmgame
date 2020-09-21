@@ -100,6 +100,15 @@ impl Vec4 {
         Vec4 { x, y, z, w }
     }
 
+    pub fn rgb(x: u8, y: u8, z: u8) -> Self {
+        Vec4 {
+            x: x as f32 / 255.0,
+            y: y as f32 / 255.0,
+            z: z as f32 / 255.0,
+            w: 1.0,
+        }
+    }
+
     pub fn dot(&self, other: &Vec4) -> f32 {
         self.x * other.x + //br
         self.y * other.y + //br

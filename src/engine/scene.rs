@@ -7,7 +7,7 @@ extern crate web_sys;
 use std::option::{Option::None, Option::Some};
 use std::{vec, vec::Vec};
 
-use super::math::{look_at, project, Mat4, Vec3};
+use super::math::{look_at, project, Mat4, Vec3, Vec4};
 use super::util;
 
 pub struct Camera {
@@ -78,6 +78,7 @@ pub struct Model {
     pub instances: Vec<Instance>,
 
     // TODO: make this more efficient
+    pub instance_color: Vec<f32>,
     pub instance_id: Vec<f32>,
     pub instance_model_data: Vec<f32>,
     pub instance_normals_data: Vec<f32>,
@@ -92,17 +93,18 @@ impl Model {
             vertices,
             normals,
             instances: Vec::new(),
+            instance_color: Vec::new(),
             instance_id: Vec::new(),
             instance_model_data: Vec::new(),
             instance_normals_data: Vec::new(),
         }
     }
 
-    pub fn add_instance(&mut self, transform: Mat4) {
-        self.instances.push(Instance::new(transform));
+    pub fn add_instance(&mut self, transform: Mat4, color: Vec4) {
+        self.instances.push(Instance::new(transform, color));
     }
 
-    pub fn update_normals(&mut self, camera: &Camera) {
+    pub fn update_instances(&mut self, camera: &Camera) {
         self.instance_model_data.clear();
         self.instance_normals_data.clear();
         let mut i: i32 = 1;
@@ -115,6 +117,9 @@ impl Model {
                     mat_model_view
                 }
             };
+            self.instance_color.push(instance.color.x);
+            self.instance_color.push(instance.color.y);
+            self.instance_color.push(instance.color.z);
             self.instance_id.push(i as f32 / 255.0);
             self.instance_id.push(1.0);
             self.instance_id.push(1.0);
@@ -130,13 +135,15 @@ impl Model {
 pub struct Instance {
     pub model: Mat4,
     pub normals: Mat4,
+    pub color: Vec4,
 }
 
 impl Instance {
-    pub fn new(model: Mat4) -> Self {
+    pub fn new(model: Mat4, color: Vec4) -> Self {
         Instance {
             model,
             normals: Mat4::IDENTITY,
+            color,
         }
     }
 }

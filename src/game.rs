@@ -34,8 +34,7 @@ impl Scene {
             .set_position(0.5, 1.4, 3.0)
             .set_frustum(35.0, 4.0 / 3.0, 0.1, 100.0)
             .refresh();
-        let mut hexatile = models::Hexatile::new(ctx)?;
-        hexatile.model.update_normals(&camera);
+        let hexatile = models::Hexatile::new(ctx)?;
         Ok(Scene { hexatile, camera })
     }
 }

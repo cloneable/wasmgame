@@ -14,7 +14,7 @@ use std::result::{Result, Result::Ok};
 use wasm_bindgen::JsValue;
 
 use engine::attrib;
-use engine::math::Mat4;
+use engine::math::{Mat4, Vec4};
 use engine::opengl::{ArrayBuffer, Context, VertexArrayObject};
 use engine::scene::Model;
 
@@ -25,6 +25,7 @@ pub struct Hexatile {
 
     vbo_vertex: ArrayBuffer,
     vbo_normals: ArrayBuffer,
+    vbo_instance_color: ArrayBuffer,
     vbo_instance_id: ArrayBuffer,
     vbo_instance_models: ArrayBuffer,
     vbo_instance_normals: ArrayBuffer,
@@ -40,6 +41,7 @@ impl Hexatile {
             vao: VertexArrayObject::create(ctx)?,
             vbo_vertex: ArrayBuffer::create(ctx)?,
             vbo_normals: ArrayBuffer::create(ctx)?,
+            vbo_instance_color: ArrayBuffer::create(ctx)?,
             vbo_instance_id: ArrayBuffer::create(ctx)?,
             vbo_instance_models: ArrayBuffer::create(ctx)?,
             vbo_instance_normals: ArrayBuffer::create(ctx)?,
@@ -47,25 +49,37 @@ impl Hexatile {
     }
 
     pub fn init(&mut self, ctx: &Rc<Context>, camera: &engine::scene::Camera) {
-        self.model.add_instance(Mat4::with_array([
-            1.0, 0.0, 0.0, 0.0, //br
-            0.0, 3.0, 0.0, 0.0, //br
-            0.0, 0.0, 1.0, 0.0, //br
-            -0.6, 0.0, 0.0, 1.0, //br
-        ]));
-        self.model.add_instance(Mat4::with_array([
-            1.0, 0.0, 0.0, 0.0, //br
-            0.0, 2.0, 0.0, 0.0, //br
-            0.0, 0.0, 1.0, 0.0, //br
-            0.0, 0.0, 0.0, 1.0, //br
-        ]));
-        self.model.add_instance(Mat4::with_array([
-            1.0, 0.0, 0.0, 0.0, //br
-            0.0, 1.0, 0.0, 0.0, //br
-            0.0, 0.0, 1.0, 0.0, //br
-            0.6, 0.0, 0.0, 1.0, //br
-        ]));
-        self.model.update_normals(camera);
+        // lightpink: #ffb6c1
+        // lightskyblue: #87cefa
+        // midnightblue: #191970
+        self.model.add_instance(
+            Mat4::with_array([
+                1.0, 0.0, 0.0, 0.0, //br
+                0.0, 3.0, 0.0, 0.0, //br
+                0.0, 0.0, 1.0, 0.0, //br
+                -0.6, 0.0, 0.0, 1.0, //br
+            ]),
+            Vec4::rgb(0x19, 0x19, 0x70),
+        );
+        self.model.add_instance(
+            Mat4::with_array([
+                1.0, 0.0, 0.0, 0.0, //br
+                0.0, 2.0, 0.0, 0.0, //br
+                0.0, 0.0, 1.0, 0.0, //br
+                0.0, 0.0, 0.0, 1.0, //br
+            ]),
+            Vec4::rgb(0x87, 0xce, 0xfa),
+        );
+        self.model.add_instance(
+            Mat4::with_array([
+                1.0, 0.0, 0.0, 0.0, //br
+                0.0, 1.0, 0.0, 0.0, //br
+                0.0, 0.0, 1.0, 0.0, //br
+                0.6, 0.0, 0.0, 1.0, //br
+            ]),
+            Vec4::rgb(0xff, 0xb6, 0xc1),
+        );
+        self.model.update_instances(camera);
 
         self.vao.bind();
         self.vbo_vertex
@@ -77,6 +91,12 @@ impl Hexatile {
             .bind()
             .set_buffer_data(&self.model.normals)
             .set_vertex_attribute_pointer_vec3(attrib::NORMAL)
+            .unbind();
+        self.vbo_instance_color
+            .bind()
+            .set_buffer_data(&self.model.instance_color)
+            .set_vertex_attribute_pointer_vec3(attrib::INSTANCE_COLOR)
+            .set_vertex_attrib_divisor(attrib::INSTANCE_COLOR, 1)
             .unbind();
         self.vbo_instance_id
             .bind()
@@ -99,6 +119,7 @@ impl Hexatile {
 
         attrib::POSITION.enable(ctx);
         attrib::NORMAL.enable(ctx);
+        attrib::INSTANCE_COLOR.enable(ctx);
         attrib::INSTANCE_ID.enable(ctx);
         attrib::MODEL.enable(ctx);
         attrib::NORMALS.enable(ctx);

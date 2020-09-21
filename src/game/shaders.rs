@@ -32,6 +32,7 @@ impl HexatileProgram {
 
         attrib::POSITION.bind(ctx, &program, "position");
         attrib::NORMAL.bind(ctx, &program, "normal");
+        attrib::INSTANCE_COLOR.bind(ctx, &program, "color");
         attrib::MODEL.bind(ctx, &program, "model");
         attrib::NORMALS.bind(ctx, &program, "normals");
 
@@ -67,21 +68,25 @@ const HEXATILE_VERTEX_SHADER: &str = r#"
 attribute vec3 position;
 attribute vec3 normal;
 // per instance
+attribute vec3 color;
 attribute mat4 model;
 attribute mat4 normals;
 
 uniform mat4 view;
 uniform mat4 projection;
 
+// TODO: combine these two.
+varying highp vec3 basecolor;
 varying highp vec3 lighting;
 
 void main() {
     gl_Position = projection * view * model * vec4(position, 1.0);
+    basecolor = color;
 
     // TODO: define uniforms for these.
-    highp vec3 ambientLightColor = vec3(0.1, 0.1, 0.2);
-    highp vec3 directionalLightColor = vec3(0.9, 0.9, 0.8);
-    highp vec3 directionalLight = normalize(vec3(3.0, 4.0, 5.0));
+    highp vec3 ambientLightColor = vec3(0.1, 0.1, 0.1);
+    highp vec3 directionalLightColor = vec3(1.0, 1.0, 1.0);
+    highp vec3 directionalLight = normalize(vec3(3.0, 3.0, 5.0));
 
     highp vec4 transformedNormal = normalize(normals * vec4(normal, 1.0));
     highp float intensity = max(dot(transformedNormal.xyz, directionalLight), 0.0);
@@ -92,10 +97,10 @@ void main() {
 const HEXATILE_FRAGMENT_SHADER: &str = r#"
 #version 100
 
+varying highp vec3 basecolor;
 varying highp vec3 lighting;
 
 void main() {
-    highp vec4 baseColor = vec4(0.2, 0.7, 0.1, 1.0);
-    gl_FragColor = vec4(baseColor.rgb * lighting, baseColor.a);
+    gl_FragColor = vec4(basecolor * lighting, 1.0);
 }
 "#;

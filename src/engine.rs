@@ -126,6 +126,7 @@ pub mod attrib {
 
     pub const POSITION: Attribute = Attribute(0, 1);
     pub const NORMAL: Attribute = Attribute(1, 1);
+    pub const INSTANCE_COLOR: Attribute = Attribute(2, 1);
     pub const INSTANCE_ID: Attribute = Attribute(3, 1);
     pub const MODEL: Attribute = Attribute(4, 4);
     pub const NORMALS: Attribute = Attribute(8, 4);
