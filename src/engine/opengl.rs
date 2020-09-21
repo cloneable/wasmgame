@@ -27,6 +27,7 @@ pub struct Context {
     next_object_id: RefCell<u32>,
     bound_array_buffer: RefCell<u32>,
     bound_framebuffer: RefCell<u32>,
+    bound_renderbuffer: RefCell<u32>,
 }
 
 impl Context {
@@ -62,6 +63,7 @@ impl Context {
             next_object_id: RefCell::new(1),
             bound_array_buffer: RefCell::new(0),
             bound_framebuffer: RefCell::new(0),
+            bound_renderbuffer: RefCell::new(0),
         })
     }
 
@@ -451,6 +453,16 @@ impl<'a> Framebuffer<'a> {
             .check_framebuffer_status(web_sys::WebGlRenderingContext::FRAMEBUFFER)
     }
 
+    pub fn renderbuffer(&mut self, buffer: &Renderbuffer) {
+        self.assert_bound();
+        self.ctx.gl.framebuffer_renderbuffer(
+            web_sys::WebGlRenderingContext::FRAMEBUFFER,
+            web_sys::WebGlRenderingContext::COLOR_ATTACHMENT0,
+            web_sys::WebGlRenderingContext::RENDERBUFFER,
+            Some(&buffer.buffer),
+        )
+    }
+
     pub fn read_pixels(
         &self,
         x: i32,
@@ -491,5 +503,73 @@ impl<'a> std::ops::Drop for Framebuffer<'a> {
         self.assert_unbound();
         log::debug!("deleting framebuffer");
         self.ctx.gl.delete_framebuffer(Some(&self.buffer));
+    }
+}
+
+pub struct Renderbuffer<'a> {
+    ctx: &'a Context,
+    id: u32,
+    buffer: web_sys::WebGlRenderbuffer,
+}
+
+impl<'a> Renderbuffer<'a> {
+    pub fn create(ctx: &'a Context) -> Result<Self, JsValue> {
+        let buffer = ctx
+            .gl
+            .create_renderbuffer()
+            .ok_or_else(|| JsValue::from_str("create_renderbuffer error"))?;
+        let id = ctx.next_object_id();
+        Ok(Renderbuffer { ctx, id, buffer })
+    }
+
+    pub fn bind(&mut self) {
+        self.assert_unbound_and_bind();
+        self.ctx.gl.bind_renderbuffer(
+            web_sys::WebGlRenderingContext::RENDERBUFFER,
+            Some(&self.buffer),
+        )
+    }
+
+    pub fn unbind(&mut self) {
+        self.assert_bound_and_unbind();
+        self.ctx
+            .gl
+            .bind_renderbuffer(web_sys::WebGlRenderingContext::RENDERBUFFER, None)
+    }
+
+    pub fn storage(&mut self, width: i32, height: i32) {
+        self.assert_bound();
+        self.ctx.gl.renderbuffer_storage(
+            web_sys::WebGlRenderingContext::RENDERBUFFER,
+            web_sys::WebGlRenderingContext::RGBA,
+            width,
+            height,
+        )
+    }
+
+    fn assert_bound(&self) {
+        assert_eq!(*self.ctx.bound_renderbuffer.borrow(), self.id);
+    }
+
+    fn assert_bound_and_unbind(&mut self) {
+        assert_eq!(*self.ctx.bound_renderbuffer.borrow(), self.id);
+        *self.ctx.bound_renderbuffer.borrow_mut() = 0;
+    }
+
+    fn assert_unbound(&self) {
+        assert_ne!(*self.ctx.bound_renderbuffer.borrow(), self.id);
+    }
+
+    fn assert_unbound_and_bind(&mut self) {
+        assert_ne!(*self.ctx.bound_renderbuffer.borrow(), self.id);
+        *self.ctx.bound_renderbuffer.borrow_mut() = self.id;
+    }
+}
+
+impl<'a> std::ops::Drop for Renderbuffer<'a> {
+    fn drop(&mut self) {
+        self.assert_unbound();
+        log::debug!("deleting renderbuffer");
+        self.ctx.gl.delete_renderbuffer(Some(&self.buffer));
     }
 }
