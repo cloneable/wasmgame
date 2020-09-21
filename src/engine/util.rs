@@ -1,8 +1,17 @@
+extern crate log;
 extern crate std;
+extern crate wasm_bindgen;
+extern crate web_sys;
 
+use std::option::Option::None;
+use std::rc::Rc;
+use std::result::{Result, Result::Ok};
 use std::{debug_assert_eq, panic};
 
+use wasm_bindgen::JsValue;
+
 use super::math::Vec3;
+use super::opengl::{Context, Framebuffer, Renderbuffer, Texture2D};
 
 pub fn generate_buffers(
     model_indices: &[u8],
@@ -71,6 +80,52 @@ pub fn generate_buffers(
         normals[j + 8] = n.z;
 
         i += 3;
+    }
+}
+
+pub struct OffscreenBuffer {
+    framebuffer: Framebuffer,
+
+    colorbuffer: Texture2D,
+    depthbuffer: Renderbuffer,
+}
+
+impl OffscreenBuffer {
+    pub fn new(ctx: &Rc<Context>, width: i32, height: i32) -> Result<Self, JsValue> {
+        let mut colorbuffer = Texture2D::create(ctx)?;
+        colorbuffer.bind();
+        colorbuffer.tex_image_2d(width, height, None)?;
+        colorbuffer.unbind();
+
+        let mut depthbuffer = Renderbuffer::create(ctx)?;
+        depthbuffer.bind();
+        depthbuffer.storage_for_depth(width, height);
+        depthbuffer.unbind();
+
+        let mut framebuffer = Framebuffer::create(ctx)?;
+        framebuffer.bind();
+        framebuffer.texture2d_as_colorbuffer(&colorbuffer);
+        framebuffer.renderbuffer_as_depthbuffer(&depthbuffer);
+        {
+            let status = framebuffer.check_status();
+            if status != web_sys::WebGlRenderingContext::FRAMEBUFFER_COMPLETE {
+                log::error!("framebuffer incomplete: {}", status)
+            }
+        }
+        framebuffer.unbind();
+        Ok(OffscreenBuffer {
+            framebuffer,
+            colorbuffer,
+            depthbuffer,
+        })
+    }
+
+    pub fn activate(&mut self) {
+        self.framebuffer.bind()
+    }
+
+    pub fn deactivate(&mut self) {
+        self.framebuffer.unbind()
     }
 }
 
