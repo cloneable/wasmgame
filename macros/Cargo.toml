@@ -1,0 +1,8 @@
+[package]
+name = "wasmgame-macros"
+version = "0.1.0"
+authors = ["Folke Behrens <folke@gmail.com>"]
+edition = "2018"
+
+[lib]
+proc-macro = true
