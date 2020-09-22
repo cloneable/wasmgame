@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"name": "app/src",
+			"path": "app/src"
+		},
+		{
+			"name": "macros/src",
+			"path": "macros/src"
+		},
+		{
+			"path": "."
+		}
+	],
+	"settings": {}
+}
