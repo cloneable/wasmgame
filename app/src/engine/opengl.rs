@@ -154,6 +154,16 @@ impl ArrayBuffer {
             .bind_buffer(web_sys::WebGlRenderingContext::ARRAY_BUFFER, None);
     }
 
+    pub fn allocate_dynamic(&mut self, size: usize) -> &mut Self {
+        self.assert_bound();
+        self.ctx.gl.buffer_data_with_i32(
+            web_sys::WebGlRenderingContext::ARRAY_BUFFER,
+            size as i32,
+            web_sys::WebGlRenderingContext::DYNAMIC_DRAW,
+        );
+        self
+    }
+
     pub fn set_buffer_data(&mut self, data: &[f32]) -> &mut Self {
         self.assert_bound();
         unsafe {
@@ -162,6 +172,19 @@ impl ArrayBuffer {
                 web_sys::WebGlRenderingContext::ARRAY_BUFFER,
                 &view,
                 web_sys::WebGlRenderingContext::STATIC_DRAW,
+            );
+        }
+        self
+    }
+
+    pub fn set_buffer_sub_data(&mut self, offset: i32, data: &[f32]) -> &mut Self {
+        self.assert_bound();
+        unsafe {
+            let view = js_sys::Float32Array::view(data);
+            self.ctx.gl.buffer_sub_data_with_i32_and_array_buffer_view(
+                web_sys::WebGlRenderingContext::ARRAY_BUFFER,
+                offset,
+                &view,
             );
         }
         self
