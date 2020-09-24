@@ -1,10 +1,7 @@
-extern crate std;
-extern crate wasm_bindgen;
+use ::std::rc::Rc;
+use ::std::result::{Result, Result::Ok};
 
-use std::rc::Rc;
-use std::result::{Result, Result::Ok};
-
-use wasm_bindgen::JsValue;
+use ::wasm_bindgen::JsValue;
 
 use crate::engine::attrib;
 use crate::engine::math::Mat4;

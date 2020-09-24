@@ -2,20 +2,12 @@ mod meshes;
 mod models;
 mod shaders;
 
-extern crate js_sys;
-extern crate log;
-extern crate std;
-extern crate wasm_bindgen;
-extern crate wasm_bindgen_macro;
-extern crate wasm_logger;
-extern crate web_sys;
+use ::std::rc::Rc;
+use ::std::result::{Result, Result::Ok};
+use ::std::time::Duration;
 
-use std::rc::Rc;
-use std::result::{Result, Result::Ok};
-use std::time::Duration;
-
-use wasm_bindgen::JsCast;
-use wasm_bindgen::JsValue;
+use ::wasm_bindgen::JsCast;
+use ::wasm_bindgen::JsValue;
 
 use crate::engine;
 use engine::opengl::Context;
@@ -94,8 +86,8 @@ impl engine::Renderer for Game {
         self.program.activate();
         ctx.gl.clear_color(0.8, 0.7, 0.6, 1.0);
         ctx.gl.clear(
-            web_sys::WebGlRenderingContext::COLOR_BUFFER_BIT
-                | web_sys::WebGlRenderingContext::DEPTH_BUFFER_BIT,
+            ::web_sys::WebGlRenderingContext::COLOR_BUFFER_BIT
+                | ::web_sys::WebGlRenderingContext::DEPTH_BUFFER_BIT,
         );
         self.scene.hexatile.draw();
 
@@ -104,8 +96,8 @@ impl engine::Renderer for Game {
         self.offscreen.activate();
         ctx.gl.clear_color(0.0, 0.0, 0.0, 0.0);
         ctx.gl.clear(
-            web_sys::WebGlRenderingContext::COLOR_BUFFER_BIT
-                | web_sys::WebGlRenderingContext::DEPTH_BUFFER_BIT,
+            ::web_sys::WebGlRenderingContext::COLOR_BUFFER_BIT
+                | ::web_sys::WebGlRenderingContext::DEPTH_BUFFER_BIT,
         );
         self.scene.hexatile.draw();
 
@@ -120,19 +112,19 @@ impl engine::Renderer for Game {
 }
 
 // TODO: use const generic for event type name.
-impl engine::EventHandler<web_sys::MouseEvent> for Game {
-    fn handle(&mut self, _ctx: &Context, millis: f64, event: &web_sys::MouseEvent) {
+impl engine::EventHandler<::web_sys::MouseEvent> for Game {
+    fn handle(&mut self, _ctx: &Context, millis: f64, event: &::web_sys::MouseEvent) {
         // TODO: Experiment with a #[wasm_bindgen(inline_js) function
         //       that does most calls in JS.
         let r = event
             .target()
             .unwrap()
-            .unchecked_ref::<web_sys::Element>()
+            .unchecked_ref::<::web_sys::Element>()
             .get_bounding_client_rect();
         let x = event.client_x() - r.left() as i32;
         let y = event.client_y() - r.top() as i32;
         let rgba = self.offscreen.read_pixel(x, r.height() as i32 - y).unwrap();
-        log::debug!(
+        ::log::debug!(
             "Clicked at {}: {},{}; rgba = {} {} {} {}",
             millis,
             x,

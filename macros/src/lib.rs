@@ -1,8 +1,7 @@
 #![no_std]
+#![no_implicit_prelude]
 
-extern crate proc_macro;
-
-use proc_macro::TokenStream;
+use ::proc_macro::TokenStream;
 
 #[proc_macro]
 pub fn test_macro(_item: TokenStream) -> TokenStream {

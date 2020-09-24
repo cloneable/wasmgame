@@ -1,26 +1,21 @@
 #![no_implicit_prelude]
 
-extern crate js_sys;
-extern crate log;
-extern crate std;
-extern crate wasm_bindgen;
-extern crate wasm_bindgen_macro;
-extern crate wasm_logger;
-extern crate web_sys;
-
 mod engine;
 mod game;
 
-use std::cell::RefCell;
-use std::clone::Clone;
-use std::default::Default;
-use std::mem::drop;
-use std::rc::Rc;
-use std::result::{Result, Result::Ok};
+use ::std::cell::RefCell;
+use ::std::clone::Clone;
+use ::std::default::Default;
+use ::std::mem::drop;
+use ::std::rc::Rc;
+use ::std::result::{Result, Result::Ok};
 
-use wasm_bindgen::JsCast;
-use wasm_bindgen::JsValue;
-use wasm_bindgen_macro::wasm_bindgen;
+use ::wasm_bindgen;
+use ::wasm_bindgen::JsCast;
+use ::wasm_bindgen::JsValue;
+use ::wasm_bindgen_macro::wasm_bindgen;
+use ::wasm_logger;
+use ::web_sys;
 
 use engine::opengl::Context;
 use game::Game;
@@ -28,7 +23,7 @@ use game::Game;
 #[wasm_bindgen(start)]
 pub fn wasm_main() -> Result<(), JsValue> {
     wasm_logger::init(wasm_logger::Config::default());
-    log::info!("wasmgame init");
+    ::log::info!("wasmgame init");
     Ok(())
 }
 
@@ -42,7 +37,7 @@ pub struct Console {
 impl Console {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Result<Console, JsValue> {
-        log::info!("wasmgame loading");
+        ::log::info!("wasmgame loading");
         let window = web_sys::window().expect("cannot get window object");
         let document = window.document().expect("cannot get document object");
         let canvas = document
@@ -58,7 +53,7 @@ impl Console {
     }
 
     pub fn start(&mut self) -> Result<(), JsValue> {
-        log::info!("wasmgame starting");
+        ::log::info!("wasmgame starting");
         self.engine
             .register_event_handler("click", self.game.clone())?;
         self.engine.start()

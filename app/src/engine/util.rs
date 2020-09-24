@@ -1,14 +1,9 @@
-extern crate log;
-extern crate std;
-extern crate wasm_bindgen;
-extern crate web_sys;
+use ::std::option::Option::None;
+use ::std::rc::Rc;
+use ::std::result::{Result, Result::Ok};
+use ::std::{debug_assert_eq, panic};
 
-use std::option::Option::None;
-use std::rc::Rc;
-use std::result::{Result, Result::Ok};
-use std::{debug_assert_eq, panic};
-
-use wasm_bindgen::JsValue;
+use ::wasm_bindgen::JsValue;
 
 use super::math::Vec3;
 use super::opengl::{Context, Framebuffer, Renderbuffer, Texture2D};
@@ -39,19 +34,19 @@ pub fn generate_buffers(
     while i < model_indices.len() {
         let ai = model_indices[i] as usize * 3;
         let a = Vec3::new(
-            model_vertices[ai + 0],
+            model_vertices[ai],
             model_vertices[ai + 1],
             model_vertices[ai + 2],
         );
         let bi = model_indices[i + 1] as usize * 3;
         let b = Vec3::new(
-            model_vertices[bi + 0],
+            model_vertices[bi],
             model_vertices[bi + 1],
             model_vertices[bi + 2],
         );
         let ci = model_indices[i + 2] as usize * 3;
         let c = Vec3::new(
-            model_vertices[ci + 0],
+            model_vertices[ci],
             model_vertices[ci + 1],
             model_vertices[ci + 2],
         );
@@ -59,7 +54,7 @@ pub fn generate_buffers(
         let n = (&b - &a).cross(&(&c - &a)).normalize();
 
         let j = i * 3;
-        vertices[j + 0] = a.x;
+        vertices[j] = a.x;
         vertices[j + 1] = a.y;
         vertices[j + 2] = a.z;
         vertices[j + 3] = b.x;
@@ -69,7 +64,7 @@ pub fn generate_buffers(
         vertices[j + 7] = c.y;
         vertices[j + 8] = c.z;
 
-        normals[j + 0] = n.x;
+        normals[j] = n.x;
         normals[j + 1] = n.y;
         normals[j + 2] = n.z;
         normals[j + 3] = n.x;
@@ -108,8 +103,8 @@ impl OffscreenBuffer {
         framebuffer.renderbuffer_as_depthbuffer(&depthbuffer);
         {
             let status = framebuffer.check_status();
-            if status != web_sys::WebGlRenderingContext::FRAMEBUFFER_COMPLETE {
-                log::error!("framebuffer incomplete: {}", status)
+            if status != ::web_sys::WebGlRenderingContext::FRAMEBUFFER_COMPLETE {
+                ::log::error!("framebuffer incomplete: {}", status)
             }
         }
         framebuffer.unbind();
@@ -135,8 +130,8 @@ impl OffscreenBuffer {
             y,
             1,
             1,
-            web_sys::WebGlRenderingContext::RGBA,
-            web_sys::WebGlRenderingContext::UNSIGNED_BYTE,
+            ::web_sys::WebGlRenderingContext::RGBA,
+            ::web_sys::WebGlRenderingContext::UNSIGNED_BYTE,
             &mut buf[..],
         )?;
         Ok(buf)
@@ -145,10 +140,8 @@ impl OffscreenBuffer {
 
 #[cfg(test)]
 pub mod tests {
-    extern crate std;
-    extern crate wasm_bindgen_test;
-    use std::{assert_eq, panic};
-    use wasm_bindgen_test::wasm_bindgen_test;
+    use ::std::{assert_eq, panic};
+    use ::wasm_bindgen_test::wasm_bindgen_test;
 
     use super::*;
 

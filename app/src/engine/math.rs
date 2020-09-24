@@ -1,9 +1,7 @@
-extern crate std;
-
-use std::convert::From;
-use std::option::{Option, Option::None, Option::Some};
-use std::result::Result;
-use std::{panic, unreachable};
+use ::std::convert::From;
+use ::std::option::{Option, Option::None, Option::Some};
+use ::std::result::Result;
+use ::std::{panic, unreachable};
 
 pub fn look_at(eye: &Vec3, center: &Vec3, up: &Vec3) -> Mat4 {
     let forward = (center - eye).normalize();
@@ -18,7 +16,7 @@ pub fn look_at(eye: &Vec3, center: &Vec3, up: &Vec3) -> Mat4 {
 }
 
 fn radians(degrees: f32) -> f32 {
-    degrees * (std::f32::consts::PI / 180.0)
+    degrees * (::std::f32::consts::PI / 180.0)
 }
 
 pub fn project(fov: f32, aspect: f32, near: f32, far: f32) -> Mat4 {
@@ -39,7 +37,7 @@ pub struct Vec3 {
     pub z: f32,
 }
 
-impl std::convert::From<[f32; 3]> for Vec3 {
+impl ::std::convert::From<[f32; 3]> for Vec3 {
     fn from(buf: [f32; 3]) -> Vec3 {
         Vec3 {
             x: buf[0],
@@ -95,7 +93,7 @@ impl Vec3 {
     }
 }
 
-impl std::ops::AddAssign<Vec3> for Vec3 {
+impl ::std::ops::AddAssign<Vec3> for Vec3 {
     fn add_assign(&mut self, other: Vec3) {
         self.x += other.x;
         self.y += other.y;
@@ -103,7 +101,7 @@ impl std::ops::AddAssign<Vec3> for Vec3 {
     }
 }
 
-impl std::ops::AddAssign<&Vec3> for Vec3 {
+impl ::std::ops::AddAssign<&Vec3> for Vec3 {
     fn add_assign(&mut self, other: &Vec3) {
         self.x += other.x;
         self.y += other.y;
@@ -111,7 +109,7 @@ impl std::ops::AddAssign<&Vec3> for Vec3 {
     }
 }
 
-impl std::ops::SubAssign<Vec3> for Vec3 {
+impl ::std::ops::SubAssign<Vec3> for Vec3 {
     fn sub_assign(&mut self, other: Vec3) {
         self.x -= other.x;
         self.y -= other.y;
@@ -119,7 +117,7 @@ impl std::ops::SubAssign<Vec3> for Vec3 {
     }
 }
 
-impl std::ops::SubAssign<&Vec3> for Vec3 {
+impl ::std::ops::SubAssign<&Vec3> for Vec3 {
     fn sub_assign(&mut self, other: &Vec3) {
         self.x -= other.x;
         self.y -= other.y;
@@ -127,7 +125,7 @@ impl std::ops::SubAssign<&Vec3> for Vec3 {
     }
 }
 
-impl std::ops::Sub for &Vec3 {
+impl ::std::ops::Sub for &Vec3 {
     type Output = Vec3;
     fn sub(self, other: &Vec3) -> Vec3 {
         Vec3 {
@@ -138,7 +136,7 @@ impl std::ops::Sub for &Vec3 {
     }
 }
 
-impl std::ops::Mul<f32> for Vec3 {
+impl ::std::ops::Mul<f32> for Vec3 {
     type Output = Vec3;
     fn mul(self, scalar: f32) -> Vec3 {
         Vec3 {
@@ -188,13 +186,13 @@ impl Vec4 {
     }
 }
 
-impl std::default::Default for Vec4 {
+impl ::std::default::Default for Vec4 {
     fn default() -> Self {
         Vec4::new(0.0, 0.0, 0.0, 1.0)
     }
 }
 
-impl std::ops::Index<usize> for Vec4 {
+impl ::std::ops::Index<usize> for Vec4 {
     type Output = f32;
     fn index(&self, i: usize) -> &f32 {
         match i {
@@ -207,7 +205,7 @@ impl std::ops::Index<usize> for Vec4 {
     }
 }
 
-impl std::ops::IndexMut<usize> for Vec4 {
+impl ::std::ops::IndexMut<usize> for Vec4 {
     fn index_mut(&mut self, i: usize) -> &mut f32 {
         match i {
             0 => &mut self.x,
@@ -219,8 +217,8 @@ impl std::ops::IndexMut<usize> for Vec4 {
     }
 }
 
-impl std::fmt::Debug for Vec4 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+impl ::std::fmt::Debug for Vec4 {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> Result<(), ::std::fmt::Error> {
         f.debug_list()
             .entry(&self.x)
             .entry(&self.y)
@@ -236,15 +234,21 @@ pub union Mat4 {
     vecs: [Vec4; 4],
 }
 
-impl std::fmt::Debug for Mat4 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        unsafe { f.debug_list().entries(&self.vecs).finish() }
+impl ::std::fmt::Debug for Mat4 {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> Result<(), ::std::fmt::Error> {
+        #[allow(unsafe_code)]
+        unsafe {
+            f.debug_list().entries(&self.vecs).finish()
+        }
     }
 }
 
-impl std::cmp::PartialEq for Mat4 {
+impl ::std::cmp::PartialEq for Mat4 {
     fn eq(&self, other: &Mat4) -> bool {
-        unsafe { self.buf == other.buf }
+        #[allow(unsafe_code)]
+        unsafe {
+            self.buf == other.buf
+        }
     }
 }
 
@@ -272,7 +276,10 @@ impl Mat4 {
     }
 
     pub fn slice(&self) -> &[f32] {
-        unsafe { &self.buf }
+        #[allow(unsafe_code)]
+        unsafe {
+            &self.buf
+        }
     }
 
     pub fn column(&self, i: usize) -> Vec4 {
@@ -289,10 +296,11 @@ impl Mat4 {
 
     pub fn to_3x3(&self) -> Mat4 {
         let mut buf: [f32; 16] = [0.0; 16];
-        unsafe {
-            for c in 0..=2 {
-                for r in 0..=2 {
-                    buf[c * 4 + r] = self.buf[c * 4 + r];
+        for c in 0..=2 {
+            for r in 0..=2 {
+                #[allow(unsafe_code)]
+                {
+                    buf[c * 4 + r] = unsafe { self.buf[c * 4 + r] };
                 }
             }
         }
@@ -301,6 +309,7 @@ impl Mat4 {
 
     pub fn invert(&self) -> Option<Mat4> {
         let mut i: [f32; 16] = [0.0; 16];
+        #[allow(unsafe_code)]
         let m = unsafe { &self.buf };
 
         // Mesa's gluInvertMatrix using the adjugate matrix.
@@ -422,27 +431,33 @@ impl Mat4 {
             return None;
         }
         let det = 1.0 / det;
-        for t in 0..=15 {
-            i[t] *= det;
+        for v in &mut i {
+            *v *= det;
         }
         Some(Mat4 { buf: i })
     }
 }
 
-impl std::ops::Index<usize> for Mat4 {
+impl ::std::ops::Index<usize> for Mat4 {
     type Output = Vec4;
     fn index(&self, i: usize) -> &Vec4 {
-        unsafe { &self.vecs[i] }
+        #[allow(unsafe_code)]
+        unsafe {
+            &self.vecs[i]
+        }
     }
 }
 
-impl std::ops::IndexMut<usize> for Mat4 {
+impl ::std::ops::IndexMut<usize> for Mat4 {
     fn index_mut(&mut self, i: usize) -> &mut Vec4 {
-        unsafe { &mut self.vecs[i] }
+        #[allow(unsafe_code)]
+        unsafe {
+            &mut self.vecs[i]
+        }
     }
 }
 
-impl std::ops::Mul<&Mat4> for &Mat4 {
+impl ::std::ops::Mul<&Mat4> for &Mat4 {
     type Output = Mat4;
     fn mul(self, m: &Mat4) -> Mat4 {
         let mut u = Mat4::new();
@@ -457,7 +472,7 @@ impl std::ops::Mul<&Mat4> for &Mat4 {
     }
 }
 
-impl std::ops::Mul<Vec4> for Mat4 {
+impl ::std::ops::Mul<Vec4> for Mat4 {
     type Output = Vec4;
     fn mul(self, v: Vec4) -> Vec4 {
         let m = &self;
@@ -470,7 +485,7 @@ impl std::ops::Mul<Vec4> for Mat4 {
     }
 }
 
-impl std::ops::Mul<&Vec4> for &Mat4 {
+impl ::std::ops::Mul<&Vec4> for &Mat4 {
     type Output = Vec4;
     fn mul(self, v: &Vec4) -> Vec4 {
         let m = &self;
@@ -483,7 +498,7 @@ impl std::ops::Mul<&Vec4> for &Mat4 {
     }
 }
 
-impl std::convert::From<[f32; 16]> for Mat4 {
+impl ::std::convert::From<[f32; 16]> for Mat4 {
     fn from(buf: [f32; 16]) -> Self {
         Mat4 { buf }
     }
@@ -498,7 +513,7 @@ pub struct Quaternion {
 
 impl Quaternion {
     pub fn new(angles: Vec3) -> Self {
-        let rad = angles * (std::f32::consts::PI / 180.0 * 0.5);
+        let rad = angles * (::std::f32::consts::PI / 180.0 * 0.5);
         let c = rad.apply(f32::cos);
         let s = rad.apply(f32::sin);
         Quaternion {
@@ -548,10 +563,8 @@ impl From<Quaternion> for Mat4 {
 
 #[cfg(test)]
 pub mod tests {
-    extern crate std;
-    extern crate wasm_bindgen_test;
-    use std::{assert_eq, panic};
-    use wasm_bindgen_test::wasm_bindgen_test;
+    use ::std::{assert_eq, panic};
+    use ::wasm_bindgen_test::wasm_bindgen_test;
 
     use super::*;
 

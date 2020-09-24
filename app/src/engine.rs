@@ -1,29 +1,22 @@
-extern crate js_sys;
-extern crate log;
-extern crate std;
-extern crate wasm_bindgen;
-extern crate wasm_bindgen_futures;
-extern crate web_sys;
-
 pub mod math;
 pub mod opengl;
 pub mod picker;
 pub mod scene;
 pub mod util;
 
-use std::boxed::Box;
-use std::cell::RefCell;
-use std::clone::Clone;
-use std::convert::AsRef;
-use std::ops::FnMut;
-use std::option::{Option, Option::None, Option::Some};
-use std::rc::Rc;
-use std::result::{Result, Result::Ok};
-use std::vec::Vec;
+use ::std::boxed::Box;
+use ::std::cell::RefCell;
+use ::std::clone::Clone;
+use ::std::convert::AsRef;
+use ::std::ops::FnMut;
+use ::std::option::{Option, Option::None, Option::Some};
+use ::std::rc::Rc;
+use ::std::result::{Result, Result::Ok};
+use ::std::vec::Vec;
 
-use wasm_bindgen::closure::Closure;
-use wasm_bindgen::JsCast;
-use wasm_bindgen::JsValue;
+use ::wasm_bindgen::closure::Closure;
+use ::wasm_bindgen::JsCast;
+use ::wasm_bindgen::JsValue;
 
 pub trait Renderer {
     fn setup(&mut self, ctx: &Rc<opengl::Context>) -> Result<(), JsValue>;
@@ -34,7 +27,7 @@ pub trait Renderer {
 type RequestAnimationFrameCallback = Closure<dyn FnMut(f64) + 'static>;
 
 fn request_animation_frame_helper(callback: Option<&RequestAnimationFrameCallback>) {
-    web_sys::window()
+    ::web_sys::window()
         .unwrap()
         .request_animation_frame(callback.unwrap().as_ref().unchecked_ref())
         .unwrap();
@@ -55,20 +48,20 @@ impl Engine {
         })
     }
 
-    pub fn register_event_handler<T: wasm_bindgen::JsCast + 'static>(
+    pub fn register_event_handler<T: ::wasm_bindgen::JsCast + 'static>(
         self: &Rc<Self>,
         type_: &'static str,
         listener: Rc<RefCell<dyn EventHandler<T>>>,
     ) -> Result<(), JsValue> {
         let self0 = self.clone();
         let c = Rc::new(RefCell::new(Closure::wrap(
-            Box::new(move |event: &web_sys::Event| {
+            Box::new(move |event: &::web_sys::Event| {
                 listener.borrow_mut().handle(
                     &self0.ctx,
                     event.time_stamp(),
                     event.dyn_ref::<T>().unwrap(),
                 );
-            }) as Box<dyn FnMut(&web_sys::Event) + 'static>,
+            }) as Box<dyn FnMut(&::web_sys::Event) + 'static>,
         )));
         {
             let handler = c.as_ref().borrow();
@@ -76,7 +69,7 @@ impl Engine {
                 .gl
                 .canvas()
                 .unwrap()
-                .unchecked_ref::<web_sys::HtmlCanvasElement>()
+                .unchecked_ref::<::web_sys::HtmlCanvasElement>()
                 .add_event_listener_with_callback(type_, handler.as_ref().unchecked_ref())?;
         }
         self.callbacks.borrow_mut().push(c.clone());
@@ -96,7 +89,7 @@ impl Engine {
         *callback.borrow_mut() = Some(Closure::wrap(Box::new(move |millis: f64| {
             if self0.renderer.borrow().done() {
                 let _ = c.borrow_mut().take();
-                log::info!("wasmgame ending");
+                ::log::info!("wasmgame ending");
                 return;
             }
 
@@ -115,11 +108,11 @@ impl Engine {
     }
 }
 
-pub trait EventHandler<T: wasm_bindgen::JsCast + 'static> {
+pub trait EventHandler<T: ::wasm_bindgen::JsCast + 'static> {
     fn handle(&mut self, ctx: &opengl::Context, millis: f64, event: &T);
 }
 
-pub type EventCallback = Closure<dyn FnMut(&web_sys::Event) + 'static>;
+pub type EventCallback = Closure<dyn FnMut(&::web_sys::Event) + 'static>;
 
 pub mod attrib {
     use crate::engine::opengl::Attribute;

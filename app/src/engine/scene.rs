@@ -1,18 +1,12 @@
-extern crate js_sys;
-extern crate log;
-extern crate std;
-extern crate wasm_bindgen;
-extern crate web_sys;
+use ::std::clone::Clone;
+use ::std::convert::Into;
+use ::std::option::{Option::None, Option::Some};
+use ::std::rc::Rc;
+use ::std::result::{Result, Result::Ok};
+use ::std::{assert, panic};
+use ::std::{vec, vec::Vec};
 
-use std::clone::Clone;
-use std::convert::Into;
-use std::option::{Option::None, Option::Some};
-use std::rc::Rc;
-use std::result::{Result, Result::Ok};
-use std::{assert, panic};
-use std::{vec, vec::Vec};
-
-use wasm_bindgen::JsValue;
+use ::wasm_bindgen::JsValue;
 
 use super::attrib;
 use super::math::{look_at, project, Mat4, Quaternion, Vec3, Vec4};
@@ -236,7 +230,7 @@ impl Model {
 
     pub fn draw(&self) {
         self.ctx.instanced_arrays_ext.draw_arrays_instanced_angle(
-            web_sys::WebGlRenderingContext::TRIANGLES,
+            ::web_sys::WebGlRenderingContext::TRIANGLES,
             0,
             self.vertices.len() as i32 / 3,
             self.instances.len() as i32,
@@ -248,14 +242,14 @@ impl Model {
     }
 }
 
-impl std::ops::Index<usize> for Model {
+impl ::std::ops::Index<usize> for Model {
     type Output = Instance;
     fn index(&self, i: usize) -> &Instance {
         &self.instances[i]
     }
 }
 
-impl std::ops::IndexMut<usize> for Model {
+impl ::std::ops::IndexMut<usize> for Model {
     fn index_mut(&mut self, i: usize) -> &mut Instance {
         &mut self.instances[i]
     }

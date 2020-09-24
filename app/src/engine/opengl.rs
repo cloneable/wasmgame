@@ -1,28 +1,24 @@
-extern crate js_sys;
-extern crate log;
-extern crate std;
-extern crate wasm_bindgen;
-extern crate web_sys;
+use ::log;
+use ::std::cell::RefCell;
+use ::std::clone::Clone;
+use ::std::convert::From;
+use ::std::convert::Into;
+use ::std::option::{Option, Option::None, Option::Some};
+use ::std::rc::Rc;
+use ::std::result::{Result, Result::Err, Result::Ok};
+use ::std::string::String;
 
-use std::cell::RefCell;
-use std::clone::Clone;
-use std::convert::From;
-use std::convert::Into;
-use std::option::{Option, Option::None, Option::Some};
-use std::rc::Rc;
-use std::result::{Result, Result::Err, Result::Ok};
-use std::string::String;
-
-use wasm_bindgen::JsCast;
-use wasm_bindgen::JsValue;
+use ::wasm_bindgen::JsCast;
+use ::wasm_bindgen::JsValue;
+use ::web_sys::WebGlRenderingContext as WebGL;
 
 pub struct Context {
     /// https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.WebGlRenderingContext.html
-    pub gl: web_sys::WebGlRenderingContext,
+    pub gl: WebGL,
     /// https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.OesVertexArrayObject.html
-    pub vertex_array_object_ext: web_sys::OesVertexArrayObject,
+    pub vertex_array_object_ext: ::web_sys::OesVertexArrayObject,
     /// https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.AngleInstancedArrays.html
-    pub instanced_arrays_ext: web_sys::AngleInstancedArrays,
+    pub instanced_arrays_ext: ::web_sys::AngleInstancedArrays,
 
     next_object_id: RefCell<u32>,
     bound_vertex_array_buffer: BindingTracker,
@@ -33,31 +29,28 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn from_canvas(canvas: &web_sys::HtmlCanvasElement) -> Result<Self, JsValue> {
+    pub fn from_canvas(canvas: &::web_sys::HtmlCanvasElement) -> Result<Self, JsValue> {
         let gl = canvas
-            .get_context_with_context_options("webgl", &web_sys::WebGlContextAttributes::new())
+            .get_context_with_context_options("webgl", &::web_sys::WebGlContextAttributes::new())
             .expect("getContext failed")
             .expect("unsupported context type")
-            .dyn_into::<web_sys::WebGlRenderingContext>()
+            .dyn_into::<WebGL>()
             .expect("context of unexpected type");
         let vertex_array_object_ext = gl
             .get_extension("OES_vertex_array_object")
             .unwrap()
             .unwrap()
-            .unchecked_into::<web_sys::OesVertexArrayObject>();
+            .unchecked_into::<::web_sys::OesVertexArrayObject>();
         // TODO: try ANGLEInstancedArrays if ANGLE_instanced_arrays doesn't work.
         let instanced_arrays_ext = gl
             .get_extension("ANGLE_instanced_arrays")
             .unwrap()
             .unwrap()
-            .unchecked_into::<web_sys::AngleInstancedArrays>();
+            .unchecked_into::<::web_sys::AngleInstancedArrays>();
         // TODO: find better place for this. some init func?
-        gl.enable(web_sys::WebGlRenderingContext::CULL_FACE);
-        gl.enable(web_sys::WebGlRenderingContext::DEPTH_TEST);
-        gl.hint(
-            web_sys::WebGlRenderingContext::GENERATE_MIPMAP_HINT,
-            web_sys::WebGlRenderingContext::NICEST,
-        );
+        gl.enable(WebGL::CULL_FACE);
+        gl.enable(WebGL::DEPTH_TEST);
+        gl.hint(WebGL::GENERATE_MIPMAP_HINT, WebGL::NICEST);
         Ok(Context {
             gl,
             vertex_array_object_ext,
@@ -81,7 +74,7 @@ impl Context {
 pub struct VertexArrayObject {
     ctx: Rc<Context>,
     id: u32,
-    vao: web_sys::WebGlVertexArrayObject,
+    vao: ::web_sys::WebGlVertexArrayObject,
 }
 
 impl VertexArrayObject {
@@ -117,7 +110,7 @@ impl VertexArrayObject {
     }
 }
 
-impl std::ops::Drop for VertexArrayObject {
+impl ::std::ops::Drop for VertexArrayObject {
     fn drop(&mut self) {
         log::debug!("deleting vao");
         self.ctx.bound_vertex_array_buffer.assert_unbound(self.id);
@@ -130,7 +123,7 @@ impl std::ops::Drop for VertexArrayObject {
 pub struct ArrayBuffer {
     ctx: Rc<Context>,
     id: u32,
-    buffer: web_sys::WebGlBuffer,
+    buffer: ::web_sys::WebGlBuffer,
 }
 
 impl ArrayBuffer {
@@ -151,10 +144,9 @@ impl ArrayBuffer {
         self.ctx
             .bound_array_buffer
             .assert_unbound_then_bind(self.id);
-        self.ctx.gl.bind_buffer(
-            web_sys::WebGlRenderingContext::ARRAY_BUFFER,
-            Some(&self.buffer),
-        );
+        self.ctx
+            .gl
+            .bind_buffer(WebGL::ARRAY_BUFFER, Some(&self.buffer));
         self
     }
 
@@ -162,29 +154,26 @@ impl ArrayBuffer {
         self.ctx
             .bound_array_buffer
             .assert_bound_then_unbind(self.id);
-        self.ctx
-            .gl
-            .bind_buffer(web_sys::WebGlRenderingContext::ARRAY_BUFFER, None);
+        self.ctx.gl.bind_buffer(WebGL::ARRAY_BUFFER, None);
     }
 
     pub fn allocate_dynamic(&mut self, size: usize) -> &mut Self {
         self.ctx.bound_array_buffer.assert_bound(self.id);
-        self.ctx.gl.buffer_data_with_i32(
-            web_sys::WebGlRenderingContext::ARRAY_BUFFER,
-            size as i32,
-            web_sys::WebGlRenderingContext::DYNAMIC_DRAW,
-        );
+        self.ctx
+            .gl
+            .buffer_data_with_i32(WebGL::ARRAY_BUFFER, size as i32, WebGL::DYNAMIC_DRAW);
         self
     }
 
     pub fn set_buffer_data(&mut self, data: &[f32]) -> &mut Self {
         self.ctx.bound_array_buffer.assert_bound(self.id);
+        #[allow(unsafe_code)]
         unsafe {
-            let view = js_sys::Float32Array::view(data);
+            let view = ::js_sys::Float32Array::view(data);
             self.ctx.gl.buffer_data_with_array_buffer_view(
-                web_sys::WebGlRenderingContext::ARRAY_BUFFER,
+                WebGL::ARRAY_BUFFER,
                 &view,
-                web_sys::WebGlRenderingContext::STATIC_DRAW,
+                WebGL::STATIC_DRAW,
             );
         }
         self
@@ -192,10 +181,11 @@ impl ArrayBuffer {
 
     pub fn set_buffer_sub_data(&mut self, offset: i32, data: &[f32]) -> &mut Self {
         self.ctx.bound_array_buffer.assert_bound(self.id);
+        #[allow(unsafe_code)]
         unsafe {
-            let view = js_sys::Float32Array::view(data);
+            let view = ::js_sys::Float32Array::view(data);
             self.ctx.gl.buffer_sub_data_with_i32_and_array_buffer_view(
-                web_sys::WebGlRenderingContext::ARRAY_BUFFER,
+                WebGL::ARRAY_BUFFER,
                 offset,
                 &view,
             );
@@ -205,14 +195,9 @@ impl ArrayBuffer {
 
     pub fn set_vertex_attribute_pointer_vec3(&mut self, attribute: Attribute) -> &mut Self {
         self.ctx.bound_array_buffer.assert_bound(self.id);
-        self.ctx.gl.vertex_attrib_pointer_with_i32(
-            attribute.0,
-            3,
-            web_sys::WebGlRenderingContext::FLOAT,
-            false,
-            3 * 4,
-            0,
-        );
+        self.ctx
+            .gl
+            .vertex_attrib_pointer_with_i32(attribute.0, 3, WebGL::FLOAT, false, 3 * 4, 0);
         self
     }
 
@@ -222,7 +207,7 @@ impl ArrayBuffer {
             self.ctx.gl.vertex_attrib_pointer_with_i32(
                 attribute.0 + i as u32,
                 4,
-                web_sys::WebGlRenderingContext::FLOAT,
+                WebGL::FLOAT,
                 false,
                 16 * 4,
                 i as i32 * 4 * 4,
@@ -242,7 +227,7 @@ impl ArrayBuffer {
     }
 }
 
-impl std::ops::Drop for ArrayBuffer {
+impl ::std::ops::Drop for ArrayBuffer {
     fn drop(&mut self) {
         log::debug!("deleting buffer");
         self.ctx.bound_array_buffer.assert_unbound(self.id);
@@ -252,11 +237,11 @@ impl std::ops::Drop for ArrayBuffer {
 
 pub struct Uniform {
     ctx: Rc<Context>,
-    location: web_sys::WebGlUniformLocation,
+    location: ::web_sys::WebGlUniformLocation,
 }
 
 impl Uniform {
-    pub fn find<'b>(ctx: &Rc<Context>, program: &'b Program, name: &str) -> Result<Self, JsValue> {
+    pub fn find(ctx: &Rc<Context>, program: &Program, name: &str) -> Result<Self, JsValue> {
         let location = ctx
             .gl
             .get_uniform_location(&program.program, name)
@@ -298,7 +283,7 @@ impl Attribute {
 
 pub struct Program {
     ctx: Rc<Context>,
-    pub program: web_sys::WebGlProgram,
+    pub program: ::web_sys::WebGlProgram,
 }
 
 impl Program {
@@ -322,7 +307,7 @@ impl Program {
         if self
             .ctx
             .gl
-            .get_program_parameter(&self.program, web_sys::WebGlRenderingContext::LINK_STATUS)
+            .get_program_parameter(&self.program, WebGL::LINK_STATUS)
             .as_bool()
             .unwrap_or(false)
         {
@@ -343,7 +328,7 @@ impl Program {
     }
 }
 
-impl<'a> std::ops::Drop for Program {
+impl ::std::ops::Drop for Program {
     fn drop(&mut self) {
         log::debug!("deleting program");
         self.ctx.gl.delete_program(Some(&self.program));
@@ -352,7 +337,7 @@ impl<'a> std::ops::Drop for Program {
 
 pub struct Shader {
     ctx: Rc<Context>,
-    shader: web_sys::WebGlShader,
+    shader: ::web_sys::WebGlShader,
 }
 
 pub enum ShaderType {
@@ -363,8 +348,8 @@ pub enum ShaderType {
 impl Shader {
     pub fn create(ctx: &Rc<Context>, type_: ShaderType) -> Result<Self, JsValue> {
         let pt = match type_ {
-            ShaderType::Vertex => web_sys::WebGlRenderingContext::VERTEX_SHADER,
-            ShaderType::Fragment => web_sys::WebGlRenderingContext::FRAGMENT_SHADER,
+            ShaderType::Vertex => WebGL::VERTEX_SHADER,
+            ShaderType::Fragment => WebGL::FRAGMENT_SHADER,
         };
         let shader = ctx
             .gl
@@ -382,7 +367,7 @@ impl Shader {
         if self
             .ctx
             .gl
-            .get_shader_parameter(&self.shader, web_sys::WebGlRenderingContext::COMPILE_STATUS)
+            .get_shader_parameter(&self.shader, WebGL::COMPILE_STATUS)
             .as_bool()
             .unwrap_or(false)
         {
@@ -399,7 +384,7 @@ impl Shader {
     }
 }
 
-impl std::ops::Drop for Shader {
+impl ::std::ops::Drop for Shader {
     fn drop(&mut self) {
         log::debug!("deleting shader");
         self.ctx.gl.delete_shader(Some(&self.shader));
@@ -409,7 +394,7 @@ impl std::ops::Drop for Shader {
 pub struct Framebuffer {
     ctx: Rc<Context>,
     id: u32,
-    buffer: web_sys::WebGlFramebuffer,
+    buffer: ::web_sys::WebGlFramebuffer,
 }
 
 impl Framebuffer {
@@ -428,32 +413,27 @@ impl Framebuffer {
 
     pub fn bind(&mut self) {
         self.ctx.bound_framebuffer.assert_unbound_then_bind(self.id);
-        self.ctx.gl.bind_framebuffer(
-            web_sys::WebGlRenderingContext::FRAMEBUFFER,
-            Some(&self.buffer),
-        )
+        self.ctx
+            .gl
+            .bind_framebuffer(WebGL::FRAMEBUFFER, Some(&self.buffer))
     }
 
     pub fn unbind(&mut self) {
         self.ctx.bound_framebuffer.assert_bound_then_unbind(self.id);
-        self.ctx
-            .gl
-            .bind_framebuffer(web_sys::WebGlRenderingContext::FRAMEBUFFER, None)
+        self.ctx.gl.bind_framebuffer(WebGL::FRAMEBUFFER, None)
     }
 
     pub fn check_status(&self) -> u32 {
         self.ctx.bound_framebuffer.assert_bound(self.id);
-        self.ctx
-            .gl
-            .check_framebuffer_status(web_sys::WebGlRenderingContext::FRAMEBUFFER)
+        self.ctx.gl.check_framebuffer_status(WebGL::FRAMEBUFFER)
     }
 
     pub fn texture2d_as_colorbuffer(&mut self, texture: &Texture2D) {
         self.ctx.bound_framebuffer.assert_bound(self.id);
         self.ctx.gl.framebuffer_texture_2d(
-            web_sys::WebGlRenderingContext::FRAMEBUFFER,
-            web_sys::WebGlRenderingContext::COLOR_ATTACHMENT0,
-            web_sys::WebGlRenderingContext::TEXTURE_2D,
+            WebGL::FRAMEBUFFER,
+            WebGL::COLOR_ATTACHMENT0,
+            WebGL::TEXTURE_2D,
             Some(&texture.texture),
             0,
         )
@@ -462,9 +442,9 @@ impl Framebuffer {
     pub fn renderbuffer_as_depthbuffer(&mut self, buffer: &Renderbuffer) {
         self.ctx.bound_framebuffer.assert_bound(self.id);
         self.ctx.gl.framebuffer_renderbuffer(
-            web_sys::WebGlRenderingContext::FRAMEBUFFER,
-            web_sys::WebGlRenderingContext::DEPTH_ATTACHMENT,
-            web_sys::WebGlRenderingContext::RENDERBUFFER,
+            WebGL::FRAMEBUFFER,
+            WebGL::DEPTH_ATTACHMENT,
+            WebGL::RENDERBUFFER,
             Some(&buffer.buffer),
         )
     }
@@ -486,7 +466,7 @@ impl Framebuffer {
     }
 }
 
-impl std::ops::Drop for Framebuffer {
+impl ::std::ops::Drop for Framebuffer {
     fn drop(&mut self) {
         log::debug!("deleting framebuffer");
         self.ctx.bound_framebuffer.assert_unbound(self.id);
@@ -497,7 +477,7 @@ impl std::ops::Drop for Framebuffer {
 pub struct Renderbuffer {
     ctx: Rc<Context>,
     id: u32,
-    buffer: web_sys::WebGlRenderbuffer,
+    buffer: ::web_sys::WebGlRenderbuffer,
 }
 
 impl Renderbuffer {
@@ -518,33 +498,30 @@ impl Renderbuffer {
         self.ctx
             .bound_renderbuffer
             .assert_unbound_then_bind(self.id);
-        self.ctx.gl.bind_renderbuffer(
-            web_sys::WebGlRenderingContext::RENDERBUFFER,
-            Some(&self.buffer),
-        )
+        self.ctx
+            .gl
+            .bind_renderbuffer(WebGL::RENDERBUFFER, Some(&self.buffer))
     }
 
     pub fn unbind(&mut self) {
         self.ctx
             .bound_renderbuffer
             .assert_bound_then_unbind(self.id);
-        self.ctx
-            .gl
-            .bind_renderbuffer(web_sys::WebGlRenderingContext::RENDERBUFFER, None)
+        self.ctx.gl.bind_renderbuffer(WebGL::RENDERBUFFER, None)
     }
 
     pub fn storage_for_depth(&mut self, width: i32, height: i32) {
         self.ctx.bound_renderbuffer.assert_bound(self.id);
         self.ctx.gl.renderbuffer_storage(
-            web_sys::WebGlRenderingContext::RENDERBUFFER,
-            web_sys::WebGlRenderingContext::DEPTH_COMPONENT16,
+            WebGL::RENDERBUFFER,
+            WebGL::DEPTH_COMPONENT16,
             width,
             height,
         )
     }
 }
 
-impl<'a> std::ops::Drop for Renderbuffer {
+impl ::std::ops::Drop for Renderbuffer {
     fn drop(&mut self) {
         log::debug!("deleting renderbuffer");
         self.ctx.bound_vertex_array_buffer.assert_unbound(self.id);
@@ -555,7 +532,7 @@ impl<'a> std::ops::Drop for Renderbuffer {
 pub struct Texture2D {
     ctx: Rc<Context>,
     id: u32,
-    texture: web_sys::WebGlTexture,
+    texture: ::web_sys::WebGlTexture,
 }
 
 impl Texture2D {
@@ -574,17 +551,14 @@ impl Texture2D {
 
     pub fn bind(&mut self) {
         self.ctx.bound_texture.assert_unbound_then_bind(self.id);
-        self.ctx.gl.bind_texture(
-            web_sys::WebGlRenderingContext::TEXTURE_2D,
-            Some(&self.texture),
-        )
+        self.ctx
+            .gl
+            .bind_texture(WebGL::TEXTURE_2D, Some(&self.texture))
     }
 
     pub fn unbind(&mut self) {
         self.ctx.bound_texture.assert_bound_then_unbind(self.id);
-        self.ctx
-            .gl
-            .bind_texture(web_sys::WebGlRenderingContext::TEXTURE_2D, None)
+        self.ctx.gl.bind_texture(WebGL::TEXTURE_2D, None)
     }
 
     pub fn tex_image_2d(
@@ -597,20 +571,20 @@ impl Texture2D {
         self.ctx
             .gl
             .tex_image_2d_with_i32_and_i32_and_i32_and_format_and_type_and_opt_u8_array(
-                web_sys::WebGlRenderingContext::TEXTURE_2D,
+                WebGL::TEXTURE_2D,
                 0,
-                web_sys::WebGlRenderingContext::RGBA as i32,
+                WebGL::RGBA as i32,
                 width,
                 height,
                 0,
-                web_sys::WebGlRenderingContext::RGBA,
-                web_sys::WebGlRenderingContext::UNSIGNED_BYTE,
+                WebGL::RGBA,
+                WebGL::UNSIGNED_BYTE,
                 pixels,
             )
     }
 }
 
-impl std::ops::Drop for Texture2D {
+impl ::std::ops::Drop for Texture2D {
     fn drop(&mut self) {
         log::debug!("deleting texture2d");
         self.ctx.bound_texture.assert_unbound(self.id);
@@ -633,8 +607,8 @@ impl BindingTracker {
 
     #[cfg(debug_assertions)]
     fn assert_bound(&self, id: u32) {
-        use std::panic;
-        std::debug_assert_eq!(*self.bound_id.borrow(), id);
+        use ::std::panic;
+        ::std::debug_assert_eq!(*self.bound_id.borrow(), id);
     }
 
     #[cfg(not(debug_assertions))]
@@ -642,9 +616,9 @@ impl BindingTracker {
 
     #[cfg(debug_assertions)]
     fn assert_bound_then_unbind(&self, id: u32) {
-        use std::panic;
+        use ::std::panic;
         let mut id_ref = self.bound_id.borrow_mut();
-        std::debug_assert_eq!(*id_ref, id);
+        ::std::debug_assert_eq!(*id_ref, id);
         *id_ref = 0;
     }
 
@@ -653,8 +627,8 @@ impl BindingTracker {
 
     #[cfg(debug_assertions)]
     fn assert_unbound(&self, id: u32) {
-        use std::panic;
-        std::debug_assert_ne!(*self.bound_id.borrow(), id);
+        use ::std::panic;
+        ::std::debug_assert_ne!(*self.bound_id.borrow(), id);
     }
 
     #[cfg(not(debug_assertions))]
@@ -662,9 +636,9 @@ impl BindingTracker {
 
     #[cfg(debug_assertions)]
     fn assert_unbound_then_bind(&self, id: u32) {
-        use std::panic;
+        use ::std::panic;
         let mut id_ref = self.bound_id.borrow_mut();
-        std::debug_assert_ne!(*id_ref, id);
+        ::std::debug_assert_ne!(*id_ref, id);
         *id_ref = id;
     }
 

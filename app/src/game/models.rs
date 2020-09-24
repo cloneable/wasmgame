@@ -1,19 +1,10 @@
-extern crate js_sys;
-extern crate log;
-extern crate std;
-extern crate wasm_bindgen;
-extern crate wasm_bindgen_macro;
-extern crate wasm_logger;
-extern crate web_sys;
+use ::std::convert::Into;
+use ::std::rc::Rc;
+use ::std::result::{Result, Result::Ok};
+
+use ::wasm_bindgen::JsValue;
 
 use crate::engine;
-
-use std::convert::Into;
-use std::rc::Rc;
-use std::result::{Result, Result::Ok};
-
-use wasm_bindgen::JsValue;
-
 use engine::math::Vec4;
 use engine::opengl::Context;
 use engine::scene::Model;
