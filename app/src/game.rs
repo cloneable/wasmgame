@@ -65,7 +65,7 @@ impl Game {
 
         Ok(Self {
             last_render: Duration::from_secs(0),
-            scene: Scene::new(ctx)?,
+            scene,
             offscreen: engine::util::OffscreenBuffer::new(ctx, 400, 300)?,
             picker_program,
             program,
