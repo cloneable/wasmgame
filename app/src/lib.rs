@@ -52,6 +52,7 @@ impl Console {
         let game = Rc::new(RefCell::new(
             Game::new(&ctx).map_err(Into::<JsValue>::into)?,
         ));
+        game.borrow_mut().init().map_err(Into::<JsValue>::into)?;
         let engine = engine::Engine::new(&ctx, game.clone());
         Ok(Console { engine, game })
     }

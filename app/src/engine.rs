@@ -15,6 +15,7 @@ use ::std::rc::Rc;
 use ::std::result::{Result, Result::Ok};
 use ::std::string::String;
 use ::std::string::ToString;
+use ::std::time::Duration;
 use ::std::vec::Vec;
 
 use ::wasm_bindgen::closure::Closure;
@@ -22,8 +23,8 @@ use ::wasm_bindgen::JsCast;
 use ::wasm_bindgen::JsValue;
 
 pub trait Renderer {
-    fn setup(&mut self, ctx: &Rc<opengl::Context>) -> Result<(), Error>;
-    fn render(&mut self, ctx: &Rc<opengl::Context>, millis: f64) -> Result<(), Error>;
+    fn update(&mut self, timestamp: Duration) -> Result<(), Error>;
+    fn render(&mut self, ctx: &Rc<opengl::Context>, timestamp: Duration) -> Result<(), Error>;
     fn done(&self) -> bool;
 }
 
@@ -80,7 +81,6 @@ impl Engine {
     }
 
     pub fn start(self: &Rc<Self>) -> Result<(), Error> {
-        self.renderer.borrow_mut().setup(&self.ctx)?;
         // Part of this is taken from the wasm-bindgen guide.
         // This kinda works for now, but needs to be checked for
         // leaks.
@@ -96,10 +96,16 @@ impl Engine {
                 return;
             }
 
+            let timestamp = Duration::from_micros((millis * 1000.0) as u64);
+
+            // TODO: move update() call out of requestAnimationFrame closure.
+            self0.renderer.borrow_mut().update(timestamp).unwrap();
+
+            // TODO: refactor game to not need context passed in here.
             self0
                 .renderer
                 .borrow_mut()
-                .render(&self0.ctx, millis)
+                .render(&self0.ctx, timestamp)
                 .unwrap();
 
             let c0 = c.clone();

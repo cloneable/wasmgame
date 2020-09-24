@@ -61,21 +61,23 @@ impl Game {
             program,
         })
     }
-}
 
-impl engine::Renderer for Game {
-    fn setup(&mut self, _ctx: &Rc<Context>) -> Result<(), Error> {
+    pub fn init(&mut self) -> Result<(), Error> {
         // TODO: refactor why camera is pulled in.
         self.scene.hexatile.init(&self.scene.camera);
         self.offscreen.activate();
         Ok(())
     }
+}
 
-    fn render(&mut self, ctx: &Rc<Context>, millis: f64) -> Result<(), Error> {
-        self.last_render = Duration::from_micros((millis * 1000.0) as u64);
-
+impl engine::Renderer for Game {
+    fn update(&mut self, timestamp: Duration) -> Result<(), Error> {
+        self.last_render = timestamp;
         self.scene.hexatile.update(&self.scene.camera);
+        Ok(())
+    }
 
+    fn render(&mut self, ctx: &Rc<Context>, _timestamp: Duration) -> Result<(), Error> {
         self.offscreen.deactivate();
 
         // draw
