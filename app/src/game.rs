@@ -6,11 +6,11 @@ use ::std::result::{Result, Result::Ok};
 use ::std::time::Duration;
 
 use ::wasm_bindgen::JsCast;
-use ::wasm_bindgen::JsValue;
 
 use crate::engine;
 use crate::util::opengl::Context;
 use engine::scene::{Camera, Drawable};
+use engine::Error;
 
 struct Scene {
     hexatile: models::Hexatile,
@@ -18,7 +18,7 @@ struct Scene {
 }
 
 impl Scene {
-    pub fn new(ctx: &Rc<Context>) -> Result<Self, JsValue> {
+    pub fn new(ctx: &Rc<Context>) -> Result<Self, Error> {
         let mut camera = Camera::new();
         camera
             .set_position(0.5, 1.4, 3.0)
@@ -40,7 +40,7 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new(ctx: &Rc<Context>) -> Result<Self, JsValue> {
+    pub fn new(ctx: &Rc<Context>) -> Result<Self, Error> {
         let scene = Scene::new(ctx)?;
 
         let mut picker_program = engine::picker::PickerProgram::new(ctx)?;
@@ -64,14 +64,14 @@ impl Game {
 }
 
 impl engine::Renderer for Game {
-    fn setup(&mut self, _ctx: &Rc<Context>) -> Result<(), JsValue> {
+    fn setup(&mut self, _ctx: &Rc<Context>) -> Result<(), Error> {
         // TODO: refactor why camera is pulled in.
         self.scene.hexatile.init(&self.scene.camera);
         self.offscreen.activate();
         Ok(())
     }
 
-    fn render(&mut self, ctx: &Rc<Context>, millis: f64) -> Result<(), JsValue> {
+    fn render(&mut self, ctx: &Rc<Context>, millis: f64) -> Result<(), Error> {
         self.last_render = Duration::from_micros((millis * 1000.0) as u64);
 
         self.scene.hexatile.update(&self.scene.camera);

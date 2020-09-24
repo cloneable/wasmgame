@@ -3,8 +3,7 @@ use ::std::rc::Rc;
 use ::std::result::{Result, Result::Ok};
 use ::std::{debug_assert_eq, panic};
 
-use ::wasm_bindgen::JsValue;
-
+use crate::engine::Error;
 use crate::util::math::Vec3;
 use crate::util::opengl::{Context, Framebuffer, Renderbuffer, Texture2D};
 
@@ -86,7 +85,7 @@ pub struct OffscreenBuffer {
 }
 
 impl OffscreenBuffer {
-    pub fn new(ctx: &Rc<Context>, width: i32, height: i32) -> Result<Self, JsValue> {
+    pub fn new(ctx: &Rc<Context>, width: i32, height: i32) -> Result<Self, Error> {
         let mut colorbuffer = Texture2D::create(ctx)?;
         colorbuffer.bind();
         colorbuffer.tex_image_2d(width, height, None)?;
@@ -123,7 +122,7 @@ impl OffscreenBuffer {
         self.framebuffer.unbind()
     }
 
-    pub fn read_pixel(&self, x: i32, y: i32) -> Result<[u8; 4], JsValue> {
+    pub fn read_pixel(&self, x: i32, y: i32) -> Result<[u8; 4], Error> {
         let mut buf: [u8; 4] = [0, 0, 0, 0];
         self.framebuffer.read_pixels(
             x,

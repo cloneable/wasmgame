@@ -6,12 +6,11 @@ use ::std::result::{Result, Result::Ok};
 use ::std::{assert, panic};
 use ::std::{vec, vec::Vec};
 
-use ::wasm_bindgen::JsValue;
-
 use super::attrib;
 use super::util;
 use crate::util::math::{look_at, project, Mat4, Quaternion, Vec3, Vec4};
 use crate::util::opengl::{ArrayBuffer, Context, VertexArrayObject};
+use crate::engine::Error;
 
 pub trait Drawable {
     fn init(&mut self, camera: &Camera);
@@ -115,7 +114,7 @@ impl Model {
         indexed_vertices: &'static [f32],
         indices: &'static [u8],
         num_instances: usize,
-    ) -> Result<Self, JsValue> {
+    ) -> Result<Self, Error> {
         assert!(num_instances > 0);
         let mut vertices: Vec<f32> = vec![0.0; indices.len() * 3];
         let mut normals: Vec<f32> = vec![0.0; indices.len() * 3];

@@ -7,10 +7,14 @@ use ::std::boxed::Box;
 use ::std::cell::RefCell;
 use ::std::clone::Clone;
 use ::std::convert::AsRef;
+use ::std::convert::From;
+use ::std::convert::Into;
 use ::std::ops::FnMut;
 use ::std::option::{Option, Option::None, Option::Some};
 use ::std::rc::Rc;
 use ::std::result::{Result, Result::Ok};
+use ::std::string::String;
+use ::std::string::ToString;
 use ::std::vec::Vec;
 
 use ::wasm_bindgen::closure::Closure;
@@ -18,8 +22,8 @@ use ::wasm_bindgen::JsCast;
 use ::wasm_bindgen::JsValue;
 
 pub trait Renderer {
-    fn setup(&mut self, ctx: &Rc<opengl::Context>) -> Result<(), JsValue>;
-    fn render(&mut self, ctx: &Rc<opengl::Context>, millis: f64) -> Result<(), JsValue>;
+    fn setup(&mut self, ctx: &Rc<opengl::Context>) -> Result<(), Error>;
+    fn render(&mut self, ctx: &Rc<opengl::Context>, millis: f64) -> Result<(), Error>;
     fn done(&self) -> bool;
 }
 
@@ -51,7 +55,7 @@ impl Engine {
         self: &Rc<Self>,
         type_: &'static str,
         listener: Rc<RefCell<dyn EventHandler<T>>>,
-    ) -> Result<(), JsValue> {
+    ) -> Result<(), Error> {
         let self0 = self.clone();
         let c = Rc::new(RefCell::new(Closure::wrap(
             Box::new(move |event: &::web_sys::Event| {
@@ -75,7 +79,7 @@ impl Engine {
         Ok(())
     }
 
-    pub fn start(self: &Rc<Self>) -> Result<(), JsValue> {
+    pub fn start(self: &Rc<Self>) -> Result<(), Error> {
         self.renderer.borrow_mut().setup(&self.ctx)?;
         // Part of this is taken from the wasm-bindgen guide.
         // This kinda works for now, but needs to be checked for
@@ -122,4 +126,39 @@ pub mod attrib {
     pub const INSTANCE_ID: Attribute = Attribute(3, 1);
     pub const MODEL: Attribute = Attribute(4, 4);
     pub const NORMALS: Attribute = Attribute(8, 4);
+}
+
+pub enum Error {
+    Internal(String),
+    JsValue(JsValue),
+}
+
+impl Error {
+    pub fn new(msg: &str) -> Self {
+        Error::Internal(msg.to_string())
+    }
+}
+
+impl From<JsValue> for Error {
+    fn from(value: JsValue) -> Error {
+        Error::JsValue(value)
+    }
+}
+
+impl Into<JsValue> for Error {
+    fn into(self) -> JsValue {
+        match self {
+            Error::Internal(msg) => JsValue::from(msg),
+            Error::JsValue(v) => v,
+        }
+    }
+}
+
+impl ::std::fmt::Debug for Error {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> Result<(), ::std::fmt::Error> {
+        match self {
+            Error::Internal(msg) => f.write_str(msg),
+            Error::JsValue(v) => f.write_str(v.as_string().unwrap().as_str()),
+        }
+    }
 }

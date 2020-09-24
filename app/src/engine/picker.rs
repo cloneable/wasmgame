@@ -1,9 +1,8 @@
 use ::std::rc::Rc;
 use ::std::result::{Result, Result::Ok};
 
-use ::wasm_bindgen::JsValue;
-
 use super::attrib;
+use crate::engine::Error;
 use crate::util::math::Mat4;
 use crate::util::opengl::{
     Context, Program, Shader, ShaderType::Fragment, ShaderType::Vertex, Uniform,
@@ -17,7 +16,7 @@ pub struct PickerProgram {
 }
 
 impl PickerProgram {
-    pub fn new(ctx: &Rc<Context>) -> Result<Self, JsValue> {
+    pub fn new(ctx: &Rc<Context>) -> Result<Self, Error> {
         let mut vertex_shader = Shader::create(ctx, Vertex)?;
         vertex_shader.compile_source(PICKER_VERTEX_SHADER)?;
         let mut fragment_shader = Shader::create(ctx, Fragment)?;

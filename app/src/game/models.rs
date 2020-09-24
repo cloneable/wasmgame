@@ -2,19 +2,18 @@ use ::std::convert::Into;
 use ::std::rc::Rc;
 use ::std::result::{Result, Result::Ok};
 
-use ::wasm_bindgen::JsValue;
-
 use crate::engine;
 use crate::util::math::Vec4;
 use crate::util::opengl::Context;
 use engine::scene::Model;
+use engine::Error;
 
 pub struct Hexatile {
     pub model: Model,
 }
 
 impl Hexatile {
-    pub fn new(ctx: &Rc<Context>) -> Result<Self, JsValue> {
+    pub fn new(ctx: &Rc<Context>) -> Result<Self, Error> {
         Ok(Hexatile {
             model: Model::new(ctx, &HEXATILE_VERTICES, &HEXATILE_INDICES, 3)?,
         })

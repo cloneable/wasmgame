@@ -6,6 +6,7 @@ mod util;
 
 use ::std::cell::RefCell;
 use ::std::clone::Clone;
+use ::std::convert::Into;
 use ::std::default::Default;
 use ::std::mem::drop;
 use ::std::rc::Rc;
@@ -48,7 +49,9 @@ impl Console {
             .expect("element not of type canvas");
 
         let ctx = Rc::new(Context::from_canvas(&canvas)?);
-        let game = Rc::new(RefCell::new(Game::new(&ctx)?));
+        let game = Rc::new(RefCell::new(
+            Game::new(&ctx).map_err(Into::<JsValue>::into)?,
+        ));
         let engine = engine::Engine::new(&ctx, game.clone());
         Ok(Console { engine, game })
     }
@@ -56,7 +59,8 @@ impl Console {
     pub fn start(&mut self) -> Result<(), JsValue> {
         ::log::info!("wasmgame starting");
         self.engine
-            .register_event_handler("click", self.game.clone())?;
-        self.engine.start()
+            .register_event_handler("click", self.game.clone())
+            .map_err(Into::<JsValue>::into)?;
+        self.engine.start().map_err(Into::<JsValue>::into)
     }
 }
