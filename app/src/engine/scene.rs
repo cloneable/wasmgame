@@ -9,9 +9,9 @@ use ::std::{vec, vec::Vec};
 use ::wasm_bindgen::JsValue;
 
 use super::attrib;
-use super::math::{look_at, project, Mat4, Quaternion, Vec3, Vec4};
-use super::opengl::{ArrayBuffer, Context, VertexArrayObject};
 use super::util;
+use crate::util::math::{look_at, project, Mat4, Quaternion, Vec3, Vec4};
+use crate::util::opengl::{ArrayBuffer, Context, VertexArrayObject};
 
 pub trait Drawable {
     fn init(&mut self, camera: &Camera);

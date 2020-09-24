@@ -5,8 +5,8 @@ use ::std::result::{Result, Result::Ok};
 use ::wasm_bindgen::JsValue;
 
 use crate::engine;
-use engine::math::Vec4;
-use engine::opengl::Context;
+use crate::util::math::Vec4;
+use crate::util::opengl::Context;
 use engine::scene::Model;
 
 pub struct Hexatile {

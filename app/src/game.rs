@@ -9,7 +9,7 @@ use ::wasm_bindgen::JsCast;
 use ::wasm_bindgen::JsValue;
 
 use crate::engine;
-use engine::opengl::Context;
+use crate::util::opengl::Context;
 use engine::scene::{Camera, Drawable};
 
 struct Scene {

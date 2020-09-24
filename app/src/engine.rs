@@ -1,9 +1,8 @@
-pub mod math;
-pub mod opengl;
 pub mod picker;
 pub mod scene;
 pub mod util;
 
+use crate::util::opengl;
 use ::std::boxed::Box;
 use ::std::cell::RefCell;
 use ::std::clone::Clone;
@@ -115,7 +114,7 @@ pub trait EventHandler<T: ::wasm_bindgen::JsCast + 'static> {
 pub type EventCallback = Closure<dyn FnMut(&::web_sys::Event) + 'static>;
 
 pub mod attrib {
-    use crate::engine::opengl::Attribute;
+    use crate::util::opengl::Attribute;
 
     pub const POSITION: Attribute = Attribute(0, 1);
     pub const NORMAL: Attribute = Attribute(1, 1);

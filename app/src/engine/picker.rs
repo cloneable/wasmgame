@@ -4,8 +4,10 @@ use ::std::result::{Result, Result::Ok};
 use ::wasm_bindgen::JsValue;
 
 use super::attrib;
-use super::math::Mat4;
-use super::opengl::{Context, Program, Shader, ShaderType::Fragment, ShaderType::Vertex, Uniform};
+use crate::util::math::Mat4;
+use crate::util::opengl::{
+    Context, Program, Shader, ShaderType::Fragment, ShaderType::Vertex, Uniform,
+};
 
 pub struct PickerProgram {
     program: Program,

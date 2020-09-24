@@ -5,8 +5,8 @@ use ::std::{debug_assert_eq, panic};
 
 use ::wasm_bindgen::JsValue;
 
-use super::math::Vec3;
-use super::opengl::{Context, Framebuffer, Renderbuffer, Texture2D};
+use crate::util::math::Vec3;
+use crate::util::opengl::{Context, Framebuffer, Renderbuffer, Texture2D};
 
 pub fn generate_buffers(
     model_indices: &[u8],

@@ -4,8 +4,8 @@ use ::std::result::{Result, Result::Ok};
 use ::wasm_bindgen::JsValue;
 
 use crate::engine::attrib;
-use crate::engine::math::Mat4;
-use crate::engine::opengl::{
+use crate::util::math::Mat4;
+use crate::util::opengl::{
     Context, Program, Shader, ShaderType::Fragment, ShaderType::Vertex, Uniform,
 };
 

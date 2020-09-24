@@ -2,6 +2,7 @@
 
 mod engine;
 mod game;
+mod util;
 
 use ::std::cell::RefCell;
 use ::std::clone::Clone;
@@ -17,7 +18,7 @@ use ::wasm_bindgen_macro::wasm_bindgen;
 use ::wasm_logger;
 use ::web_sys;
 
-use engine::opengl::Context;
+use crate::util::opengl::Context;
 use game::Game;
 
 #[wasm_bindgen(start)]
