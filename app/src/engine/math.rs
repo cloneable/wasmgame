@@ -1,5 +1,6 @@
 extern crate std;
 
+use std::convert::From;
 use std::option::{Option, Option::None, Option::Some};
 use std::result::Result;
 use std::{panic, unreachable};
@@ -38,6 +39,16 @@ pub struct Vec3 {
     pub z: f32,
 }
 
+impl std::convert::From<[f32; 3]> for Vec3 {
+    fn from(buf: [f32; 3]) -> Vec3 {
+        Vec3 {
+            x: buf[0],
+            y: buf[1],
+            z: buf[2],
+        }
+    }
+}
+
 impl Vec3 {
     pub fn new(x: f32, y: f32, z: f32) -> Self {
         Self { x, y, z }
@@ -74,6 +85,46 @@ impl Vec3 {
             z: self.z / length,
         }
     }
+
+    pub fn apply(&self, func: fn(f32) -> f32) -> Vec3 {
+        Vec3 {
+            x: func(self.x),
+            y: func(self.y),
+            z: func(self.z),
+        }
+    }
+}
+
+impl std::ops::AddAssign<Vec3> for Vec3 {
+    fn add_assign(&mut self, other: Vec3) {
+        self.x += other.x;
+        self.y += other.y;
+        self.z += other.z;
+    }
+}
+
+impl std::ops::AddAssign<&Vec3> for Vec3 {
+    fn add_assign(&mut self, other: &Vec3) {
+        self.x += other.x;
+        self.y += other.y;
+        self.z += other.z;
+    }
+}
+
+impl std::ops::SubAssign<Vec3> for Vec3 {
+    fn sub_assign(&mut self, other: Vec3) {
+        self.x -= other.x;
+        self.y -= other.y;
+        self.z -= other.z;
+    }
+}
+
+impl std::ops::SubAssign<&Vec3> for Vec3 {
+    fn sub_assign(&mut self, other: &Vec3) {
+        self.x -= other.x;
+        self.y -= other.y;
+        self.z -= other.z;
+    }
 }
 
 impl std::ops::Sub for &Vec3 {
@@ -83,6 +134,17 @@ impl std::ops::Sub for &Vec3 {
             x: self.x - other.x,
             y: self.y - other.y,
             z: self.z - other.z,
+        }
+    }
+}
+
+impl std::ops::Mul<f32> for Vec3 {
+    type Output = Vec3;
+    fn mul(self, scalar: f32) -> Vec3 {
+        Vec3 {
+            x: self.x * scalar,
+            y: self.y * scalar,
+            z: self.z * scalar,
         }
     }
 }
@@ -106,6 +168,15 @@ impl Vec4 {
             y: y as f32 / 255.0,
             z: z as f32 / 255.0,
             w: 1.0,
+        }
+    }
+
+    pub fn from_vec3(v: Vec3, w: f32) -> Self {
+        Vec4 {
+            x: v.x,
+            y: v.y,
+            z: v.z,
+            w,
         }
     }
 
@@ -383,6 +454,95 @@ impl std::ops::Mul<&Mat4> for &Mat4 {
             }
         }
         u
+    }
+}
+
+impl std::ops::Mul<Vec4> for Mat4 {
+    type Output = Vec4;
+    fn mul(self, v: Vec4) -> Vec4 {
+        let m = &self;
+        Vec4 {
+            x: m[0][0] * v[0] + m[1][0] * v[1] + m[2][0] * v[2] + m[3][0] * v[3],
+            y: m[0][1] * v[0] + m[1][1] * v[1] + m[2][1] * v[2] + m[3][1] * v[3],
+            z: m[0][2] * v[0] + m[1][2] * v[1] + m[2][2] * v[2] + m[3][2] * v[3],
+            w: m[0][3] * v[0] + m[1][3] * v[1] + m[2][3] * v[2] + m[3][3] * v[3],
+        }
+    }
+}
+
+impl std::ops::Mul<&Vec4> for &Mat4 {
+    type Output = Vec4;
+    fn mul(self, v: &Vec4) -> Vec4 {
+        let m = &self;
+        Vec4 {
+            x: m[0][0] * v[0] + m[1][0] * v[1] + m[2][0] * v[2] + m[3][0] * v[3],
+            y: m[0][1] * v[0] + m[1][1] * v[1] + m[2][1] * v[2] + m[3][1] * v[3],
+            z: m[0][2] * v[0] + m[1][2] * v[1] + m[2][2] * v[2] + m[3][2] * v[3],
+            w: m[0][3] * v[0] + m[1][3] * v[1] + m[2][3] * v[2] + m[3][3] * v[3],
+        }
+    }
+}
+
+impl std::convert::From<[f32; 16]> for Mat4 {
+    fn from(buf: [f32; 16]) -> Self {
+        Mat4 { buf }
+    }
+}
+
+pub struct Quaternion {
+    w: f32,
+    x: f32,
+    y: f32,
+    z: f32,
+}
+
+impl Quaternion {
+    pub fn new(angles: Vec3) -> Self {
+        let rad = angles * (std::f32::consts::PI / 180.0 * 0.5);
+        let c = rad.apply(f32::cos);
+        let s = rad.apply(f32::sin);
+        Quaternion {
+            w: c.x * c.y * c.z + s.x * s.y * s.z,
+            x: s.x * c.y * c.z - c.x * s.y * s.z,
+            y: c.x * s.y * c.z + s.x * c.y * s.z,
+            z: c.x * c.y * s.z - s.x * s.y * c.z,
+        }
+    }
+}
+
+impl From<Quaternion> for Mat4 {
+    fn from(q: Quaternion) -> Self {
+        let xx = q.x * q.x;
+        let yy = q.y * q.y;
+        let zz = q.z * q.z;
+        let xz = q.x * q.z;
+        let xy = q.x * q.y;
+        let yz = q.y * q.z;
+        let wx = q.w * q.x;
+        let wy = q.w * q.y;
+        let wz = q.w * q.z;
+
+        let a = Vec4::new(
+            1.0 - 2.0 * (yy + zz), //br
+            2.0 * (xy + wz),       //br
+            2.0 * (xz - wy),       //br
+            0.0,
+        );
+        let b = Vec4::new(
+            2.0 * (xy - wz),       //br
+            1.0 - 2.0 * (xx + zz), //br
+            2.0 * (yz + wx),       //br
+            0.0,
+        );
+        let c = Vec4::new(
+            2.0 * (xz + wy),       //br
+            2.0 * (yz - wx),       //br
+            1.0 - 2.0 * (xx + yy), //br
+            0.0,
+        );
+        let d = Vec4::new(0.0, 0.0, 0.0, 1.0);
+
+        Mat4::with_vecs(a, b, c, d)
     }
 }
 
