@@ -2,7 +2,6 @@ extern crate js_sys;
 extern crate log;
 extern crate std;
 extern crate wasm_bindgen;
-extern crate wasm_bindgen_futures;
 extern crate web_sys;
 
 use std::cell::RefCell;
@@ -13,7 +12,6 @@ use std::option::{Option, Option::None, Option::Some};
 use std::rc::Rc;
 use std::result::{Result, Result::Err, Result::Ok};
 use std::string::String;
-use std::{debug_assert_eq, debug_assert_ne, panic};
 
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
@@ -290,6 +288,7 @@ impl Attribute {
         }
     }
 
+    #[allow(dead_code)]
     pub fn disable(&self, ctx: &Rc<Context>) {
         for i in 0..self.1 {
             ctx.gl.disable_vertex_attrib_array(self.0 + i as u32);
@@ -620,19 +619,22 @@ impl std::ops::Drop for Texture2D {
 }
 
 struct BindingTracker {
+    #[cfg(debug_assertions)]
     bound_id: RefCell<u32>,
 }
 
 impl BindingTracker {
     fn new() -> Self {
         BindingTracker {
+            #[cfg(debug_assertions)]
             bound_id: RefCell::new(0),
         }
     }
 
     #[cfg(debug_assertions)]
     fn assert_bound(&self, id: u32) {
-        debug_assert_eq!(*self.bound_id.borrow(), id);
+        use std::panic;
+        std::debug_assert_eq!(*self.bound_id.borrow(), id);
     }
 
     #[cfg(not(debug_assertions))]
@@ -640,8 +642,9 @@ impl BindingTracker {
 
     #[cfg(debug_assertions)]
     fn assert_bound_then_unbind(&self, id: u32) {
+        use std::panic;
         let mut id_ref = self.bound_id.borrow_mut();
-        debug_assert_eq!(*id_ref, id);
+        std::debug_assert_eq!(*id_ref, id);
         *id_ref = 0;
     }
 
@@ -650,7 +653,8 @@ impl BindingTracker {
 
     #[cfg(debug_assertions)]
     fn assert_unbound(&self, id: u32) {
-        debug_assert_ne!(*self.bound_id.borrow(), id);
+        use std::panic;
+        std::debug_assert_ne!(*self.bound_id.borrow(), id);
     }
 
     #[cfg(not(debug_assertions))]
@@ -658,8 +662,9 @@ impl BindingTracker {
 
     #[cfg(debug_assertions)]
     fn assert_unbound_then_bind(&self, id: u32) {
+        use std::panic;
         let mut id_ref = self.bound_id.borrow_mut();
-        debug_assert_ne!(*id_ref, id);
+        std::debug_assert_ne!(*id_ref, id);
         *id_ref = id;
     }
 
