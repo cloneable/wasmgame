@@ -1,4 +1,3 @@
-mod meshes;
 mod models;
 mod shaders;
 
