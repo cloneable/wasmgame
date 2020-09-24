@@ -24,7 +24,7 @@ use ::wasm_bindgen::JsValue;
 
 pub trait Renderer {
     fn update(&mut self, timestamp: Duration) -> Result<(), Error>;
-    fn render(&mut self, ctx: &Rc<opengl::Context>, timestamp: Duration) -> Result<(), Error>;
+    fn render(&mut self, timestamp: Duration) -> Result<(), Error>;
     fn done(&self) -> bool;
 }
 
@@ -38,7 +38,7 @@ fn request_animation_frame_helper(callback: Option<&RequestAnimationFrameCallbac
 }
 
 pub struct Engine {
-    pub ctx: Rc<opengl::Context>,
+    ctx: Rc<opengl::Context>,
     renderer: Rc<RefCell<dyn Renderer>>,
     callbacks: RefCell<Vec<Rc<RefCell<EventCallback>>>>,
 }
@@ -57,12 +57,10 @@ impl Engine {
         type_: &'static str,
         listener: Rc<RefCell<dyn EventHandler<T>>>,
     ) -> Result<(), Error> {
-        let self0 = self.clone();
         let c = Rc::new(RefCell::new(Closure::wrap(
             Box::new(move |event: &::web_sys::Event| {
                 listener.borrow_mut().handle(
-                    &self0.ctx,
-                    event.time_stamp(),
+                    timestamp_from_millis(event.time_stamp()),
                     event.dyn_ref::<T>().unwrap(),
                 );
             }) as Box<dyn FnMut(&::web_sys::Event) + 'static>,
@@ -96,17 +94,13 @@ impl Engine {
                 return;
             }
 
-            let timestamp = Duration::from_micros((millis * 1000.0) as u64);
+            let timestamp = timestamp_from_millis(millis);
 
             // TODO: move update() call out of requestAnimationFrame closure.
             self0.renderer.borrow_mut().update(timestamp).unwrap();
 
             // TODO: refactor game to not need context passed in here.
-            self0
-                .renderer
-                .borrow_mut()
-                .render(&self0.ctx, timestamp)
-                .unwrap();
+            self0.renderer.borrow_mut().render(timestamp).unwrap();
 
             let c0 = c.clone();
             request_animation_frame_helper(c0.borrow().as_ref());
@@ -117,8 +111,12 @@ impl Engine {
     }
 }
 
+fn timestamp_from_millis(millis: f64) -> Duration {
+    Duration::from_micros((millis * 1000.0 + 0.5) as u64)
+}
+
 pub trait EventHandler<T: ::wasm_bindgen::JsCast + 'static> {
-    fn handle(&mut self, ctx: &opengl::Context, millis: f64, event: &T);
+    fn handle(&mut self, timestamp: Duration, event: &T);
 }
 
 pub type EventCallback = Closure<dyn FnMut(&::web_sys::Event) + 'static>;

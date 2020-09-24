@@ -1,6 +1,7 @@
 mod models;
 mod shaders;
 
+use ::std::clone::Clone;
 use ::std::rc::Rc;
 use ::std::result::{Result, Result::Ok};
 use ::std::time::Duration;
@@ -31,6 +32,8 @@ impl Scene {
 }
 
 pub struct Game {
+    ctx: Rc<Context>,
+
     last_render: Duration,
     scene: Scene,
     offscreen: engine::util::OffscreenBuffer,
@@ -54,6 +57,7 @@ impl Game {
         program.set_projection(scene.camera.projection_matrix());
 
         Ok(Self {
+            ctx: ctx.clone(),
             last_render: Duration::from_secs(0),
             scene,
             offscreen: engine::util::OffscreenBuffer::new(ctx, 400, 300)?,
@@ -77,7 +81,7 @@ impl engine::Renderer for Game {
         Ok(())
     }
 
-    fn render(&mut self, ctx: &Rc<Context>, _timestamp: Duration) -> Result<(), Error> {
+    fn render(&mut self, _timestamp: Duration) -> Result<(), Error> {
         self.offscreen.deactivate();
 
         // draw
@@ -85,8 +89,8 @@ impl engine::Renderer for Game {
         self.scene.hexatile.stage();
 
         self.program.activate();
-        ctx.gl.clear_color(0.8, 0.7, 0.6, 1.0);
-        ctx.gl.clear(
+        self.ctx.gl.clear_color(0.8, 0.7, 0.6, 1.0);
+        self.ctx.gl.clear(
             ::web_sys::WebGlRenderingContext::COLOR_BUFFER_BIT
                 | ::web_sys::WebGlRenderingContext::DEPTH_BUFFER_BIT,
         );
@@ -95,8 +99,8 @@ impl engine::Renderer for Game {
         // for read_pixels.
         self.picker_program.activate();
         self.offscreen.activate();
-        ctx.gl.clear_color(0.0, 0.0, 0.0, 0.0);
-        ctx.gl.clear(
+        self.ctx.gl.clear_color(0.0, 0.0, 0.0, 0.0);
+        self.ctx.gl.clear(
             ::web_sys::WebGlRenderingContext::COLOR_BUFFER_BIT
                 | ::web_sys::WebGlRenderingContext::DEPTH_BUFFER_BIT,
         );
@@ -114,7 +118,7 @@ impl engine::Renderer for Game {
 
 // TODO: use const generic for event type name.
 impl engine::EventHandler<::web_sys::MouseEvent> for Game {
-    fn handle(&mut self, _ctx: &Context, millis: f64, event: &::web_sys::MouseEvent) {
+    fn handle(&mut self, timestamp: Duration, event: &::web_sys::MouseEvent) {
         // TODO: Experiment with a #[wasm_bindgen(inline_js) function
         //       that does most calls in JS.
         let r = event
@@ -127,7 +131,7 @@ impl engine::EventHandler<::web_sys::MouseEvent> for Game {
         let rgba = self.offscreen.read_pixel(x, r.height() as i32 - y).unwrap();
         ::log::debug!(
             "Clicked at {}: {},{}; rgba = {} {} {} {}",
-            millis,
+            timestamp.as_micros(),
             x,
             y,
             rgba[0],
