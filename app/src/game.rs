@@ -32,6 +32,7 @@ impl Scene {
         let mut camera = Camera::new();
         camera
             .set_position(0.5, 1.4, 3.0)
+            .set_target(0.0, 0.0, 0.0)
             .set_frustum(35.0, 4.0 / 3.0, 0.1, 100.0)
             .refresh();
         let hexatile = models::Hexatile::new(ctx)?;
@@ -73,9 +74,9 @@ impl Game {
 }
 
 impl engine::Renderer for Game {
-    fn setup(&mut self, ctx: &Rc<Context>) -> Result<(), JsValue> {
+    fn setup(&mut self, _ctx: &Rc<Context>) -> Result<(), JsValue> {
         // TODO: refactor why camera is pulled in.
-        self.scene.hexatile.init(ctx, &self.scene.camera);
+        self.scene.hexatile.init(&self.scene.camera);
         self.offscreen.activate();
         Ok(())
     }
@@ -83,13 +84,13 @@ impl engine::Renderer for Game {
     fn render(&mut self, ctx: &Rc<Context>, millis: f64) -> Result<(), JsValue> {
         self.last_render = Duration::from_micros((millis * 1000.0) as u64);
 
-        self.scene.hexatile.update(ctx, &self.scene.camera);
+        self.scene.hexatile.update(&self.scene.camera);
 
         self.offscreen.deactivate();
 
         // draw
 
-        self.scene.hexatile.stage(ctx);
+        self.scene.hexatile.stage();
 
         self.program.activate();
         ctx.gl.clear_color(0.8, 0.7, 0.6, 1.0);
@@ -97,7 +98,7 @@ impl engine::Renderer for Game {
             web_sys::WebGlRenderingContext::COLOR_BUFFER_BIT
                 | web_sys::WebGlRenderingContext::DEPTH_BUFFER_BIT,
         );
-        self.scene.hexatile.draw(ctx);
+        self.scene.hexatile.draw();
 
         // for read_pixels.
         self.picker_program.activate();
@@ -107,9 +108,9 @@ impl engine::Renderer for Game {
             web_sys::WebGlRenderingContext::COLOR_BUFFER_BIT
                 | web_sys::WebGlRenderingContext::DEPTH_BUFFER_BIT,
         );
-        self.scene.hexatile.draw(ctx);
+        self.scene.hexatile.draw();
 
-        self.scene.hexatile.unstage(ctx);
+        self.scene.hexatile.unstage();
 
         Ok(())
     }

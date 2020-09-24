@@ -4,20 +4,27 @@ extern crate std;
 extern crate wasm_bindgen;
 extern crate web_sys;
 
+use std::clone::Clone;
+use std::convert::Into;
 use std::option::{Option::None, Option::Some};
-use std::{vec, vec::Vec};
 use std::rc::Rc;
+use std::result::{Result, Result::Ok};
+use std::{assert, panic};
+use std::{vec, vec::Vec};
 
-use super::math::{look_at, project, Mat4, Vec3, Vec4};
+use wasm_bindgen::JsValue;
+
+use super::attrib;
+use super::math::{look_at, project, Mat4, Quaternion, Vec3, Vec4};
+use super::opengl::{ArrayBuffer, Context, VertexArrayObject};
 use super::util;
-use super::opengl::Context;
 
 pub trait Drawable {
-    fn init(&mut self, ctx: &Rc<Context>, camera: &Camera);
-    fn update(&mut self, ctx: &Rc<Context>, camera: &Camera);
-    fn stage(&mut self, ctx: &Rc<Context>);
-    fn draw(&self, ctx: &Rc<Context>);
-    fn unstage(&mut self, ctx: &Rc<Context>);
+    fn init(&mut self, camera: &Camera);
+    fn update(&mut self, camera: &Camera);
+    fn stage(&mut self);
+    fn draw(&self);
+    fn unstage(&mut self);
 }
 
 pub struct Camera {
@@ -83,50 +90,68 @@ impl Camera {
 }
 
 pub struct Model {
-    pub vertices: Vec<f32>,
-    pub normals: Vec<f32>,
-    pub instances: Vec<Instance>,
+    ctx: Rc<Context>,
 
-    // TODO: make this more efficient
-    pub instance_color: Vec<f32>,
-    pub instance_id: Vec<f32>,
-    pub instance_model_data: Vec<f32>,
-    pub instance_normals_data: Vec<f32>,
+    vertices: Vec<f32>,
+    normals: Vec<f32>,
+
+    instances: Vec<Instance>,
+
+    vao: VertexArrayObject,
+
+    // static, per vertex
+    vbo_vertex: ArrayBuffer,
+    vbo_normals: ArrayBuffer,
+    // static, per instance
+    vbo_instance_color: ArrayBuffer,
+    vbo_instance_id: ArrayBuffer,
+    // dynamic, per instance
+    vbo_instance_models: ArrayBuffer,
+    vbo_instance_normals: ArrayBuffer,
+
+    instance_color: Vec<f32>,
+    instance_id: Vec<f32>,
+    instance_model_data: Vec<f32>,
+    instance_normals_data: Vec<f32>,
 }
 
 impl Model {
-    pub fn new(indexed_vertices: &'static [f32], indices: &'static [u8]) -> Self {
+    pub fn new(
+        ctx: &Rc<Context>,
+        indexed_vertices: &'static [f32],
+        indices: &'static [u8],
+        num_instances: usize,
+    ) -> Result<Self, JsValue> {
+        assert!(num_instances > 0);
         let mut vertices: Vec<f32> = vec![0.0; indices.len() * 3];
         let mut normals: Vec<f32> = vec![0.0; indices.len() * 3];
         util::generate_buffers(indices, indexed_vertices, &mut vertices, &mut normals);
-        Model {
+
+        let mut instances: Vec<Instance> = Vec::with_capacity(num_instances);
+        instances.resize_with(num_instances, Instance::new);
+
+        Ok(Model {
+            ctx: ctx.clone(),
             vertices,
             normals,
-            instances: Vec::new(),
-            instance_color: Vec::new(),
-            instance_id: Vec::new(),
-            instance_model_data: Vec::new(),
-            instance_normals_data: Vec::new(),
-        }
+            instances,
+            vao: VertexArrayObject::create(ctx)?,
+            vbo_vertex: ArrayBuffer::create(ctx)?,
+            vbo_normals: ArrayBuffer::create(ctx)?,
+            vbo_instance_color: ArrayBuffer::create(ctx)?,
+            vbo_instance_id: ArrayBuffer::create(ctx)?,
+            vbo_instance_models: ArrayBuffer::create(ctx)?,
+            vbo_instance_normals: ArrayBuffer::create(ctx)?,
+            instance_color: Vec::<f32>::new(),
+            instance_id: Vec::<f32>::new(),
+            instance_model_data: Vec::<f32>::new(),
+            instance_normals_data: Vec::<f32>::new(),
+        })
     }
 
-    pub fn add_instance(&mut self, transform: Mat4, color: Vec4) {
-        self.instances.push(Instance::new(transform, color));
-    }
-
-    pub fn update_instances(&mut self, camera: &Camera) {
-        self.instance_model_data.clear();
-        self.instance_normals_data.clear();
+    pub fn init(&mut self) {
         let mut i: i32 = 1;
-        for instance in &mut self.instances {
-            let mat_model_view = (camera.view_matrix() * &instance.model).to_3x3();
-            instance.normals = match mat_model_view.invert() {
-                Some(inv) => inv.transpose(),
-                None => {
-                    log::error!("mat_model_view not invertible");
-                    mat_model_view
-                }
-            };
+        for instance in self.instances.iter_mut() {
             self.instance_color.push(instance.color.x);
             self.instance_color.push(instance.color.y);
             self.instance_color.push(instance.color.z);
@@ -139,21 +164,156 @@ impl Model {
                 .extend_from_slice(instance.normals.slice());
             i += 1;
         }
+
+        self.vao.bind();
+
+        self.vbo_vertex
+            .bind()
+            .set_buffer_data(&self.vertices)
+            .set_vertex_attribute_pointer_vec3(attrib::POSITION)
+            .unbind();
+        self.vbo_normals
+            .bind()
+            .set_buffer_data(&self.normals)
+            .set_vertex_attribute_pointer_vec3(attrib::NORMAL)
+            .unbind();
+        self.vbo_instance_color
+            .bind()
+            .set_buffer_data(&self.instance_color)
+            .set_vertex_attribute_pointer_vec3(attrib::INSTANCE_COLOR)
+            .set_vertex_attrib_divisor(attrib::INSTANCE_COLOR, 1)
+            .unbind();
+        self.vbo_instance_id
+            .bind()
+            .set_buffer_data(&self.instance_id)
+            .set_vertex_attribute_pointer_vec3(attrib::INSTANCE_ID)
+            .set_vertex_attrib_divisor(attrib::INSTANCE_ID, 1)
+            .unbind();
+        self.vbo_instance_models
+            .bind()
+            .allocate_dynamic(16 * 4 * self.instances.len())
+            .set_vertex_attribute_pointer_mat4(attrib::MODEL)
+            .set_vertex_attrib_divisor(attrib::MODEL, 1)
+            .unbind();
+        self.vbo_instance_normals
+            .bind()
+            .allocate_dynamic(16 * 4 * self.instances.len())
+            .set_vertex_attribute_pointer_mat4(attrib::NORMALS)
+            .set_vertex_attrib_divisor(attrib::NORMALS, 1)
+            .unbind();
+
+        attrib::POSITION.enable(&self.ctx);
+        attrib::NORMAL.enable(&self.ctx);
+        attrib::INSTANCE_COLOR.enable(&self.ctx);
+        attrib::INSTANCE_ID.enable(&self.ctx);
+        attrib::MODEL.enable(&self.ctx);
+        attrib::NORMALS.enable(&self.ctx);
+
+        self.vao.unbind();
+    }
+
+    pub fn refresh(&mut self) {
+        self.instance_model_data.clear();
+        self.instance_normals_data.clear();
+        for instance in self.instances.iter_mut() {
+            self.instance_model_data
+                .extend_from_slice(instance.model.slice());
+            self.instance_normals_data
+                .extend_from_slice(instance.normals.slice());
+        }
+        self.vbo_instance_models.bind();
+        self.vbo_instance_models
+            .set_buffer_sub_data(0, &self.instance_model_data);
+        self.vbo_instance_normals.bind();
+        self.vbo_instance_normals
+            .set_buffer_sub_data(0, &self.instance_normals_data);
+        self.vbo_instance_normals.unbind();
+    }
+
+    pub fn select(&mut self) {
+        self.vao.bind();
+    }
+
+    pub fn draw(&self) {
+        self.ctx.instanced_arrays_ext.draw_arrays_instanced_angle(
+            web_sys::WebGlRenderingContext::TRIANGLES,
+            0,
+            self.vertices.len() as i32 / 3,
+            self.instances.len() as i32,
+        );
+    }
+
+    pub fn unselect(&mut self) {
+        self.vao.unbind();
+    }
+}
+
+impl std::ops::Index<usize> for Model {
+    type Output = Instance;
+    fn index(&self, i: usize) -> &Instance {
+        &self.instances[i]
+    }
+}
+
+impl std::ops::IndexMut<usize> for Model {
+    fn index_mut(&mut self, i: usize) -> &mut Instance {
+        &mut self.instances[i]
     }
 }
 
 pub struct Instance {
+    pub position: Vec3,
+    pub scale: Vec3,
+    pub rotation: Vec3,
+    pub color: Vec4,
+
     pub model: Mat4,
     pub normals: Mat4,
-    pub color: Vec4,
 }
 
 impl Instance {
-    pub fn new(model: Mat4, color: Vec4) -> Self {
+    pub fn new() -> Self {
         Instance {
-            model,
+            position: Vec3::new(0.0, 0.0, 0.0),
+            scale: Vec3::new(1.0, 1.0, 1.0),
+            rotation: Vec3::new(0.0, 0.0, 0.0),
+            color: Vec4::new(1.0, 1.0, 1.0, 1.0),
+            model: Mat4::IDENTITY,
             normals: Mat4::IDENTITY,
-            color,
         }
+    }
+
+    pub fn translate(&mut self, v: Vec3) {
+        self.position += v;
+    }
+
+    pub fn scale(&mut self, scalars: Vec3) {
+        // TODO: Add Hadamard product to Vec34?
+        self.scale.x *= scalars.x;
+        self.scale.y *= scalars.y;
+        self.scale.z *= scalars.z;
+    }
+
+    pub fn rotate(&mut self, angles: Vec3) {
+        self.rotation += angles;
+    }
+
+    pub fn color(&mut self, rgba: Vec4) {
+        self.color = rgba;
+    }
+
+    pub fn refresh(&mut self, view: &Mat4) {
+        let mut m: Mat4 = Quaternion::new(self.rotation).into();
+        m[0][0] *= self.scale.x;
+        m[1][1] *= self.scale.y;
+        m[2][2] *= self.scale.z;
+        m[3] = Vec4::from_vec3(self.position, 1.0);
+        let mat_model_view = (view * &m).to_3x3();
+        let normals = match mat_model_view.invert() {
+            Some(inv) => inv.transpose(),
+            None => mat_model_view,
+        };
+        self.model = m;
+        self.normals = normals;
     }
 }
