@@ -27,6 +27,7 @@ pub struct Context {
     pub instanced_arrays_ext: web_sys::AngleInstancedArrays,
 
     next_object_id: RefCell<u32>,
+    bound_vertex_array_buffer: RefCell<u32>,
     bound_array_buffer: RefCell<u32>,
     bound_framebuffer: RefCell<u32>,
     bound_renderbuffer: RefCell<u32>,
@@ -64,6 +65,7 @@ impl Context {
             vertex_array_object_ext,
             instanced_arrays_ext,
             next_object_id: RefCell::new(1),
+            bound_vertex_array_buffer: RefCell::new(0),
             bound_array_buffer: RefCell::new(0),
             bound_framebuffer: RefCell::new(0),
             bound_renderbuffer: RefCell::new(0),
@@ -80,6 +82,7 @@ impl Context {
 
 pub struct VertexArrayObject {
     ctx: Rc<Context>,
+    id: u32,
     vao: web_sys::WebGlVertexArrayObject,
 }
 
@@ -89,14 +92,16 @@ impl VertexArrayObject {
             .vertex_array_object_ext
             .create_vertex_array_oes()
             .ok_or_else(|| JsValue::from_str("create_vertex_array_oes vao error"))?;
+        let id = ctx.next_object_id();
         Ok(VertexArrayObject {
             ctx: ctx.clone(),
+            id,
             vao,
         })
     }
 
     pub fn bind(&mut self) -> &mut Self {
-        // TODO: track binding and debug_assert
+        self.assert_unbound_and_bind();
         self.ctx
             .vertex_array_object_ext
             .bind_vertex_array_oes(Some(&self.vao));
@@ -104,8 +109,27 @@ impl VertexArrayObject {
     }
 
     pub fn unbind(&mut self) -> &mut Self {
+        self.assert_bound_and_unbind();
         self.ctx.vertex_array_object_ext.bind_vertex_array_oes(None);
         self
+    }
+
+    fn assert_bound(&self) {
+        assert_eq!(*self.ctx.bound_vertex_array_buffer.borrow(), self.id);
+    }
+
+    fn assert_bound_and_unbind(&mut self) {
+        assert_eq!(*self.ctx.bound_vertex_array_buffer.borrow(), self.id);
+        *self.ctx.bound_vertex_array_buffer.borrow_mut() = 0;
+    }
+
+    fn assert_unbound(&self) {
+        assert_ne!(*self.ctx.bound_vertex_array_buffer.borrow(), self.id);
+    }
+
+    fn assert_unbound_and_bind(&mut self) {
+        assert_ne!(*self.ctx.bound_vertex_array_buffer.borrow(), self.id);
+        *self.ctx.bound_vertex_array_buffer.borrow_mut() = self.id;
     }
 }
 
