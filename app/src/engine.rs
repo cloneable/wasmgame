@@ -85,28 +85,35 @@ impl Engine {
         // TODO: Check if renderer, callback instances not freed.
         // TODO: See if there's a better/cleaner way to do this.
         let callback = Rc::new(RefCell::new(None as Option<RequestAnimationFrameCallback>));
-        let c = callback.clone();
+        let c0 = callback.clone();
         let self0 = self.clone();
         *callback.borrow_mut() = Some(Closure::wrap(Box::new(move |millis: f64| {
             if self0.renderer.borrow().done() {
-                let _ = c.borrow_mut().take();
+                let _ = c0.borrow_mut().take();
                 ::log::info!("wasmgame ending");
                 return;
             }
 
             let timestamp = timestamp_from_millis(millis);
-
-            // TODO: move update() call out of requestAnimationFrame closure.
-            self0.renderer.borrow_mut().update(timestamp).unwrap();
-
             self0.renderer.borrow_mut().render(timestamp).unwrap();
 
-            let c0 = c.clone();
-            request_animation_frame_helper(c0.borrow().as_ref());
+            let self1 = self0.clone();
+            let c1 = c0.clone();
+            ::wasm_bindgen_futures::spawn_local(self1.prepare_next_frame(c1, timestamp));
         }) as Box<dyn FnMut(f64) + 'static>));
 
         request_animation_frame_helper(callback.borrow().as_ref());
         Ok(())
+    }
+
+    // TODO: replace with requestPostAnimationFrame() once available.
+    async fn prepare_next_frame(
+        self: Rc<Self>,
+        callback: Rc<RefCell<Option<RequestAnimationFrameCallback>>>,
+        timestamp: Duration,
+    ) {
+        self.renderer.borrow_mut().update(timestamp).unwrap();
+        request_animation_frame_helper(callback.borrow().as_ref());
     }
 }
 
