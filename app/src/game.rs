@@ -10,7 +10,6 @@ extern crate wasm_bindgen_macro;
 extern crate wasm_logger;
 extern crate web_sys;
 
-use std::option::Option::Some;
 use std::rc::Rc;
 use std::result::{Result, Result::Ok};
 use std::time::Duration;
@@ -122,7 +121,7 @@ impl engine::Renderer for Game {
 
 // TODO: use const generic for event type name.
 impl engine::EventHandler<web_sys::MouseEvent> for Game {
-    fn handle(&mut self, ctx: &Context, millis: f64, event: &web_sys::MouseEvent) {
+    fn handle(&mut self, _ctx: &Context, millis: f64, event: &web_sys::MouseEvent) {
         // TODO: Experiment with a #[wasm_bindgen(inline_js) function
         //       that does most calls in JS.
         let r = event
@@ -132,18 +131,7 @@ impl engine::EventHandler<web_sys::MouseEvent> for Game {
             .get_bounding_client_rect();
         let x = event.client_x() - r.left() as i32;
         let y = event.client_y() - r.top() as i32;
-        let rgba: &mut [u8] = &mut [0, 0, 0, 0];
-        ctx.gl
-            .read_pixels_with_opt_u8_array(
-                x,
-                r.height() as i32 - y,
-                1,
-                1,
-                web_sys::WebGlRenderingContext::RGBA,
-                web_sys::WebGlRenderingContext::UNSIGNED_BYTE,
-                Some(rgba),
-            )
-            .unwrap();
+        let rgba = self.offscreen.read_pixel(x, r.height() as i32 - y).unwrap();
         log::debug!(
             "Clicked at {}: {},{}; rgba = {} {} {} {}",
             millis,

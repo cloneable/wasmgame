@@ -86,8 +86,8 @@ pub fn generate_buffers(
 pub struct OffscreenBuffer {
     framebuffer: Framebuffer,
 
-    colorbuffer: Texture2D,
-    depthbuffer: Renderbuffer,
+    _colorbuffer: Texture2D,
+    _depthbuffer: Renderbuffer,
 }
 
 impl OffscreenBuffer {
@@ -115,8 +115,8 @@ impl OffscreenBuffer {
         framebuffer.unbind();
         Ok(OffscreenBuffer {
             framebuffer,
-            colorbuffer,
-            depthbuffer,
+            _colorbuffer: colorbuffer,
+            _depthbuffer: depthbuffer,
         })
     }
 
@@ -126,6 +126,20 @@ impl OffscreenBuffer {
 
     pub fn deactivate(&mut self) {
         self.framebuffer.unbind()
+    }
+
+    pub fn read_pixel(&self, x: i32, y: i32) -> Result<[u8; 4], JsValue> {
+        let mut buf: [u8; 4] = [0, 0, 0, 0];
+        self.framebuffer.read_pixels(
+            x,
+            y,
+            1,
+            1,
+            web_sys::WebGlRenderingContext::RGBA,
+            web_sys::WebGlRenderingContext::UNSIGNED_BYTE,
+            &mut buf[..],
+        )?;
+        Ok(buf)
     }
 }
 
