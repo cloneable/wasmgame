@@ -13,7 +13,7 @@ use std::option::{Option, Option::None, Option::Some};
 use std::rc::Rc;
 use std::result::{Result, Result::Err, Result::Ok};
 use std::string::String;
-use std::{assert_eq, assert_ne, panic};
+use std::{debug_assert_eq, debug_assert_ne, panic};
 
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
@@ -27,11 +27,11 @@ pub struct Context {
     pub instanced_arrays_ext: web_sys::AngleInstancedArrays,
 
     next_object_id: RefCell<u32>,
-    bound_vertex_array_buffer: RefCell<u32>,
-    bound_array_buffer: RefCell<u32>,
-    bound_framebuffer: RefCell<u32>,
-    bound_renderbuffer: RefCell<u32>,
-    bound_texture: RefCell<u32>,
+    bound_vertex_array_buffer: BindingTracker,
+    bound_array_buffer: BindingTracker,
+    bound_framebuffer: BindingTracker,
+    bound_renderbuffer: BindingTracker,
+    bound_texture: BindingTracker,
 }
 
 impl Context {
@@ -65,11 +65,11 @@ impl Context {
             vertex_array_object_ext,
             instanced_arrays_ext,
             next_object_id: RefCell::new(1),
-            bound_vertex_array_buffer: RefCell::new(0),
-            bound_array_buffer: RefCell::new(0),
-            bound_framebuffer: RefCell::new(0),
-            bound_renderbuffer: RefCell::new(0),
-            bound_texture: RefCell::new(0),
+            bound_vertex_array_buffer: BindingTracker::new(),
+            bound_array_buffer: BindingTracker::new(),
+            bound_framebuffer: BindingTracker::new(),
+            bound_renderbuffer: BindingTracker::new(),
+            bound_texture: BindingTracker::new(),
         })
     }
 
@@ -101,7 +101,9 @@ impl VertexArrayObject {
     }
 
     pub fn bind(&mut self) -> &mut Self {
-        self.assert_unbound_and_bind();
+        self.ctx
+            .bound_vertex_array_buffer
+            .assert_unbound_then_bind(self.id);
         self.ctx
             .vertex_array_object_ext
             .bind_vertex_array_oes(Some(&self.vao));
@@ -109,33 +111,18 @@ impl VertexArrayObject {
     }
 
     pub fn unbind(&mut self) -> &mut Self {
-        self.assert_bound_and_unbind();
+        self.ctx
+            .bound_vertex_array_buffer
+            .assert_bound_then_unbind(self.id);
         self.ctx.vertex_array_object_ext.bind_vertex_array_oes(None);
         self
-    }
-
-    fn assert_bound(&self) {
-        assert_eq!(*self.ctx.bound_vertex_array_buffer.borrow(), self.id);
-    }
-
-    fn assert_bound_and_unbind(&mut self) {
-        assert_eq!(*self.ctx.bound_vertex_array_buffer.borrow(), self.id);
-        *self.ctx.bound_vertex_array_buffer.borrow_mut() = 0;
-    }
-
-    fn assert_unbound(&self) {
-        assert_ne!(*self.ctx.bound_vertex_array_buffer.borrow(), self.id);
-    }
-
-    fn assert_unbound_and_bind(&mut self) {
-        assert_ne!(*self.ctx.bound_vertex_array_buffer.borrow(), self.id);
-        *self.ctx.bound_vertex_array_buffer.borrow_mut() = self.id;
     }
 }
 
 impl std::ops::Drop for VertexArrayObject {
     fn drop(&mut self) {
         log::debug!("deleting vao");
+        self.ctx.bound_vertex_array_buffer.assert_unbound(self.id);
         self.ctx
             .vertex_array_object_ext
             .delete_vertex_array_oes(Some(&self.vao));
@@ -163,7 +150,9 @@ impl ArrayBuffer {
     }
 
     pub fn bind(&mut self) -> &mut Self {
-        self.assert_unbound_and_bind();
+        self.ctx
+            .bound_array_buffer
+            .assert_unbound_then_bind(self.id);
         self.ctx.gl.bind_buffer(
             web_sys::WebGlRenderingContext::ARRAY_BUFFER,
             Some(&self.buffer),
@@ -172,14 +161,16 @@ impl ArrayBuffer {
     }
 
     pub fn unbind(&mut self) {
-        self.assert_bound_and_unbind();
+        self.ctx
+            .bound_array_buffer
+            .assert_bound_then_unbind(self.id);
         self.ctx
             .gl
             .bind_buffer(web_sys::WebGlRenderingContext::ARRAY_BUFFER, None);
     }
 
     pub fn allocate_dynamic(&mut self, size: usize) -> &mut Self {
-        self.assert_bound();
+        self.ctx.bound_array_buffer.assert_bound(self.id);
         self.ctx.gl.buffer_data_with_i32(
             web_sys::WebGlRenderingContext::ARRAY_BUFFER,
             size as i32,
@@ -189,7 +180,7 @@ impl ArrayBuffer {
     }
 
     pub fn set_buffer_data(&mut self, data: &[f32]) -> &mut Self {
-        self.assert_bound();
+        self.ctx.bound_array_buffer.assert_bound(self.id);
         unsafe {
             let view = js_sys::Float32Array::view(data);
             self.ctx.gl.buffer_data_with_array_buffer_view(
@@ -202,7 +193,7 @@ impl ArrayBuffer {
     }
 
     pub fn set_buffer_sub_data(&mut self, offset: i32, data: &[f32]) -> &mut Self {
-        self.assert_bound();
+        self.ctx.bound_array_buffer.assert_bound(self.id);
         unsafe {
             let view = js_sys::Float32Array::view(data);
             self.ctx.gl.buffer_sub_data_with_i32_and_array_buffer_view(
@@ -215,7 +206,7 @@ impl ArrayBuffer {
     }
 
     pub fn set_vertex_attribute_pointer_vec3(&mut self, attribute: Attribute) -> &mut Self {
-        self.assert_bound();
+        self.ctx.bound_array_buffer.assert_bound(self.id);
         self.ctx.gl.vertex_attrib_pointer_with_i32(
             attribute.0,
             3,
@@ -228,7 +219,7 @@ impl ArrayBuffer {
     }
 
     pub fn set_vertex_attribute_pointer_mat4(&mut self, attribute: Attribute) -> &mut Self {
-        self.assert_bound();
+        self.ctx.bound_array_buffer.assert_bound(self.id);
         for i in 0..attribute.1 {
             self.ctx.gl.vertex_attrib_pointer_with_i32(
                 attribute.0 + i as u32,
@@ -243,7 +234,7 @@ impl ArrayBuffer {
     }
 
     pub fn set_vertex_attrib_divisor(&mut self, attribute: Attribute, divisor: usize) -> &mut Self {
-        self.assert_bound();
+        self.ctx.bound_array_buffer.assert_bound(self.id);
         for i in 0..attribute.1 {
             self.ctx
                 .instanced_arrays_ext
@@ -251,30 +242,12 @@ impl ArrayBuffer {
         }
         self
     }
-
-    fn assert_bound(&self) {
-        assert_eq!(*self.ctx.bound_array_buffer.borrow(), self.id);
-    }
-
-    fn assert_bound_and_unbind(&mut self) {
-        assert_eq!(*self.ctx.bound_array_buffer.borrow(), self.id);
-        *self.ctx.bound_array_buffer.borrow_mut() = 0;
-    }
-
-    fn assert_unbound(&self) {
-        assert_ne!(*self.ctx.bound_array_buffer.borrow(), self.id);
-    }
-
-    fn assert_unbound_and_bind(&mut self) {
-        assert_ne!(*self.ctx.bound_array_buffer.borrow(), self.id);
-        *self.ctx.bound_array_buffer.borrow_mut() = self.id;
-    }
 }
 
 impl std::ops::Drop for ArrayBuffer {
     fn drop(&mut self) {
-        self.assert_unbound();
         log::debug!("deleting buffer");
+        self.ctx.bound_array_buffer.assert_unbound(self.id);
         self.ctx.gl.delete_buffer(Some(&self.buffer));
     }
 }
@@ -455,7 +428,7 @@ impl Framebuffer {
     }
 
     pub fn bind(&mut self) {
-        self.assert_unbound_and_bind();
+        self.ctx.bound_framebuffer.assert_unbound_then_bind(self.id);
         self.ctx.gl.bind_framebuffer(
             web_sys::WebGlRenderingContext::FRAMEBUFFER,
             Some(&self.buffer),
@@ -463,21 +436,21 @@ impl Framebuffer {
     }
 
     pub fn unbind(&mut self) {
-        self.assert_bound_and_unbind();
+        self.ctx.bound_framebuffer.assert_bound_then_unbind(self.id);
         self.ctx
             .gl
             .bind_framebuffer(web_sys::WebGlRenderingContext::FRAMEBUFFER, None)
     }
 
     pub fn check_status(&self) -> u32 {
-        self.assert_bound();
+        self.ctx.bound_framebuffer.assert_bound(self.id);
         self.ctx
             .gl
             .check_framebuffer_status(web_sys::WebGlRenderingContext::FRAMEBUFFER)
     }
 
     pub fn texture2d_as_colorbuffer(&mut self, texture: &Texture2D) {
-        self.assert_bound();
+        self.ctx.bound_framebuffer.assert_bound(self.id);
         self.ctx.gl.framebuffer_texture_2d(
             web_sys::WebGlRenderingContext::FRAMEBUFFER,
             web_sys::WebGlRenderingContext::COLOR_ATTACHMENT0,
@@ -488,7 +461,7 @@ impl Framebuffer {
     }
 
     pub fn renderbuffer_as_depthbuffer(&mut self, buffer: &Renderbuffer) {
-        self.assert_bound();
+        self.ctx.bound_framebuffer.assert_bound(self.id);
         self.ctx.gl.framebuffer_renderbuffer(
             web_sys::WebGlRenderingContext::FRAMEBUFFER,
             web_sys::WebGlRenderingContext::DEPTH_ATTACHMENT,
@@ -507,35 +480,17 @@ impl Framebuffer {
         type_: u32,
         pixels: &mut [u8],
     ) -> Result<(), JsValue> {
-        self.assert_bound();
+        self.ctx.bound_framebuffer.assert_bound(self.id);
         self.ctx
             .gl
             .read_pixels_with_opt_u8_array(x, y, width, height, format, type_, Some(pixels))
-    }
-
-    fn assert_bound(&self) {
-        assert_eq!(*self.ctx.bound_framebuffer.borrow(), self.id);
-    }
-
-    fn assert_bound_and_unbind(&mut self) {
-        assert_eq!(*self.ctx.bound_framebuffer.borrow(), self.id);
-        *self.ctx.bound_framebuffer.borrow_mut() = 0;
-    }
-
-    fn assert_unbound(&self) {
-        assert_ne!(*self.ctx.bound_framebuffer.borrow(), self.id);
-    }
-
-    fn assert_unbound_and_bind(&mut self) {
-        assert_ne!(*self.ctx.bound_framebuffer.borrow(), self.id);
-        *self.ctx.bound_framebuffer.borrow_mut() = self.id;
     }
 }
 
 impl std::ops::Drop for Framebuffer {
     fn drop(&mut self) {
-        self.assert_unbound();
         log::debug!("deleting framebuffer");
+        self.ctx.bound_framebuffer.assert_unbound(self.id);
         self.ctx.gl.delete_framebuffer(Some(&self.buffer));
     }
 }
@@ -561,7 +516,9 @@ impl Renderbuffer {
     }
 
     pub fn bind(&mut self) {
-        self.assert_unbound_and_bind();
+        self.ctx
+            .bound_renderbuffer
+            .assert_unbound_then_bind(self.id);
         self.ctx.gl.bind_renderbuffer(
             web_sys::WebGlRenderingContext::RENDERBUFFER,
             Some(&self.buffer),
@@ -569,14 +526,16 @@ impl Renderbuffer {
     }
 
     pub fn unbind(&mut self) {
-        self.assert_bound_and_unbind();
+        self.ctx
+            .bound_renderbuffer
+            .assert_bound_then_unbind(self.id);
         self.ctx
             .gl
             .bind_renderbuffer(web_sys::WebGlRenderingContext::RENDERBUFFER, None)
     }
 
     pub fn storage_for_depth(&mut self, width: i32, height: i32) {
-        self.assert_bound();
+        self.ctx.bound_renderbuffer.assert_bound(self.id);
         self.ctx.gl.renderbuffer_storage(
             web_sys::WebGlRenderingContext::RENDERBUFFER,
             web_sys::WebGlRenderingContext::DEPTH_COMPONENT16,
@@ -584,30 +543,12 @@ impl Renderbuffer {
             height,
         )
     }
-
-    fn assert_bound(&self) {
-        assert_eq!(*self.ctx.bound_renderbuffer.borrow(), self.id);
-    }
-
-    fn assert_bound_and_unbind(&mut self) {
-        assert_eq!(*self.ctx.bound_renderbuffer.borrow(), self.id);
-        *self.ctx.bound_renderbuffer.borrow_mut() = 0;
-    }
-
-    fn assert_unbound(&self) {
-        assert_ne!(*self.ctx.bound_renderbuffer.borrow(), self.id);
-    }
-
-    fn assert_unbound_and_bind(&mut self) {
-        assert_ne!(*self.ctx.bound_renderbuffer.borrow(), self.id);
-        *self.ctx.bound_renderbuffer.borrow_mut() = self.id;
-    }
 }
 
 impl<'a> std::ops::Drop for Renderbuffer {
     fn drop(&mut self) {
-        self.assert_unbound();
         log::debug!("deleting renderbuffer");
+        self.ctx.bound_vertex_array_buffer.assert_unbound(self.id);
         self.ctx.gl.delete_renderbuffer(Some(&self.buffer));
     }
 }
@@ -633,7 +574,7 @@ impl Texture2D {
     }
 
     pub fn bind(&mut self) {
-        self.assert_unbound_and_bind();
+        self.ctx.bound_texture.assert_unbound_then_bind(self.id);
         self.ctx.gl.bind_texture(
             web_sys::WebGlRenderingContext::TEXTURE_2D,
             Some(&self.texture),
@@ -641,7 +582,7 @@ impl Texture2D {
     }
 
     pub fn unbind(&mut self) {
-        self.assert_bound_and_unbind();
+        self.ctx.bound_texture.assert_bound_then_unbind(self.id);
         self.ctx
             .gl
             .bind_texture(web_sys::WebGlRenderingContext::TEXTURE_2D, None)
@@ -653,7 +594,7 @@ impl Texture2D {
         height: i32,
         pixels: Option<&[u8]>,
     ) -> Result<(), JsValue> {
-        self.assert_bound();
+        self.ctx.bound_texture.assert_bound(self.id);
         self.ctx
             .gl
             .tex_image_2d_with_i32_and_i32_and_i32_and_format_and_type_and_opt_u8_array(
@@ -668,30 +609,60 @@ impl Texture2D {
                 pixels,
             )
     }
-
-    fn assert_bound(&self) {
-        assert_eq!(*self.ctx.bound_texture.borrow(), self.id);
-    }
-
-    fn assert_bound_and_unbind(&mut self) {
-        assert_eq!(*self.ctx.bound_texture.borrow(), self.id);
-        *self.ctx.bound_texture.borrow_mut() = 0;
-    }
-
-    fn assert_unbound(&self) {
-        assert_ne!(*self.ctx.bound_texture.borrow(), self.id);
-    }
-
-    fn assert_unbound_and_bind(&mut self) {
-        assert_ne!(*self.ctx.bound_texture.borrow(), self.id);
-        *self.ctx.bound_texture.borrow_mut() = self.id;
-    }
 }
 
 impl std::ops::Drop for Texture2D {
     fn drop(&mut self) {
-        self.assert_unbound();
-        log::debug!("deleting texture");
+        log::debug!("deleting texture2d");
+        self.ctx.bound_texture.assert_unbound(self.id);
         self.ctx.gl.delete_texture(Some(&self.texture));
     }
+}
+
+struct BindingTracker {
+    bound_id: RefCell<u32>,
+}
+
+impl BindingTracker {
+    fn new() -> Self {
+        BindingTracker {
+            bound_id: RefCell::new(0),
+        }
+    }
+
+    #[cfg(debug_assertions)]
+    fn assert_bound(&self, id: u32) {
+        debug_assert_eq!(*self.bound_id.borrow(), id);
+    }
+
+    #[cfg(not(debug_assertions))]
+    fn assert_bound(&self, _id: u32) {}
+
+    #[cfg(debug_assertions)]
+    fn assert_bound_then_unbind(&self, id: u32) {
+        let mut id_ref = self.bound_id.borrow_mut();
+        debug_assert_eq!(*id_ref, id);
+        *id_ref = 0;
+    }
+
+    #[cfg(not(debug_assertions))]
+    fn assert_bound_then_unbind(&self, _id: u32) {}
+
+    #[cfg(debug_assertions)]
+    fn assert_unbound(&self, id: u32) {
+        debug_assert_ne!(*self.bound_id.borrow(), id);
+    }
+
+    #[cfg(not(debug_assertions))]
+    fn assert_unbound(&self, _id: u32) {}
+
+    #[cfg(debug_assertions)]
+    fn assert_unbound_then_bind(&self, id: u32) {
+        let mut id_ref = self.bound_id.borrow_mut();
+        debug_assert_ne!(*id_ref, id);
+        *id_ref = id;
+    }
+
+    #[cfg(not(debug_assertions))]
+    fn assert_unbound_then_bind(&self, _id: u32) {}
 }
