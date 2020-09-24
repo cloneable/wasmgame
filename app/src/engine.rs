@@ -99,7 +99,6 @@ impl Engine {
             // TODO: move update() call out of requestAnimationFrame closure.
             self0.renderer.borrow_mut().update(timestamp).unwrap();
 
-            // TODO: refactor game to not need context passed in here.
             self0.renderer.borrow_mut().render(timestamp).unwrap();
 
             let c0 = c.clone();
