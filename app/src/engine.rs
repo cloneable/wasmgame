@@ -102,7 +102,12 @@ impl Engine {
             ::wasm_bindgen_futures::spawn_local(self1.prepare_next_frame(c1, timestamp));
         }) as Box<dyn FnMut(f64) + 'static>));
 
-        request_animation_frame_helper(callback.borrow().as_ref());
+        // first frame always gets timestamp=0.
+        // TODO: or just pass performance.now()?
+        ::wasm_bindgen_futures::spawn_local(
+            self.clone()
+                .prepare_next_frame(callback, timestamp_from_millis(0.0)),
+        );
         Ok(())
     }
 
