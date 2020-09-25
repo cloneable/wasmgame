@@ -41,6 +41,7 @@ pub struct Engine {
     ctx: Rc<opengl::Context>,
     renderer: Rc<RefCell<dyn Renderer>>,
     callbacks: RefCell<Vec<Rc<RefCell<EventCallback>>>>,
+    framerate: RefCell<Framerate>,
 }
 
 impl Engine {
@@ -49,6 +50,7 @@ impl Engine {
             ctx: ctx.clone(),
             renderer,
             callbacks: RefCell::new(Vec::new()),
+            framerate: RefCell::new(Framerate::new()),
         })
     }
 
@@ -89,11 +91,13 @@ impl Engine {
         let self0 = self.clone();
         *callback.borrow_mut() = Some(Closure::wrap(Box::new(move |millis: f64| {
             if self0.renderer.borrow().done() {
+                ::log::debug!("framerate: {}", self0.framerate.borrow().rate());
                 let _ = c0.borrow_mut().take();
                 ::log::info!("wasmgame ending");
                 return;
             }
 
+            self0.framerate.borrow_mut().record_timestamp(millis);
             let timestamp = timestamp_from_millis(millis);
             self0.renderer.borrow_mut().render(timestamp).unwrap();
 
@@ -175,5 +179,31 @@ impl ::std::fmt::Debug for Error {
             Error::Internal(msg) => f.write_str(msg),
             Error::JsValue(v) => f.write_str(v.as_string().unwrap().as_str()),
         }
+    }
+}
+
+struct Framerate {
+    buf: [f64; 32],
+    index: usize,
+}
+
+impl Framerate {
+    fn new() -> Self {
+        Framerate {
+            buf: [0.0; 32],
+            index: 0,
+        }
+    }
+
+    fn record_timestamp(&mut self, millis: f64) {
+        self.buf[self.index] = millis;
+        self.index = (self.index + 1) % self.buf.len();
+    }
+
+    fn rate(&self) -> f64 {
+        let len = self.buf.len();
+        let first = self.buf[self.index];
+        let last = self.buf[(self.index - 1 + len) % len];
+        len as f64 * 1000.0 / (last - first)
     }
 }
