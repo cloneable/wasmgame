@@ -15,7 +15,6 @@ use ::std::rc::Rc;
 use ::std::result::{Result, Result::Ok};
 use ::std::string::String;
 use ::std::string::ToString;
-use ::std::time::Duration;
 use ::std::vec::Vec;
 
 use ::wasm_bindgen::closure::Closure;
@@ -23,8 +22,8 @@ use ::wasm_bindgen::JsCast;
 use ::wasm_bindgen::JsValue;
 
 pub trait Renderer {
-    fn update(&mut self, timestamp: Duration) -> Result<(), Error>;
-    fn render(&mut self, timestamp: Duration) -> Result<(), Error>;
+    fn update(&mut self, t: Time) -> Result<(), Error>;
+    fn render(&mut self) -> Result<(), Error>;
     fn done(&self) -> bool;
 }
 
@@ -62,7 +61,7 @@ impl Engine {
         let c = Rc::new(RefCell::new(Closure::wrap(
             Box::new(move |event: &::web_sys::Event| {
                 listener.borrow_mut().handle(
-                    timestamp_from_millis(event.time_stamp()),
+                    Time::from_millis(event.time_stamp()),
                     event.dyn_ref::<T>().unwrap(),
                 );
             }) as Box<dyn FnMut(&::web_sys::Event) + 'static>,
@@ -91,26 +90,26 @@ impl Engine {
         let self0 = self.clone();
         *callback.borrow_mut() = Some(Closure::wrap(Box::new(move |millis: f64| {
             if self0.renderer.borrow().done() {
-                ::log::debug!("framerate: {}", self0.framerate.borrow().rate());
+                ::log::debug!("framerate: {:?}", self0.framerate.borrow().rate());
                 let _ = c0.borrow_mut().take();
                 ::log::info!("wasmgame ending");
                 return;
             }
 
-            self0.framerate.borrow_mut().record_timestamp(millis);
-            let timestamp = timestamp_from_millis(millis);
-            self0.renderer.borrow_mut().render(timestamp).unwrap();
+            let t = Time::from_millis(millis);
+            self0.framerate.borrow_mut().record_timestamp(t);
+            self0.renderer.borrow_mut().render().unwrap();
 
             let self1 = self0.clone();
             let c1 = c0.clone();
-            ::wasm_bindgen_futures::spawn_local(self1.prepare_next_frame(c1, timestamp));
+            ::wasm_bindgen_futures::spawn_local(self1.prepare_next_frame(c1, t));
         }) as Box<dyn FnMut(f64) + 'static>));
 
         // first frame always gets timestamp=0.
         // TODO: or just pass performance.now()?
         ::wasm_bindgen_futures::spawn_local(
             self.clone()
-                .prepare_next_frame(callback, timestamp_from_millis(0.0)),
+                .prepare_next_frame(callback, Time::from_millis(0.0)),
         );
         Ok(())
     }
@@ -119,19 +118,15 @@ impl Engine {
     async fn prepare_next_frame(
         self: Rc<Self>,
         callback: Rc<RefCell<Option<RequestAnimationFrameCallback>>>,
-        timestamp: Duration,
+        t: Time,
     ) {
-        self.renderer.borrow_mut().update(timestamp).unwrap();
+        self.renderer.borrow_mut().update(t).unwrap();
         request_animation_frame_helper(callback.borrow().as_ref());
     }
 }
 
-fn timestamp_from_millis(millis: f64) -> Duration {
-    Duration::from_micros((millis * 1000.0 + 0.5) as u64)
-}
-
 pub trait EventHandler<T: ::wasm_bindgen::JsCast + 'static> {
-    fn handle(&mut self, timestamp: Duration, event: &T);
+    fn handle(&mut self, t: Time, event: &T);
 }
 
 pub type EventCallback = Closure<dyn FnMut(&::web_sys::Event) + 'static>;
@@ -183,27 +178,56 @@ impl ::std::fmt::Debug for Error {
 }
 
 struct Framerate {
-    buf: [f64; 32],
+    buf: [Time; 32],
     index: usize,
 }
 
 impl Framerate {
     fn new() -> Self {
         Framerate {
-            buf: [0.0; 32],
+            buf: [::std::default::Default::default(); 32],
             index: 0,
         }
     }
 
-    fn record_timestamp(&mut self, millis: f64) {
-        self.buf[self.index] = millis;
+    fn record_timestamp(&mut self, t: Time) {
+        self.buf[self.index] = t;
         self.index = (self.index + 1) % self.buf.len();
     }
 
-    fn rate(&self) -> f64 {
+    fn rate(&self) -> Rate {
         let len = self.buf.len();
         let first = self.buf[self.index];
         let last = self.buf[(self.index - 1 + len) % len];
-        len as f64 * 1000.0 / (last - first)
+        len / (last - first)
+    }
+}
+
+#[derive(Copy, Clone, Default, PartialOrd, PartialEq, Debug)]
+pub struct Time(f64);
+
+#[derive(Copy, Clone, Default, PartialOrd, PartialEq, Debug)]
+pub struct Duration(f64);
+
+#[derive(Copy, Clone, Default, PartialOrd, PartialEq, Debug)]
+pub struct Rate(f64);
+
+impl Time {
+    pub fn from_millis(millis: f64) -> Self {
+        Time(millis)
+    }
+}
+
+impl ::std::ops::Sub for Time {
+    type Output = Duration;
+    fn sub(self, other: Time) -> Duration {
+        Duration(self.0 - other.0)
+    }
+}
+
+impl ::std::ops::Div<Duration> for usize {
+    type Output = Rate;
+    fn div(self, d: Duration) -> Rate {
+        Rate(self as f64 * 1000.0 / d.0)
     }
 }
