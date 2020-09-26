@@ -13,6 +13,8 @@ use ::wasm_bindgen::JsValue;
 use ::web_sys::WebGlRenderingContext as WebGL;
 
 pub struct Context {
+    /// https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.HtmlCanvasElement.html
+    pub canvas: ::web_sys::HtmlCanvasElement,
     /// https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.WebGlRenderingContext.html
     pub gl: WebGL,
     /// https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.OesVertexArrayObject.html
@@ -52,6 +54,7 @@ impl Context {
         gl.enable(WebGL::DEPTH_TEST);
         gl.hint(WebGL::GENERATE_MIPMAP_HINT, WebGL::NICEST);
         Ok(Context {
+            canvas: canvas.clone(),
             gl,
             vertex_array_object_ext,
             instanced_arrays_ext,
@@ -68,6 +71,14 @@ impl Context {
         let id = *self.next_object_id.borrow();
         *self.next_object_id.borrow_mut() = id + 1;
         id
+    }
+
+    pub fn width(&self) -> i32 {
+        self.canvas.width() as i32
+    }
+
+    pub fn height(&self) -> i32 {
+        self.canvas.height() as i32
     }
 }
 

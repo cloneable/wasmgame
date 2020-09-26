@@ -60,7 +60,7 @@ impl Game {
             ctx: ctx.clone(),
             last_render: Time::from_millis(0.0),
             scene,
-            offscreen: engine::util::OffscreenBuffer::new(ctx, 400, 300)?,
+            offscreen: engine::util::OffscreenBuffer::new(ctx, ctx.width(), ctx.height())?,
             picker_program,
             program,
         })

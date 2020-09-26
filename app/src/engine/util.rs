@@ -79,9 +79,8 @@ pub fn generate_buffers(
 
 pub struct OffscreenBuffer {
     framebuffer: Framebuffer,
-
-    _colorbuffer: Texture2D,
-    _depthbuffer: Renderbuffer,
+    colorbuffer: Texture2D,
+    depthbuffer: Renderbuffer,
 }
 
 impl OffscreenBuffer {
@@ -109,9 +108,19 @@ impl OffscreenBuffer {
         framebuffer.unbind();
         Ok(OffscreenBuffer {
             framebuffer,
-            _colorbuffer: colorbuffer,
-            _depthbuffer: depthbuffer,
+            colorbuffer,
+            depthbuffer,
         })
+    }
+
+    pub fn resize(&mut self, width: i32, height: i32) -> Result<(), Error> {
+        self.colorbuffer.bind();
+        self.colorbuffer.tex_image_2d(width, height, None)?;
+        self.colorbuffer.unbind();
+        self.depthbuffer.bind();
+        self.depthbuffer.storage_for_depth(width, height);
+        self.depthbuffer.unbind();
+        Ok(())
     }
 
     pub fn activate(&mut self) {
