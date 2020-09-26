@@ -81,10 +81,12 @@ impl engine::Renderer for Game {
         Ok(())
     }
 
-    fn render(&mut self) -> Result<(), Error> {
-        self.offscreen.deactivate();
+    fn render(&mut self, t: Time) -> Result<bool, Error> {
+        if t - self.last_render > engine::Duration::from_millis(100.0) {
+            return Ok(false);
+        }
 
-        // draw
+        self.offscreen.deactivate();
 
         self.scene.hexatile.stage();
 
@@ -108,7 +110,7 @@ impl engine::Renderer for Game {
 
         self.scene.hexatile.unstage();
 
-        Ok(())
+        Ok(true)
     }
 
     fn done(&self) -> bool {

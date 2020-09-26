@@ -12,7 +12,7 @@ use ::std::convert::Into;
 use ::std::ops::FnMut;
 use ::std::option::{Option, Option::None, Option::Some};
 use ::std::rc::Rc;
-use ::std::result::{Result, Result::Ok};
+use ::std::result::{Result, Result::Err, Result::Ok};
 use ::std::string::String;
 use ::std::string::ToString;
 use ::std::vec::Vec;
@@ -23,7 +23,7 @@ use ::wasm_bindgen::JsValue;
 
 pub trait Renderer {
     fn update(&mut self, t: Time) -> Result<(), Error>;
-    fn render(&mut self) -> Result<(), Error>;
+    fn render(&mut self, t: Time) -> Result<bool, Error>;
     fn done(&self) -> bool;
 }
 
@@ -97,8 +97,11 @@ impl Engine {
             }
 
             let t = Time::from_millis(millis);
-            self0.framerate.borrow_mut().record_timestamp(t);
-            self0.renderer.borrow_mut().render().unwrap();
+            match self0.renderer.borrow_mut().render(t) {
+                Ok(true) => self0.framerate.borrow_mut().record_timestamp(t),
+                Ok(false) => (),
+                Err(error) => ::log::error!("{:?}", error),
+            }
 
             let self1 = self0.clone();
             let c1 = c0.clone();
@@ -206,12 +209,6 @@ impl Framerate {
 #[derive(Copy, Clone, Default, PartialOrd, PartialEq, Debug)]
 pub struct Time(f64);
 
-#[derive(Copy, Clone, Default, PartialOrd, PartialEq, Debug)]
-pub struct Duration(f64);
-
-#[derive(Copy, Clone, Default, PartialOrd, PartialEq, Debug)]
-pub struct Rate(f64);
-
 impl Time {
     pub fn from_millis(millis: f64) -> Self {
         Time(millis)
@@ -225,9 +222,21 @@ impl ::std::ops::Sub for Time {
     }
 }
 
+#[derive(Copy, Clone, Default, PartialOrd, PartialEq, Debug)]
+pub struct Duration(f64);
+
+impl Duration {
+    pub fn from_millis(millis: f64) -> Self {
+        Duration(millis)
+    }
+}
+
 impl ::std::ops::Div<Duration> for usize {
     type Output = Rate;
     fn div(self, d: Duration) -> Rate {
         Rate(self as f64 * 1000.0 / d.0)
     }
 }
+
+#[derive(Copy, Clone, Default, PartialOrd, PartialEq, Debug)]
+pub struct Rate(f64);
