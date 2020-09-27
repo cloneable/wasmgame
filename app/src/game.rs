@@ -2,12 +2,14 @@ mod models;
 mod shaders;
 
 use ::std::clone::Clone;
+use ::std::option::{Option, Option::None, Option::Some};
 use ::std::rc::Rc;
 use ::std::result::{Result, Result::Ok};
 
 use ::wasm_bindgen::JsCast;
 
 use crate::engine;
+use crate::util::math::Vec3;
 use crate::util::opengl::Context;
 use engine::scene::{Camera, Drawable};
 use engine::Error;
@@ -40,6 +42,9 @@ pub struct Game {
 
     picker_program: engine::picker::PickerProgram,
     program: shaders::HexatileProgram,
+
+    mouse_down: Option<(i32, i32)>,
+    camera_position: Vec3,
 }
 
 impl Game {
@@ -56,6 +61,8 @@ impl Game {
         program.set_view(scene.camera.view_matrix());
         program.set_projection(scene.camera.projection_matrix());
 
+        let camera_position = scene.camera.position();
+
         Ok(Self {
             ctx: ctx.clone(),
             last_render: Time::from_millis(0.0),
@@ -63,6 +70,8 @@ impl Game {
             offscreen: engine::util::OffscreenBuffer::new(ctx, ctx.width(), ctx.height())?,
             picker_program,
             program,
+            mouse_down: None,
+            camera_position,
         })
     }
 
@@ -93,12 +102,61 @@ impl Game {
             rgba[3]
         );
     }
+
+    pub fn on_mousedown(&mut self, millis: f64, event: &::web_sys::MouseEvent) {
+        let r = event
+            .target()
+            .unwrap()
+            .unchecked_ref::<::web_sys::Element>()
+            .get_bounding_client_rect();
+        let x = event.client_x() - r.left() as i32;
+        let y = event.client_y() - r.top() as i32;
+        self.mouse_down = Some((x, y));
+        self.camera_position = self.scene.camera.position();
+        ::log::debug!("DOWN at {:?}: {},{}", millis, x, y);
+    }
+
+    pub fn on_mouseup(&mut self, millis: f64, event: &::web_sys::MouseEvent) {
+        let r = event
+            .target()
+            .unwrap()
+            .unchecked_ref::<::web_sys::Element>()
+            .get_bounding_client_rect();
+        let x = event.client_x() - r.left() as i32;
+        let y = event.client_y() - r.top() as i32;
+        self.mouse_down = None;
+        ::log::debug!("UP at {:?}: {},{}", millis, x, y);
+    }
+
+    pub fn on_mousemove(&mut self, millis: f64, event: &::web_sys::MouseEvent) {
+        if let Some((ox, oy)) = self.mouse_down {
+            let r = event
+                .target()
+                .unwrap()
+                .unchecked_ref::<::web_sys::Element>()
+                .get_bounding_client_rect();
+            let x = event.client_x() - r.left() as i32;
+            let y = event.client_y() - r.top() as i32;
+            let new_x = self.camera_position.x + (x - ox) as f32 / 100.0;
+            let new_z = self.camera_position.z + (-y + oy) as f32 / 100.0;
+            self.scene
+                .camera
+                .set_position(new_x, self.camera_position.y, new_z)
+                .refresh();
+            ::log::debug!("MOVE at {:?}: {},{}", millis, x, y);
+        }
+    }
 }
 
 impl engine::Renderer for Game {
     fn update(&mut self, t: Time) -> Result<(), Error> {
         self.last_render = t;
         self.scene.hexatile.update(&self.scene.camera);
+        self.program.activate();
+        self.program.set_view(self.scene.camera.view_matrix());
+        self.picker_program.activate();
+        self.picker_program
+            .set_view(self.scene.camera.view_matrix());
         Ok(())
     }
 
@@ -135,6 +193,6 @@ impl engine::Renderer for Game {
     }
 
     fn done(&self) -> bool {
-        self.last_render >= Time::from_millis(10000.0)
+        self.last_render >= Time::from_millis(60000.0)
     }
 }

@@ -49,6 +49,10 @@ impl Camera {
         }
     }
 
+    pub fn position(&self) -> Vec3 {
+        self.position
+    }
+
     pub fn set_position(&mut self, x: f32, y: f32, z: f32) -> &mut Self {
         self.position = Vec3::new(x, y, z);
         self

@@ -35,6 +35,9 @@ pub struct Console {
     engine: Rc<engine::Engine>,
     _game: Rc<RefCell<Game>>,
     _on_click: event::Listener,
+    _on_mousedown: event::Listener,
+    _on_mouseup: event::Listener,
+    _on_mousemove: event::Listener,
 }
 
 #[wasm_bindgen]
@@ -64,10 +67,37 @@ impl Console {
                 game0.borrow_mut().on_click(millis, event)
             },
         )?;
+        let game0 = _game.clone();
+        let _on_mousedown = event::Listener::new(
+            &ctx.canvas,
+            "mousedown",
+            move |millis: f64, event: &::web_sys::MouseEvent| {
+                game0.borrow_mut().on_mousedown(millis, event)
+            },
+        )?;
+        let game0 = _game.clone();
+        let _on_mousemove = event::Listener::new(
+            &ctx.canvas,
+            "mousemove",
+            move |millis: f64, event: &::web_sys::MouseEvent| {
+                game0.borrow_mut().on_mousemove(millis, event)
+            },
+        )?;
+        let game0 = _game.clone();
+        let _on_mouseup = event::Listener::new(
+            &window,
+            "mouseup",
+            move |millis: f64, event: &::web_sys::MouseEvent| {
+                game0.borrow_mut().on_mouseup(millis, event)
+            },
+        )?;
         Ok(Console {
             engine,
             _game,
             _on_click,
+            _on_mousedown,
+            _on_mouseup,
+            _on_mousemove,
         })
     }
 
