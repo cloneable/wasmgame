@@ -2,7 +2,6 @@ pub mod picker;
 pub mod scene;
 pub mod util;
 
-use crate::util::opengl;
 use ::std::boxed::Box;
 use ::std::cell::RefCell;
 use ::std::clone::Clone;
@@ -15,7 +14,6 @@ use ::std::rc::Rc;
 use ::std::result::{Result, Result::Err, Result::Ok};
 use ::std::string::String;
 use ::std::string::ToString;
-use ::std::vec::Vec;
 
 use ::wasm_bindgen::closure::Closure;
 use ::wasm_bindgen::JsCast;
@@ -37,46 +35,16 @@ fn request_animation_frame_helper(callback: Option<&RequestAnimationFrameCallbac
 }
 
 pub struct Engine {
-    ctx: Rc<opengl::Context>,
     renderer: Rc<RefCell<dyn Renderer>>,
-    callbacks: RefCell<Vec<Rc<RefCell<EventCallback>>>>,
     framerate: RefCell<Framerate>,
 }
 
 impl Engine {
-    pub fn new(ctx: &Rc<opengl::Context>, renderer: Rc<RefCell<dyn Renderer>>) -> Rc<Self> {
+    pub fn new(renderer: Rc<RefCell<dyn Renderer>>) -> Rc<Self> {
         Rc::new(Engine {
-            ctx: ctx.clone(),
             renderer,
-            callbacks: RefCell::new(Vec::new()),
             framerate: RefCell::new(Framerate::new()),
         })
-    }
-
-    pub fn register_event_handler<T: ::wasm_bindgen::JsCast + 'static>(
-        self: &Rc<Self>,
-        type_: &'static str,
-        listener: Rc<RefCell<dyn EventHandler<T>>>,
-    ) -> Result<(), Error> {
-        let c = Rc::new(RefCell::new(Closure::wrap(
-            Box::new(move |event: &::web_sys::Event| {
-                listener.borrow_mut().handle(
-                    Time::from_millis(event.time_stamp()),
-                    event.dyn_ref::<T>().unwrap(),
-                );
-            }) as Box<dyn FnMut(&::web_sys::Event) + 'static>,
-        )));
-        {
-            let handler = c.as_ref().borrow();
-            self.ctx
-                .gl
-                .canvas()
-                .unwrap()
-                .unchecked_ref::<::web_sys::HtmlCanvasElement>()
-                .add_event_listener_with_callback(type_, handler.as_ref().unchecked_ref())?;
-        }
-        self.callbacks.borrow_mut().push(c.clone());
-        Ok(())
     }
 
     pub fn start(self: &Rc<Self>) -> Result<(), Error> {
@@ -127,12 +95,6 @@ impl Engine {
         request_animation_frame_helper(callback.borrow().as_ref());
     }
 }
-
-pub trait EventHandler<T: ::wasm_bindgen::JsCast + 'static> {
-    fn handle(&mut self, t: Time, event: &T);
-}
-
-pub type EventCallback = Closure<dyn FnMut(&::web_sys::Event) + 'static>;
 
 pub mod attrib {
     use crate::util::opengl::Attribute;

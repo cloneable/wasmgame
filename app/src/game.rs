@@ -72,6 +72,27 @@ impl Game {
         self.offscreen.activate();
         Ok(())
     }
+
+    pub fn on_click(&mut self, millis: f64, event: &::web_sys::MouseEvent) {
+        let r = event
+            .target()
+            .unwrap()
+            .unchecked_ref::<::web_sys::Element>()
+            .get_bounding_client_rect();
+        let x = event.client_x() - r.left() as i32;
+        let y = event.client_y() - r.top() as i32;
+        let rgba = self.offscreen.read_pixel(x, r.height() as i32 - y).unwrap();
+        ::log::debug!(
+            "Clicked at {:?}: {},{}; rgba = {} {} {} {}",
+            millis,
+            x,
+            y,
+            rgba[0],
+            rgba[1],
+            rgba[2],
+            rgba[3]
+        );
+    }
 }
 
 impl engine::Renderer for Game {
@@ -115,31 +136,5 @@ impl engine::Renderer for Game {
 
     fn done(&self) -> bool {
         self.last_render >= Time::from_millis(10000.0)
-    }
-}
-
-// TODO: use const generic for event type name.
-impl engine::EventHandler<::web_sys::MouseEvent> for Game {
-    fn handle(&mut self, t: Time, event: &::web_sys::MouseEvent) {
-        // TODO: Experiment with a #[wasm_bindgen(inline_js) function
-        //       that does most calls in JS.
-        let r = event
-            .target()
-            .unwrap()
-            .unchecked_ref::<::web_sys::Element>()
-            .get_bounding_client_rect();
-        let x = event.client_x() - r.left() as i32;
-        let y = event.client_y() - r.top() as i32;
-        let rgba = self.offscreen.read_pixel(x, r.height() as i32 - y).unwrap();
-        ::log::debug!(
-            "Clicked at {:?}: {},{}; rgba = {} {} {} {}",
-            t,
-            x,
-            y,
-            rgba[0],
-            rgba[1],
-            rgba[2],
-            rgba[3]
-        );
     }
 }

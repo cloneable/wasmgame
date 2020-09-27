@@ -19,6 +19,7 @@ use ::wasm_bindgen_macro::wasm_bindgen;
 use ::wasm_logger;
 use ::web_sys;
 
+use crate::util::event;
 use crate::util::opengl::Context;
 use game::Game;
 
@@ -32,7 +33,8 @@ pub fn wasm_main() -> Result<(), JsValue> {
 #[wasm_bindgen]
 pub struct Console {
     engine: Rc<engine::Engine>,
-    game: Rc<RefCell<Game>>,
+    _game: Rc<RefCell<Game>>,
+    _on_click: event::Listener,
 }
 
 #[wasm_bindgen]
@@ -49,19 +51,28 @@ impl Console {
             .expect("element not of type canvas");
 
         let ctx = Rc::new(Context::from_canvas(&canvas)?);
-        let game = Rc::new(RefCell::new(
+        let _game = Rc::new(RefCell::new(
             Game::new(&ctx).map_err(Into::<JsValue>::into)?,
         ));
-        game.borrow_mut().init().map_err(Into::<JsValue>::into)?;
-        let engine = engine::Engine::new(&ctx, game.clone());
-        Ok(Console { engine, game })
+        _game.borrow_mut().init().map_err(Into::<JsValue>::into)?;
+        let engine = engine::Engine::new(_game.clone());
+        let game0 = _game.clone();
+        let _on_click = event::Listener::new(
+            &ctx.canvas,
+            "click",
+            move |millis: f64, event: &::web_sys::MouseEvent| {
+                game0.borrow_mut().on_click(millis, event)
+            },
+        )?;
+        Ok(Console {
+            engine,
+            _game,
+            _on_click,
+        })
     }
 
     pub fn start(&mut self) -> Result<(), JsValue> {
         ::log::info!("wasmgame starting");
-        self.engine
-            .register_event_handler("click", self.game.clone())
-            .map_err(Into::<JsValue>::into)?;
         self.engine.start().map_err(Into::<JsValue>::into)
     }
 }
