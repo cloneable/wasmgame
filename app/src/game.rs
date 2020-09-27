@@ -44,6 +44,7 @@ pub struct Game {
     program: shaders::HexatileProgram,
 
     mouse_down: Option<(i32, i32)>,
+    touch_id: Option<i32>,
     camera_position: Vec3,
 }
 
@@ -71,6 +72,7 @@ impl Game {
             picker_program,
             program,
             mouse_down: None,
+            touch_id: None,
             camera_position,
         })
     }
@@ -82,18 +84,14 @@ impl Game {
         Ok(())
     }
 
-    pub fn on_click(&mut self, millis: f64, event: &::web_sys::MouseEvent) {
-        let r = event
-            .target()
-            .unwrap()
-            .unchecked_ref::<::web_sys::Element>()
-            .get_bounding_client_rect();
-        let x = event.client_x() - r.left() as i32;
-        let y = event.client_y() - r.top() as i32;
-        let rgba = self.offscreen.read_pixel(x, r.height() as i32 - y).unwrap();
+    pub fn on_click(&mut self, e: &::web_sys::MouseEvent) {
+        let (left, top, _, height) = target_rect(e);
+        let x = e.client_x() - left as i32;
+        let y = e.client_y() - top as i32;
+        let rgba = self.offscreen.read_pixel(x, height - y).unwrap();
         ::log::debug!(
             "Clicked at {:?}: {},{}; rgba = {} {} {} {}",
-            millis,
+            e.time_stamp(),
             x,
             y,
             rgba[0],
@@ -103,49 +101,133 @@ impl Game {
         );
     }
 
-    pub fn on_mousedown(&mut self, millis: f64, event: &::web_sys::MouseEvent) {
-        let r = event
-            .target()
-            .unwrap()
-            .unchecked_ref::<::web_sys::Element>()
-            .get_bounding_client_rect();
-        let x = event.client_x() - r.left() as i32;
-        let y = event.client_y() - r.top() as i32;
+    pub fn on_mousedown(&mut self, e: &::web_sys::MouseEvent) {
+        let (left, top, _, _) = target_rect(e);
+        let x = e.client_x() - left;
+        let y = e.client_y() - top;
         self.mouse_down = Some((x, y));
         self.camera_position = self.scene.camera.position();
-        ::log::debug!("DOWN at {:?}: {},{}", millis, x, y);
+        ::log::debug!("DOWN at {:?}: {},{}", e.time_stamp(), x, y);
     }
 
-    pub fn on_mouseup(&mut self, millis: f64, event: &::web_sys::MouseEvent) {
-        let r = event
-            .target()
-            .unwrap()
-            .unchecked_ref::<::web_sys::Element>()
-            .get_bounding_client_rect();
-        let x = event.client_x() - r.left() as i32;
-        let y = event.client_y() - r.top() as i32;
+    pub fn on_mouseup(&mut self, e: &::web_sys::MouseEvent) {
+        let (left, top, _, _) = target_rect(e);
+        let x = e.client_x() - left;
+        let y = e.client_y() - top;
         self.mouse_down = None;
-        ::log::debug!("UP at {:?}: {},{}", millis, x, y);
+        ::log::debug!("UP at {:?}: {},{}", e.time_stamp(), x, y);
     }
 
-    pub fn on_mousemove(&mut self, millis: f64, event: &::web_sys::MouseEvent) {
+    pub fn on_mousemove(&mut self, e: &::web_sys::MouseEvent) {
         if let Some((ox, oy)) = self.mouse_down {
-            let r = event
-                .target()
-                .unwrap()
-                .unchecked_ref::<::web_sys::Element>()
-                .get_bounding_client_rect();
-            let x = event.client_x() - r.left() as i32;
-            let y = event.client_y() - r.top() as i32;
+            let (left, top, _, _) = target_rect(e);
+            let x = e.client_x() - left;
+            let y = e.client_y() - top;
             let new_x = self.camera_position.x + (x - ox) as f32 / 100.0;
             let new_z = self.camera_position.z + (-y + oy) as f32 / 100.0;
             self.scene
                 .camera
                 .set_position(new_x, self.camera_position.y, new_z)
                 .refresh();
-            ::log::debug!("MOVE at {:?}: {},{}", millis, x, y);
+            ::log::debug!("MOVE at {:?}: {},{}", e.time_stamp(), x, y);
         }
     }
+
+    pub fn on_touchstart(&mut self, e: &::web_sys::TouchEvent) {
+        let touch_list = e.target_touches();
+        if touch_list.length() != 1 {
+            return;
+        }
+        if let Some(touch) = touch_list.item(0) {
+            let (left, top, _, _) = target_rect(e);
+            let x = touch.client_x() - left;
+            let y = touch.client_y() - top;
+            self.mouse_down = Some((x, y));
+            self.camera_position = self.scene.camera.position();
+            self.touch_id = Some(touch.identifier());
+        }
+    }
+
+    pub fn on_touchmove(&mut self, e: &::web_sys::TouchEvent) {
+        let touch_list = e.changed_touches();
+        for i in 0..touch_list.length() {
+            if let Some(touch) = touch_list.item(i) {
+                if Some(touch.identifier()) != self.touch_id {
+                    return;
+                }
+                let (left, top, _, _) = target_rect(e);
+                let x = touch.client_x() - left;
+                let y = touch.client_y() - top;
+                let (ox, oy) = self.mouse_down.unwrap();
+                let new_x = self.camera_position.x + (x - ox) as f32 / 100.0;
+                let new_z = self.camera_position.z + (-y + oy) as f32 / 100.0;
+                self.scene
+                    .camera
+                    .set_position(new_x, self.camera_position.y, new_z)
+                    .refresh();
+            }
+        }
+    }
+
+    pub fn on_touchend(&mut self, e: &::web_sys::TouchEvent) {
+        let touch_list = e.changed_touches();
+        for i in 0..touch_list.length() {
+            if let Some(touch) = touch_list.item(i) {
+                if Some(touch.identifier()) != self.touch_id {
+                    return;
+                }
+                let (left, top, _, _) = target_rect(e);
+                let x = touch.client_x() - left;
+                let y = touch.client_y() - top;
+                let (ox, oy) = self.mouse_down.unwrap();
+                let new_x = self.camera_position.x + (x - ox) as f32 / 100.0;
+                let new_z = self.camera_position.z + (-y + oy) as f32 / 100.0;
+                self.scene
+                    .camera
+                    .set_position(new_x, self.camera_position.y, new_z)
+                    .refresh();
+                self.mouse_down = None;
+                self.touch_id = None;
+            }
+        }
+    }
+
+    pub fn on_touchcancel(&mut self, e: &::web_sys::TouchEvent) {
+        let touch_list = e.changed_touches();
+        for i in 0..touch_list.length() {
+            if let Some(touch) = touch_list.item(i) {
+                if Some(touch.identifier()) != self.touch_id {
+                    return;
+                }
+                let (left, top, _, _) = target_rect(e);
+                let x = touch.client_x() - left;
+                let y = touch.client_y() - top;
+                let (ox, oy) = self.mouse_down.unwrap();
+                let new_x = self.camera_position.x + (x - ox) as f32 / 100.0;
+                let new_z = self.camera_position.z + (-y + oy) as f32 / 100.0;
+                self.scene
+                    .camera
+                    .set_position(new_x, self.camera_position.y, new_z)
+                    .refresh();
+                self.mouse_down = None;
+                self.touch_id = None;
+            }
+        }
+    }
+}
+
+fn target_rect(e: &::web_sys::Event) -> (i32, i32, i32, i32) {
+    let r = e
+        .target()
+        .unwrap()
+        .unchecked_ref::<::web_sys::Element>()
+        .get_bounding_client_rect();
+    (
+        r.left() as i32,
+        r.top() as i32,
+        r.width() as i32,
+        r.height() as i32,
+    )
 }
 
 impl engine::Renderer for Game {

@@ -27,17 +27,19 @@ impl Listener {
     ) -> Result<Self, JsValue>
     where
         E: JsCast,
-        F: FnMut(f64, &E) + 'static,
+        F: FnMut(&E) + 'static,
     {
         let mut cb = callback;
         let closure = Rc::new(RefCell::new(Some(Closure::wrap(
-            Box::new(move |event: &Event| {
-                cb(event.time_stamp(), event.unchecked_ref::<E>());
+            Box::new(move |e: &Event| {
+                e.prevent_default();
+                cb(e.unchecked_ref::<E>());
             }) as Box<dyn FnMut(&Event) + 'static>,
         ))));
-        target.add_event_listener_with_callback(
+        target.add_event_listener_with_callback_and_add_event_listener_options(
             type_,
             closure.borrow().as_ref().unwrap().as_ref().unchecked_ref(),
+            ::web_sys::AddEventListenerOptions::new().passive(false),
         )?;
         Ok(Listener {
             target: target.clone(),
