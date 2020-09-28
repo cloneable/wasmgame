@@ -89,7 +89,7 @@ impl Game {
         let x = e.client_x() - left as i32;
         let y = e.client_y() - top as i32;
         let rgba = self.offscreen.read_pixel(x, height - y).unwrap();
-        ::log::debug!(
+        ::log::trace!(
             "Clicked at {:?}: {},{}; rgba = {} {} {} {}",
             e.time_stamp(),
             x,
@@ -107,7 +107,7 @@ impl Game {
         let y = e.client_y() - top;
         self.mouse_down = Some((x, y));
         self.camera_position = self.scene.camera.position();
-        ::log::debug!("DOWN at {:?}: {},{}", e.time_stamp(), x, y);
+        ::log::trace!("DOWN at {:?}: {},{}", e.time_stamp(), x, y);
     }
 
     pub fn on_mouseup(&mut self, e: &::web_sys::MouseEvent) {
@@ -115,7 +115,7 @@ impl Game {
         let x = e.client_x() - left;
         let y = e.client_y() - top;
         self.mouse_down = None;
-        ::log::debug!("UP at {:?}: {},{}", e.time_stamp(), x, y);
+        ::log::trace!("UP at {:?}: {},{}", e.time_stamp(), x, y);
     }
 
     pub fn on_mousemove(&mut self, e: &::web_sys::MouseEvent) {
@@ -129,7 +129,7 @@ impl Game {
                 .camera
                 .set_position(new_x, self.camera_position.y, new_z)
                 .refresh();
-            ::log::debug!("MOVE at {:?}: {},{}", e.time_stamp(), x, y);
+            ::log::trace!("MOVE at {:?}: {},{}", e.time_stamp(), x, y);
         }
     }
 
@@ -145,6 +145,13 @@ impl Game {
             self.mouse_down = Some((x, y));
             self.camera_position = self.scene.camera.position();
             self.touch_id = Some(touch.identifier());
+            ::log::trace!(
+                "TOUCH START at {:?}: #{} {},{}",
+                e.time_stamp(),
+                touch.identifier(),
+                x,
+                y
+            );
         }
     }
 
@@ -165,6 +172,13 @@ impl Game {
                     .camera
                     .set_position(new_x, self.camera_position.y, new_z)
                     .refresh();
+                ::log::trace!(
+                    "TOUCH MOVE at {:?}: #{} {},{}",
+                    e.time_stamp(),
+                    touch.identifier(),
+                    x,
+                    y
+                );
             }
         }
     }
@@ -188,6 +202,13 @@ impl Game {
                     .refresh();
                 self.mouse_down = None;
                 self.touch_id = None;
+                ::log::trace!(
+                    "TOUCH END at {:?}: #{} {},{}",
+                    e.time_stamp(),
+                    touch.identifier(),
+                    x,
+                    y
+                );
             }
         }
     }
@@ -211,6 +232,13 @@ impl Game {
                     .refresh();
                 self.mouse_down = None;
                 self.touch_id = None;
+                ::log::trace!(
+                    "TOUCH CANCEL at {:?}: #{} {},{}",
+                    e.time_stamp(),
+                    touch.identifier(),
+                    x,
+                    y
+                );
             }
         }
     }
@@ -276,5 +304,11 @@ impl engine::Renderer for Game {
 
     fn done(&self) -> bool {
         self.last_render >= Time::from_millis(60000.0)
+    }
+}
+
+impl ::std::ops::Drop for Game {
+    fn drop(&mut self) {
+        self.offscreen.deactivate();
     }
 }

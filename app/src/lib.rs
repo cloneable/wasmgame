@@ -7,7 +7,6 @@ mod util;
 use ::std::cell::RefCell;
 use ::std::clone::Clone;
 use ::std::convert::Into;
-use ::std::default::Default;
 use ::std::mem::drop;
 use ::std::rc::Rc;
 use ::std::result::{Result, Result::Ok};
@@ -16,7 +15,6 @@ use ::wasm_bindgen;
 use ::wasm_bindgen::JsCast;
 use ::wasm_bindgen::JsValue;
 use ::wasm_bindgen_macro::wasm_bindgen;
-use ::wasm_logger;
 use ::web_sys;
 
 use crate::util::event;
@@ -25,7 +23,7 @@ use game::Game;
 
 #[wasm_bindgen(start)]
 pub fn wasm_main() -> Result<(), JsValue> {
-    wasm_logger::init(wasm_logger::Config::default());
+    ::wasm_logger::init(::wasm_logger::Config::new(::log::Level::Trace));
     ::log::info!("wasmgame init");
     Ok(())
 }

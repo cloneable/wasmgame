@@ -8,7 +8,7 @@ edition = "2018"
 crate-type = ["cdylib"]
 
 [dependencies]
-log = "0.4"
+log = { version = "0.4", features = ["max_level_trace", "release_max_level_info"] }
 js-sys = "0.3"
 wasm-bindgen = "0.2.68"
 wasm-bindgen-futures = "0.4"
