@@ -86,11 +86,11 @@ impl Console {
             game0.borrow_mut().on_touchmove(event)
         })?;
         let game0 = _game.clone();
-        let _on_touchend = event::Listener::new(&window, "touchend", move |event| {
+        let _on_touchend = event::Listener::new(&ctx.canvas, "touchend", move |event| {
             game0.borrow_mut().on_touchend(event)
         })?;
         let game0 = _game.clone();
-        let _on_touchcancel = event::Listener::new(&window, "touchcancel", move |event| {
+        let _on_touchcancel = event::Listener::new(&ctx.canvas, "touchcancel", move |event| {
             game0.borrow_mut().on_touchcancel(event)
         })?;
         Ok(Console {
