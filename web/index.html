@@ -4,13 +4,11 @@
     <title>wasmgame</title>
     <script type="module">
       import init, { Console } from './wasmgame.js';
-      async function run() {
-        await init();
+      init().then(() => {
         const g = new Console();
         g.start();
         window.game = g;
-      }
-      run();
+      });
     </script>
   </head>
   <body>
