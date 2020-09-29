@@ -9,6 +9,7 @@ use ::std::result::{Result, Result::Ok};
 use ::wasm_bindgen::JsCast;
 
 use crate::engine;
+use crate::util::event;
 use crate::util::math::Vec3;
 use crate::util::opengl::Context;
 use engine::scene::{Camera, Drawable};
@@ -134,6 +135,7 @@ impl Game {
     }
 
     pub fn on_touchstart(&mut self, e: &::web_sys::TouchEvent) {
+        ::log::trace!("TOUCH START: {:?}", event::TouchEventWrapper::wrap(e));
         let touch_list = e.target_touches();
         if touch_list.length() != 1 {
             return;
@@ -145,17 +147,19 @@ impl Game {
             self.mouse_down = Some((x, y));
             self.camera_position = self.scene.camera.position();
             self.touch_id = Some(touch.identifier());
+            let tew = event::TouchEventWrapper::wrap(e);
             ::log::trace!(
-                "TOUCH START at {:?}: #{} {},{}",
+                "TOUCH START at {:?} ({} {}): {:?}",
                 e.time_stamp(),
-                touch.identifier(),
                 x,
-                y
+                y,
+                tew
             );
         }
     }
 
     pub fn on_touchmove(&mut self, e: &::web_sys::TouchEvent) {
+        ::log::trace!("TOUCH MOVE: {:?}", event::TouchEventWrapper::wrap(e));
         let touch_list = e.changed_touches();
         for i in 0..touch_list.length() {
             if let Some(touch) = touch_list.item(i) {
@@ -172,18 +176,12 @@ impl Game {
                     .camera
                     .set_position(new_x, self.camera_position.y, new_z)
                     .refresh();
-                ::log::trace!(
-                    "TOUCH MOVE at {:?}: #{} {},{}",
-                    e.time_stamp(),
-                    touch.identifier(),
-                    x,
-                    y
-                );
             }
         }
     }
 
     pub fn on_touchend(&mut self, e: &::web_sys::TouchEvent) {
+        ::log::trace!("TOUCH END: {:?}", event::TouchEventWrapper::wrap(e));
         let touch_list = e.changed_touches();
         for i in 0..touch_list.length() {
             if let Some(touch) = touch_list.item(i) {
@@ -202,7 +200,7 @@ impl Game {
                     .refresh();
                 self.mouse_down = None;
                 self.touch_id = None;
-                ::log::trace!(
+                ::log::debug!(
                     "TOUCH END at {:?}: #{} {},{}",
                     e.time_stamp(),
                     touch.identifier(),
@@ -214,6 +212,7 @@ impl Game {
     }
 
     pub fn on_touchcancel(&mut self, e: &::web_sys::TouchEvent) {
+        ::log::trace!("TOUCH CANCEL: {:?}", event::TouchEventWrapper::wrap(e));
         let touch_list = e.changed_touches();
         for i in 0..touch_list.length() {
             if let Some(touch) = touch_list.item(i) {
@@ -232,7 +231,7 @@ impl Game {
                     .refresh();
                 self.mouse_down = None;
                 self.touch_id = None;
-                ::log::trace!(
+                ::log::debug!(
                     "TOUCH CANCEL at {:?}: #{} {},{}",
                     e.time_stamp(),
                     touch.identifier(),

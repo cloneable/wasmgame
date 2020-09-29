@@ -12,6 +12,7 @@ use ::wasm_bindgen::JsCast;
 use ::wasm_bindgen::JsValue;
 use ::web_sys::Event;
 use ::web_sys::EventTarget;
+use ::web_sys::TouchEvent;
 
 pub struct Listener {
     target: EventTarget,
@@ -58,5 +59,45 @@ impl ::std::ops::Drop for Listener {
                 closure.as_ref().unwrap().as_ref().unchecked_ref(),
             )
             .unwrap()
+    }
+}
+
+pub(crate) struct TouchEventWrapper<'a>(&'a TouchEvent);
+
+impl TouchEventWrapper<'_> {
+    pub(crate) fn wrap(e: &TouchEvent) -> TouchEventWrapper<'_> {
+        TouchEventWrapper(e)
+    }
+}
+
+impl ::std::fmt::Debug for TouchEventWrapper<'_> {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> Result<(), ::std::fmt::Error> {
+        f.write_str("all=")?;
+        let mut l = f.debug_list();
+        let touches = self.0.touches();
+        for i in 0..touches.length() {
+            if let Some(touch) = touches.item(i) {
+                l.entry(&touch.identifier());
+            }
+        }
+        l.finish()?;
+        f.write_str(", target=")?;
+        let mut l = f.debug_list();
+        let touches = self.0.target_touches();
+        for i in 0..touches.length() {
+            if let Some(touch) = touches.item(i) {
+                l.entry(&touch.identifier());
+            }
+        }
+        l.finish()?;
+        f.write_str(", changed=")?;
+        let mut l = f.debug_list();
+        let touches = self.0.changed_touches();
+        for i in 0..touches.length() {
+            if let Some(touch) = touches.item(i) {
+                l.entry(&touch.identifier());
+            }
+        }
+        l.finish()
     }
 }
