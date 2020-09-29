@@ -21,8 +21,14 @@ use crate::util::event;
 use crate::util::opengl::Context;
 use game::Game;
 
+#[cfg(feature = "wee_alloc")]
+#[global_allocator]
+static ALLOC: ::wee_alloc::WeeAlloc = ::wee_alloc::WeeAlloc::INIT;
+
 #[wasm_bindgen(start)]
 pub fn wasm_main() -> Result<(), JsValue> {
+    #[cfg(feature = "console_error_panic_hook")]
+    ::std::panic::set_hook(::std::boxed::Box::new(::console_error_panic_hook::hook));
     ::wasm_logger::init(::wasm_logger::Config::new(::log::Level::Trace));
     ::log::info!("wasmgame init");
     Ok(())
