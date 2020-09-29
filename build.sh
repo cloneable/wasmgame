@@ -9,12 +9,21 @@ BUILD_TYPE=debug
 BUILD_FLAGS=
 BUILD_OPT=false
 BUILD_FEATURES=console_error_panic_hook,wee_alloc
-if [ "$1" == "--release" ]; then
-  BUILD_TYPE=release
-  BUILD_FLAGS=--release
-  BUILD_OPT=true
-  BUILD_FEATURES=wee_alloc
-fi
+
+case "$1" in
+  --release)
+    BUILD_TYPE=release
+    BUILD_FLAGS=--release
+    BUILD_OPT=true
+    BUILD_FEATURES=wee_alloc
+    ;;
+  --debug)
+    ;;
+  *)
+    echo "Invalid flag: $1"
+    exit 1
+    ;;
+esac
 
 (cd app && cargo build --features="$BUILD_FEATURES" $BUILD_FLAGS --target=wasm32-unknown-unknown)
 rm -rf wbg
