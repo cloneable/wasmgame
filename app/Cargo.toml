@@ -41,6 +41,7 @@ features = [
   'Touch',
   'TouchEvent',
   'TouchList',
+  'UiEvent',
   # WebGL
   'WebGlBuffer',
   'WebGlContextAttributes',

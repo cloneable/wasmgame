@@ -38,6 +38,7 @@ pub fn wasm_main() -> Result<(), JsValue> {
 pub struct Console {
     engine: Rc<engine::Engine>,
     _game: Rc<RefCell<Game>>,
+    _on_resize: event::Listener,
     _on_click: event::Listener,
     _on_mousedown: event::Listener,
     _on_mouseup: event::Listener,
@@ -67,6 +68,11 @@ impl Console {
         ));
         _game.borrow_mut().init().map_err(Into::<JsValue>::into)?;
         let engine = engine::Engine::new(_game.clone());
+
+        let game0 = _game.clone();
+        let _on_resize = event::Listener::new(&window, "resize", move |event| {
+            game0.borrow_mut().on_resize(event)
+        })?;
         let game0 = _game.clone();
         let _on_click = event::Listener::new(&ctx.canvas, "click", move |event| {
             game0.borrow_mut().on_click(event)
@@ -102,6 +108,7 @@ impl Console {
         Ok(Console {
             engine,
             _game,
+            _on_resize,
             _on_click,
             _on_mousedown,
             _on_mouseup,

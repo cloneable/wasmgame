@@ -102,6 +102,16 @@ impl Game {
         );
     }
 
+    pub fn on_resize(&mut self, e: &::web_sys::UiEvent) {
+        self.ctx.resized();
+        ::log::trace!(
+            "RESIZE at {:?}: {},{}",
+            e.time_stamp(),
+            self.ctx.width(),
+            self.ctx.height()
+        );
+    }
+
     pub fn on_mousedown(&mut self, e: &::web_sys::MouseEvent) {
         let (left, top, _, _) = target_rect(e);
         let x = e.client_x() - left;

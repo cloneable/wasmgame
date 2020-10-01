@@ -2,6 +2,16 @@
 <html>
   <head>
     <title>wasmgame</title>
+    <style>
+      html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      #wasmgame {
+        width: 100%;
+        height: 100%;
+      }
+    </style>
     <script type="module">
       import init, { Console } from './wasmgame.js';
       init().then(() => {
@@ -12,6 +22,6 @@
     </script>
   </head>
   <body>
-    <canvas id="wasmgame" width="400" height="300"></canvas>
+    <canvas id="wasmgame" width="800" height="600"></canvas>
   </body>
 </html>

@@ -67,6 +67,10 @@ impl Context {
         })
     }
 
+    pub fn resized(&self) {
+        self.gl.viewport(0, 0, self.width(), self.height())
+    }
+
     pub fn next_object_id(&self) -> u32 {
         let id = *self.next_object_id.borrow();
         *self.next_object_id.borrow_mut() = id + 1;
