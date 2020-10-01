@@ -32,19 +32,19 @@ pub fn generate_buffers(
     let mut i = 0;
     while i < model_indices.len() {
         let ai = model_indices[i] as usize * 3;
-        let a = Vec3::new(
+        let a = Vec3::with(
             model_vertices[ai],
             model_vertices[ai + 1],
             model_vertices[ai + 2],
         );
         let bi = model_indices[i + 1] as usize * 3;
-        let b = Vec3::new(
+        let b = Vec3::with(
             model_vertices[bi],
             model_vertices[bi + 1],
             model_vertices[bi + 2],
         );
         let ci = model_indices[i + 2] as usize * 3;
-        let c = Vec3::new(
+        let c = Vec3::with(
             model_vertices[ci],
             model_vertices[ci + 1],
             model_vertices[ci + 2],

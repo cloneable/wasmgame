@@ -24,16 +24,17 @@ impl engine::scene::Drawable for Hexatile {
     fn init(&mut self, camera: &engine::scene::Camera) {
         self.model[0].translate([-0.6, 0.0, 0.0].into());
         self.model[0].scale([1.0, 3.0, 1.0].into());
-        self.model[0].color(Vec4::rgb(0x19, 0x19, 0x70)); // midnightblue
+        self.model[0].color(Vec4::with_rgb(0x19, 0x19, 0x70)); // midnightblue
         self.model[0].refresh(camera.view_matrix());
 
+        self.model[1].translate([0.0, -0.01, 0.0].into());
         self.model[1].scale([1.0, 2.0, 1.0].into());
-        self.model[1].color(Vec4::rgb(0x87, 0xce, 0xfa)); // lightskyblue
+        self.model[1].color(Vec4::with_rgb(0x87, 0xce, 0xfa)); // lightskyblue
         self.model[1].refresh(camera.view_matrix());
 
-        self.model[2].translate([0.6, 0.0, 0.0].into());
+        self.model[2].translate([0.6, -0.02, 0.0].into());
         self.model[2].rotate([0.0, 20.0, 0.0].into());
-        self.model[2].color(Vec4::rgb(0xff, 0xb6, 0xc1)); // lightpink
+        self.model[2].color(Vec4::with_rgb(0xff, 0xb6, 0xc1)); // lightpink
         self.model[2].refresh(camera.view_matrix());
 
         self.model.init();
