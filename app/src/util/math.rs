@@ -988,7 +988,7 @@ impl From<Quaternion> for Mat4 {
             1.0 - 2.0 * (xx + yy), //br
             0.0,
         ];
-        let d = [0.0, 0.0, 0.0, 0.0];
+        let d = [0.0, 0.0, 0.0, 1.0];
         Mat4::from([a, b, c, d])
     }
 }

@@ -8,9 +8,9 @@ use ::std::{vec, vec::Vec};
 
 use super::attrib;
 use super::util;
+use crate::engine::Error;
 use crate::util::math::{look_at, project, Mat4, Quaternion, Vec3, Vec4};
 use crate::util::opengl::{ArrayBuffer, Context, VertexArrayObject};
-use crate::engine::Error;
 
 pub trait Drawable {
     fn init(&mut self, camera: &Camera);
@@ -37,9 +37,9 @@ pub struct Camera {
 impl Camera {
     pub fn new() -> Self {
         Camera {
-            position: Vec3::new(0.0, 0.0, 1.0),
-            target: Vec3::new(0.0, 0.0, 0.0),
-            up: Vec3::new(0.0, 1.0, 0.0),
+            position: Vec3::with(0.0, 0.0, 1.0),
+            target: Vec3::with(0.0, 0.0, 0.0),
+            up: Vec3::with(0.0, 1.0, 0.0),
             fov: 90.0,
             aspect: 1.0,
             near: 0.1,
@@ -54,12 +54,12 @@ impl Camera {
     }
 
     pub fn set_position(&mut self, x: f32, y: f32, z: f32) -> &mut Self {
-        self.position = Vec3::new(x, y, z);
+        self.position = Vec3::with(x, y, z);
         self
     }
 
     pub fn set_target(&mut self, x: f32, y: f32, z: f32) -> &mut Self {
-        self.target = Vec3::new(x, y, z);
+        self.target = Vec3::with(x, y, z);
         self
     }
 
@@ -271,10 +271,10 @@ pub struct Instance {
 impl Instance {
     pub fn new() -> Self {
         Instance {
-            position: Vec3::new(0.0, 0.0, 0.0),
-            scale: Vec3::new(1.0, 1.0, 1.0),
-            rotation: Vec3::new(0.0, 0.0, 0.0),
-            color: Vec4::new(1.0, 1.0, 1.0, 1.0),
+            position: Vec3::with(0.0, 0.0, 0.0),
+            scale: Vec3::with(1.0, 1.0, 1.0),
+            rotation: Vec3::with(0.0, 0.0, 0.0),
+            color: Vec4::with(1.0, 1.0, 1.0, 1.0),
             model: Mat4::IDENTITY,
             normals: Mat4::IDENTITY,
         }
@@ -301,10 +301,8 @@ impl Instance {
 
     pub fn refresh(&mut self, view: &Mat4) {
         let mut m: Mat4 = Quaternion::new(self.rotation).into();
-        m[0][0] *= self.scale.x;
-        m[1][1] *= self.scale.y;
-        m[2][2] *= self.scale.z;
-        m[3] = Vec4::from_vec3(self.position, 1.0);
+        m.scale(self.scale);
+        m.translate(self.position);
         let mat_model_view = (view * &m).to_3x3();
         let normals = match mat_model_view.invert() {
             Some(inv) => inv.transpose(),
