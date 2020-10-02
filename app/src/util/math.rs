@@ -62,6 +62,10 @@ impl Vec3 {
         self.x == 0.0 && self.y == 0.0 && self.z == 0.0
     }
 
+    pub fn length(&self) -> f32 {
+        self.dot(self).sqrt()
+    }
+
     pub fn cross(&self, other: &Vec3) -> Vec3 {
         Vec3 {
             x: self.y * other.z - self.z * other.y,
@@ -78,7 +82,7 @@ impl Vec3 {
         if self.is_zero() {
             return *self;
         }
-        let length = (self.x * self.x + self.y * self.y + self.z * self.z).sqrt();
+        let length = self.length();
         Vec3 {
             x: self.x / length,
             y: self.y / length,
@@ -380,11 +384,41 @@ impl Vec4 {
         }
     }
 
+    pub fn is_zero(&self) -> bool {
+        self.x == 0.0 && self.y == 0.0 && self.z == 0.0 && self.w == 0.0
+    }
+
+    pub fn length(&self) -> f32 {
+        self.dot(self).sqrt()
+    }
+
     pub fn dot(&self, other: &Vec4) -> f32 {
         self.x * other.x + //br
         self.y * other.y + //br
         self.z * other.z + //br
         self.w * other.w
+    }
+
+    pub fn normalize(&self) -> Vec4 {
+        if self.is_zero() {
+            return *self;
+        }
+        let length = self.length();
+        Vec4 {
+            x: self.x / length,
+            y: self.y / length,
+            z: self.z / length,
+            w: self.w / length,
+        }
+    }
+
+    pub fn apply(&self, func: fn(f32) -> f32) -> Vec4 {
+        Vec4 {
+            x: func(self.x),
+            y: func(self.y),
+            z: func(self.z),
+            w: func(self.w),
+        }
     }
 }
 
@@ -402,6 +436,28 @@ impl ::std::convert::From<[f32; 4]> for Vec4 {
             y: buf[1],
             z: buf[2],
             w: buf[3],
+        }
+    }
+}
+
+impl ::std::convert::From<(Vec3, f32)> for Vec4 {
+    fn from(v: (Vec3, f32)) -> Vec4 {
+        Vec4 {
+            x: v.0.x,
+            y: v.0.y,
+            z: v.0.z,
+            w: v.1,
+        }
+    }
+}
+
+impl ::std::convert::From<(&Vec3, f32)> for Vec4 {
+    fn from(v: (&Vec3, f32)) -> Vec4 {
+        Vec4 {
+            x: v.0.x,
+            y: v.0.y,
+            z: v.0.z,
+            w: v.1,
         }
     }
 }
