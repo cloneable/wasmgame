@@ -17,7 +17,7 @@ case "$1" in
     BUILD_OPT=true
     BUILD_FEATURES=wee_alloc
     ;;
-  --debug)
+  --debug | "")
     ;;
   *)
     echo "Invalid flag: $1"
