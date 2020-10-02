@@ -29,7 +29,7 @@ pub fn project(fov: f32, aspect: f32, near: f32, far: f32) -> Mat4 {
     ])
 }
 
-#[derive(Copy, Clone, PartialEq, PartialOrd)]
+#[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Vec3 {
     pub x: f32,
@@ -96,6 +96,24 @@ impl Vec3 {
             y: func(self.y),
             z: func(self.z),
         }
+    }
+
+    pub fn to_polar(&self) -> Vec3 {
+        let r = self.length();
+        if r == 0.0 {
+            return Vec3::new();
+        }
+        Vec3::with(
+            r,
+            (self.z / r).acos().to_degrees(),
+            self.y.atan2(self.x).to_degrees(),
+        )
+    }
+
+    pub fn to_cartesian(&self) -> Vec3 {
+        let (t_s, t_c) = self.y.to_radians().sin_cos();
+        let (a_s, a_c) = self.z.to_radians().sin_cos();
+        Vec3::with(self.x * t_s * a_c, self.x * t_s * a_s, self.x * t_c)
     }
 }
 
@@ -327,7 +345,7 @@ impl ::std::ops::Neg for &Vec3 {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, PartialOrd)]
+#[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Vec4 {
     pub x: f32,
@@ -695,11 +713,11 @@ impl ::std::ops::Neg for &Vec4 {
     }
 }
 
-#[derive(Copy, Clone, PartialOrd, PartialEq)]
+#[derive(Copy, Clone)]
 #[repr(C)]
 struct Mat4Column(f32, f32, f32, f32);
 
-#[derive(Copy, Clone, PartialOrd, PartialEq)]
+#[derive(Copy, Clone)]
 #[repr(C)]
 struct Mat4Columns(Mat4Column, Mat4Column, Mat4Column, Mat4Column);
 
@@ -1051,10 +1069,23 @@ impl From<Quaternion> for Mat4 {
 
 #[cfg(test)]
 pub mod tests {
+    use ::float_cmp::approx_eq;
+    use ::float_cmp::ApproxEq;
+    use ::std::default::Default;
     use ::std::{assert_eq, panic};
     use ::wasm_bindgen_test::wasm_bindgen_test;
 
     use super::*;
+
+    impl ApproxEq for Vec3 {
+        type Margin = ::float_cmp::F32Margin;
+        fn approx_eq<T: Into<Self::Margin>>(self, other: Self, margin: T) -> bool {
+            let margin = margin.into();
+            self.x.approx_eq(other.x, margin)
+                && self.y.approx_eq(other.y, margin)
+                && self.z.approx_eq(other.z, margin)
+        }
+    }
 
     #[wasm_bindgen_test]
     fn test_vec4_dot() {
@@ -1115,5 +1146,195 @@ pub mod tests {
             103.0, 50.0, -7.0, -68.0, //br
         ]);
         assert_eq!(&m1 * &m2, m3);
+    }
+
+    #[wasm_bindgen_test]
+    fn test_vec3_unit_cartesian_to_polar() {
+        approx_eq!(
+            Vec3,
+            Vec3::with(1.0, 0.0, 0.0).to_polar(),
+            Vec3::with(1.0, 90.0, 0.0)
+        );
+        approx_eq!(
+            Vec3,
+            Vec3::with(0.0, 1.0, 0.0).to_polar(),
+            Vec3::with(1.0, 0.0, 90.0)
+        );
+        approx_eq!(
+            Vec3,
+            Vec3::with(0.0, 0.0, 1.0).to_polar(),
+            Vec3::with(1.0, 0.0, 0.0)
+        );
+        approx_eq!(
+            Vec3,
+            Vec3::with(-1.0, 0.0, 0.0).to_polar(),
+            Vec3::with(1.0, -90.0, 0.0)
+        );
+        approx_eq!(
+            Vec3,
+            Vec3::with(0.0, -1.0, 0.0).to_polar(),
+            Vec3::with(1.0, 0.0, -90.0)
+        );
+        approx_eq!(
+            Vec3,
+            Vec3::with(0.0, 0.0, -1.0).to_polar(),
+            Vec3::with(1.0, 180.0, 0.0)
+        );
+
+        let sqrt2 = 2.0_f32.sqrt();
+        let sqrt3 = 3.0_f32.sqrt();
+
+        approx_eq!(
+            Vec3,
+            Vec3::with(1.0, 0.0, 1.0).to_polar(),
+            Vec3::with(sqrt2, 45.0, 0.0)
+        );
+        approx_eq!(
+            Vec3,
+            Vec3::with(0.0, 1.0, 1.0).to_polar(),
+            Vec3::with(sqrt2, 45.0, 90.0)
+        );
+        approx_eq!(
+            Vec3,
+            Vec3::with(1.0, 1.0, 0.0).to_polar(),
+            Vec3::with(sqrt2, 90.0, 45.0)
+        );
+        approx_eq!(
+            Vec3,
+            Vec3::with(1.0, 1.0, 1.0).to_polar(),
+            Vec3::with(sqrt3, 54.735615, 45.0)
+        );
+        approx_eq!(
+            Vec3,
+            Vec3::with(-1.0, 0.0, 1.0).to_polar(),
+            Vec3::with(sqrt2, 45.0, 180.0)
+        );
+        approx_eq!(
+            Vec3,
+            Vec3::with(0.0, -1.0, 1.0).to_polar(),
+            Vec3::with(sqrt2, 45.0, -90.0)
+        );
+        approx_eq!(
+            Vec3,
+            Vec3::with(-1.0, -1.0, 0.0).to_polar(),
+            Vec3::with(sqrt2, 90.0, -135.0)
+        );
+        approx_eq!(
+            Vec3,
+            Vec3::with(-1.0, -1.0, 1.0).to_polar(),
+            Vec3::with(sqrt3, 54.735615, -135.0)
+        );
+        approx_eq!(
+            Vec3,
+            Vec3::with(-1.0, 0.0, -1.0).to_polar(),
+            Vec3::with(sqrt2, 135.0, 180.0)
+        );
+        approx_eq!(
+            Vec3,
+            Vec3::with(0.0, 1.0, -1.0).to_polar(),
+            Vec3::with(sqrt2, 135.0, 90.0)
+        );
+        approx_eq!(
+            Vec3,
+            Vec3::with(-1.0, 1.0, 0.0).to_polar(),
+            Vec3::with(sqrt2, 90.0, 135.0)
+        );
+        approx_eq!(
+            Vec3,
+            Vec3::with(-1.0, 1.0, -1.0).to_polar(),
+            Vec3::with(sqrt3, 125.26439, 135.0)
+        );
+        approx_eq!(
+            Vec3,
+            Vec3::with(1.0, 0.0, -1.0).to_polar(),
+            Vec3::with(sqrt2, 135.0, 0.0)
+        );
+        approx_eq!(
+            Vec3,
+            Vec3::with(0.0, -1.0, -1.0).to_polar(),
+            Vec3::with(sqrt2, 135.0, -90.0)
+        );
+        approx_eq!(
+            Vec3,
+            Vec3::with(1.0, -1.0, 0.0).to_polar(),
+            Vec3::with(sqrt2, 90.0, -45.00)
+        );
+        approx_eq!(
+            Vec3,
+            Vec3::with(1.0, -1.0, -1.0).to_polar(),
+            Vec3::with(sqrt3, 125.26439, -45.0)
+        );
+        approx_eq!(
+            Vec3,
+            Vec3::with(-1.0, 0.0, -1.0).to_polar(),
+            Vec3::with(sqrt2, 135.0, 180.0)
+        );
+        approx_eq!(
+            Vec3,
+            Vec3::with(0.0, -1.0, -1.0).to_polar(),
+            Vec3::with(sqrt2, 135.0, -90.0)
+        );
+        approx_eq!(
+            Vec3,
+            Vec3::with(-1.0, -1.0, 0.0).to_polar(),
+            Vec3::with(sqrt2, 90.0, -135.0)
+        );
+        approx_eq!(
+            Vec3,
+            Vec3::with(-1.0, -1.0, -1.0).to_polar(),
+            Vec3::with(sqrt3, 125.26439, -135.0)
+        );
+    }
+
+    #[wasm_bindgen_test]
+    fn test_vec3_unit_polar_to_cartesian() {
+        approx_eq!(
+            Vec3,
+            Vec3::with(1.0, 90.0, 0.0).to_cartesian(),
+            Vec3::with(1.0, 0.0, 0.0)
+        );
+        approx_eq!(
+            Vec3,
+            Vec3::with(1.0, 0.0, 90.0).to_cartesian(),
+            Vec3::with(0.0, 1.0, 0.0)
+        );
+        approx_eq!(
+            Vec3,
+            Vec3::with(1.0, 0.0, 0.0).to_cartesian(),
+            Vec3::with(0.0, 0.0, 1.0)
+        );
+        approx_eq!(
+            Vec3,
+            Vec3::with(1.0, -90.0, 0.0).to_cartesian(),
+            Vec3::with(-1.0, 0.0, 0.0)
+        );
+        approx_eq!(
+            Vec3,
+            Vec3::with(1.0, 0.0, -90.0).to_cartesian(),
+            Vec3::with(0.0, -1.0, 0.0)
+        );
+        approx_eq!(
+            Vec3,
+            Vec3::with(1.0, 180.0, 0.0).to_cartesian(),
+            Vec3::with(0.0, 0.0, -1.0)
+        );
+
+        let sqrt2 = 2.0_f32.sqrt();
+
+        approx_eq!(
+            Vec3,
+            Vec3::with(sqrt2, 45.0, 0.0).to_cartesian(),
+            Vec3::with(1.0, 0.0, 1.0)
+        );
+        approx_eq!(
+            Vec3,
+            Vec3::with(sqrt2, 45.0, 90.0).to_cartesian(),
+            Vec3::with(0.0, 1.0, 1.0)
+        );
+        approx_eq!(
+            Vec3,
+            Vec3::with(sqrt2, 90.0, 45.0).to_cartesian(),
+            Vec3::with(1.0, 1.0, 0.0)
+        );
     }
 }
