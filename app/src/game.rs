@@ -13,8 +13,8 @@ use crate::util::event;
 use crate::util::math::Vec3;
 use crate::util::opengl::Context;
 use engine::scene::{Camera, Drawable};
+use engine::time::{Duration, Time};
 use engine::Error;
-use engine::Time;
 
 struct Scene {
     hexatile: models::Hexatile,
@@ -289,7 +289,7 @@ impl engine::Renderer for Game {
     }
 
     fn render(&mut self, t: Time) -> Result<bool, Error> {
-        if t - self.last_render > engine::Duration::from_millis(100.0) {
+        if t - self.last_render > Duration::from_millis(100.0) {
             return Ok(false);
         }
 
