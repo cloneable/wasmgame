@@ -122,7 +122,7 @@ impl Game {
     }
 
     pub fn on_mousedown(&mut self, e: &::web_sys::MouseEvent) {
-        let (left, top, _, _) = target_rect(e);
+        let (left, top, ..) = target_rect(e);
         let x = e.client_x() - left;
         let y = e.client_y() - top;
         self.mouse_down = Some((x, y));
@@ -131,7 +131,7 @@ impl Game {
     }
 
     pub fn on_mouseup(&mut self, e: &::web_sys::MouseEvent) {
-        let (left, top, _, _) = target_rect(e);
+        let (left, top, ..) = target_rect(e);
         let x = e.client_x() - left;
         let y = e.client_y() - top;
         self.mouse_down = None;
@@ -140,7 +140,7 @@ impl Game {
 
     pub fn on_mousemove(&mut self, e: &::web_sys::MouseEvent) {
         if let Some((ox, oy)) = self.mouse_down {
-            let (left, top, _, _) = target_rect(e);
+            let (left, top, ..) = target_rect(e);
             let x = e.client_x() - left;
             let y = e.client_y() - top;
             let new_x = self.camera_position.x + (x - ox) as f32 / 100.0;
@@ -160,7 +160,7 @@ impl Game {
             return;
         }
         if let Some(touch) = touch_list.item(0) {
-            let (left, top, _, _) = target_rect(e);
+            let (left, top, ..) = target_rect(e);
             let x = touch.client_x() - left;
             let y = touch.client_y() - top;
             self.mouse_down = Some((x, y));
@@ -185,7 +185,7 @@ impl Game {
                 if Some(touch.identifier()) != self.touch_id {
                     return;
                 }
-                let (left, top, _, _) = target_rect(e);
+                let (left, top, ..) = target_rect(e);
                 let x = touch.client_x() - left;
                 let y = touch.client_y() - top;
                 let (ox, oy) = self.mouse_down.unwrap();
@@ -207,7 +207,7 @@ impl Game {
                 if Some(touch.identifier()) != self.touch_id {
                     return;
                 }
-                let (left, top, _, _) = target_rect(e);
+                let (left, top, ..) = target_rect(e);
                 let x = touch.client_x() - left;
                 let y = touch.client_y() - top;
                 let (ox, oy) = self.mouse_down.unwrap();
@@ -238,7 +238,7 @@ impl Game {
                 if Some(touch.identifier()) != self.touch_id {
                     return;
                 }
-                let (left, top, _, _) = target_rect(e);
+                let (left, top, ..) = target_rect(e);
                 let x = touch.client_x() - left;
                 let y = touch.client_y() - top;
                 let (ox, oy) = self.mouse_down.unwrap();
