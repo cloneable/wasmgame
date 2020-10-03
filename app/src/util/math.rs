@@ -14,12 +14,8 @@ pub fn look_at(eye: &Vec3, center: &Vec3, up: &Vec3) -> Mat4 {
     ])
 }
 
-fn radians(degrees: f32) -> f32 {
-    degrees * (::std::f32::consts::PI / 180.0)
-}
-
 pub fn project(fov: f32, aspect: f32, near: f32, far: f32) -> Mat4 {
-    let scale = 1.0 / (radians(fov) / 2.0).tan();
+    let scale = 1.0 / (fov.to_radians() / 2.0).tan();
     let d = -1.0 / (far - near);
     Mat4::from([
         [scale / aspect, 0.0, 0.0, 0.0],
@@ -78,6 +74,11 @@ impl Vec3 {
         self.x * other.x + self.y * other.y + self.z * other.z
     }
 
+    /// Hadamard product
+    pub fn componentwise(&mut self, v: Vec3) -> Vec3 {
+        self.combine(v, |a, b| a * b)
+    }
+
     pub fn normalize(&self) -> Vec3 {
         if self.is_zero() {
             return *self;
@@ -98,22 +99,33 @@ impl Vec3 {
         }
     }
 
+    pub fn combine(&self, v: Vec3, func: fn(f32, f32) -> f32) -> Vec3 {
+        Vec3 {
+            x: func(self.x, v.x),
+            y: func(self.y, v.y),
+            z: func(self.z, v.z),
+        }
+    }
+
     pub fn to_polar(&self) -> Vec3 {
         let r = self.length();
         if r == 0.0 {
             return Vec3::new();
         }
-        Vec3::with(
-            r,
-            (self.z / r).acos().to_degrees(),
-            self.y.atan2(self.x).to_degrees(),
-        )
+        let t = self.x.atan2(self.z).to_degrees();
+        let p = (self.y / r).asin().to_degrees();
+        Vec3::with(r, t, p)
     }
 
     pub fn to_cartesian(&self) -> Vec3 {
-        let (t_s, t_c) = self.y.to_radians().sin_cos();
-        let (a_s, a_c) = self.z.to_radians().sin_cos();
-        Vec3::with(self.x * t_s * a_c, self.x * t_s * a_s, self.x * t_c)
+        let r = self.x;
+        let (t_sin, t_cos) = self.y.to_radians().sin_cos();
+        let (p_sin, p_cos) = self.z.to_radians().sin_cos();
+        Vec3::with(
+            r * t_sin * p_cos, //br
+            r * p_sin,         //br
+            r * t_cos * p_cos,
+        )
     }
 }
 
@@ -1069,22 +1081,27 @@ impl From<Quaternion> for Mat4 {
 
 #[cfg(test)]
 pub mod tests {
-    use ::float_cmp::approx_eq;
     use ::float_cmp::ApproxEq;
     use ::std::default::Default;
-    use ::std::{assert_eq, panic};
+    use ::std::{assert_eq, assert_ne, panic};
     use ::wasm_bindgen_test::wasm_bindgen_test;
 
     use super::*;
 
-    impl ApproxEq for Vec3 {
-        type Margin = ::float_cmp::F32Margin;
-        fn approx_eq<T: Into<Self::Margin>>(self, other: Self, margin: T) -> bool {
-            let margin = margin.into();
-            self.x.approx_eq(other.x, margin)
-                && self.y.approx_eq(other.y, margin)
-                && self.z.approx_eq(other.z, margin)
+    impl ::std::cmp::PartialEq for Vec3 {
+        fn eq(&self, other: &Self) -> bool {
+            let m = ::float_cmp::F32Margin::default();
+            self.x.approx_eq(other.x, m)
+                && self.y.approx_eq(other.y, m)
+                && self.z.approx_eq(other.z, m)
         }
+    }
+
+    #[wasm_bindgen_test]
+    fn test_vec3_approx_eq() {
+        let v1 = Vec3::with(1.0, 0.0, 0.0);
+        let v2 = Vec3::with(0.0, 0.0, -1.0);
+        assert_ne!(v1, v2);
     }
 
     #[wasm_bindgen_test]
@@ -1150,33 +1167,31 @@ pub mod tests {
 
     #[wasm_bindgen_test]
     fn test_vec3_unit_cartesian_to_polar() {
-        approx_eq!(
-            Vec3,
+        assert_eq!(
+            Vec3::with(0.0, 0.0, 0.0).to_polar(),
+            Vec3::with(0.0, 0.0, 0.0)
+        );
+        assert_eq!(
             Vec3::with(1.0, 0.0, 0.0).to_polar(),
             Vec3::with(1.0, 90.0, 0.0)
         );
-        approx_eq!(
-            Vec3,
+        assert_eq!(
             Vec3::with(0.0, 1.0, 0.0).to_polar(),
             Vec3::with(1.0, 0.0, 90.0)
         );
-        approx_eq!(
-            Vec3,
+        assert_eq!(
             Vec3::with(0.0, 0.0, 1.0).to_polar(),
             Vec3::with(1.0, 0.0, 0.0)
         );
-        approx_eq!(
-            Vec3,
+        assert_eq!(
             Vec3::with(-1.0, 0.0, 0.0).to_polar(),
             Vec3::with(1.0, -90.0, 0.0)
         );
-        approx_eq!(
-            Vec3,
+        assert_eq!(
             Vec3::with(0.0, -1.0, 0.0).to_polar(),
             Vec3::with(1.0, 0.0, -90.0)
         );
-        approx_eq!(
-            Vec3,
+        assert_eq!(
             Vec3::with(0.0, 0.0, -1.0).to_polar(),
             Vec3::with(1.0, 180.0, 0.0)
         );
@@ -1184,157 +1199,167 @@ pub mod tests {
         let sqrt2 = 2.0_f32.sqrt();
         let sqrt3 = 3.0_f32.sqrt();
 
-        approx_eq!(
-            Vec3,
+        assert_eq!(
             Vec3::with(1.0, 0.0, 1.0).to_polar(),
             Vec3::with(sqrt2, 45.0, 0.0)
         );
-        approx_eq!(
-            Vec3,
+        assert_eq!(
             Vec3::with(0.0, 1.0, 1.0).to_polar(),
-            Vec3::with(sqrt2, 45.0, 90.0)
+            Vec3::with(sqrt2, 0.0, 45.0)
         );
-        approx_eq!(
-            Vec3,
+        assert_eq!(
             Vec3::with(1.0, 1.0, 0.0).to_polar(),
             Vec3::with(sqrt2, 90.0, 45.0)
         );
-        approx_eq!(
-            Vec3,
+        assert_eq!(
             Vec3::with(1.0, 1.0, 1.0).to_polar(),
-            Vec3::with(sqrt3, 54.735615, 45.0)
+            Vec3::with(sqrt3, 45.0, 35.26439)
         );
-        approx_eq!(
-            Vec3,
+        assert_eq!(
             Vec3::with(-1.0, 0.0, 1.0).to_polar(),
-            Vec3::with(sqrt2, 45.0, 180.0)
+            Vec3::with(sqrt2, -45.0, 0.0)
         );
-        approx_eq!(
-            Vec3,
+        assert_eq!(
             Vec3::with(0.0, -1.0, 1.0).to_polar(),
-            Vec3::with(sqrt2, 45.0, -90.0)
+            Vec3::with(sqrt2, 0.0, -45.0)
         );
-        approx_eq!(
-            Vec3,
+        assert_eq!(
             Vec3::with(-1.0, -1.0, 0.0).to_polar(),
-            Vec3::with(sqrt2, 90.0, -135.0)
+            Vec3::with(sqrt2, -90.0, -45.0)
         );
-        approx_eq!(
-            Vec3,
+        assert_eq!(
             Vec3::with(-1.0, -1.0, 1.0).to_polar(),
-            Vec3::with(sqrt3, 54.735615, -135.0)
+            Vec3::with(sqrt3, -45.0, -35.26439)
         );
-        approx_eq!(
-            Vec3,
+        assert_eq!(
             Vec3::with(-1.0, 0.0, -1.0).to_polar(),
-            Vec3::with(sqrt2, 135.0, 180.0)
+            Vec3::with(sqrt2, -135.0, 0.0)
         );
-        approx_eq!(
-            Vec3,
+        assert_eq!(
             Vec3::with(0.0, 1.0, -1.0).to_polar(),
-            Vec3::with(sqrt2, 135.0, 90.0)
+            Vec3::with(sqrt2, 180.0, 45.0)
         );
-        approx_eq!(
-            Vec3,
+        assert_eq!(
             Vec3::with(-1.0, 1.0, 0.0).to_polar(),
-            Vec3::with(sqrt2, 90.0, 135.0)
+            Vec3::with(sqrt2, -90.0, 45.0)
         );
-        approx_eq!(
-            Vec3,
+        assert_eq!(
             Vec3::with(-1.0, 1.0, -1.0).to_polar(),
-            Vec3::with(sqrt3, 125.26439, 135.0)
+            Vec3::with(sqrt3, -135.0, 35.26439)
         );
-        approx_eq!(
-            Vec3,
+        assert_eq!(
             Vec3::with(1.0, 0.0, -1.0).to_polar(),
             Vec3::with(sqrt2, 135.0, 0.0)
         );
-        approx_eq!(
-            Vec3,
+        assert_eq!(
             Vec3::with(0.0, -1.0, -1.0).to_polar(),
-            Vec3::with(sqrt2, 135.0, -90.0)
+            Vec3::with(sqrt2, 180.0, -45.0)
         );
-        approx_eq!(
-            Vec3,
+        assert_eq!(
             Vec3::with(1.0, -1.0, 0.0).to_polar(),
-            Vec3::with(sqrt2, 90.0, -45.00)
+            Vec3::with(sqrt2, 90.0, -45.0)
         );
-        approx_eq!(
-            Vec3,
+        assert_eq!(
             Vec3::with(1.0, -1.0, -1.0).to_polar(),
-            Vec3::with(sqrt3, 125.26439, -45.0)
+            Vec3::with(sqrt3, 135.0, -35.26439)
         );
-        approx_eq!(
-            Vec3,
+        assert_eq!(
             Vec3::with(-1.0, 0.0, -1.0).to_polar(),
-            Vec3::with(sqrt2, 135.0, 180.0)
+            Vec3::with(sqrt2, -135.0, 0.0)
         );
-        approx_eq!(
-            Vec3,
+        assert_eq!(
             Vec3::with(0.0, -1.0, -1.0).to_polar(),
-            Vec3::with(sqrt2, 135.0, -90.0)
+            Vec3::with(sqrt2, 180.0, -45.0)
         );
-        approx_eq!(
-            Vec3,
+        assert_eq!(
             Vec3::with(-1.0, -1.0, 0.0).to_polar(),
-            Vec3::with(sqrt2, 90.0, -135.0)
+            Vec3::with(sqrt2, -90.0, -45.0)
         );
-        approx_eq!(
-            Vec3,
+        assert_eq!(
             Vec3::with(-1.0, -1.0, -1.0).to_polar(),
-            Vec3::with(sqrt3, 125.26439, -135.0)
+            Vec3::with(sqrt3, -135.0, -35.26439)
         );
     }
 
     #[wasm_bindgen_test]
     fn test_vec3_unit_polar_to_cartesian() {
-        approx_eq!(
-            Vec3,
+        assert_eq!(
             Vec3::with(1.0, 90.0, 0.0).to_cartesian(),
             Vec3::with(1.0, 0.0, 0.0)
         );
-        approx_eq!(
-            Vec3,
+        assert_eq!(
             Vec3::with(1.0, 0.0, 90.0).to_cartesian(),
             Vec3::with(0.0, 1.0, 0.0)
         );
-        approx_eq!(
-            Vec3,
+        assert_eq!(
             Vec3::with(1.0, 0.0, 0.0).to_cartesian(),
             Vec3::with(0.0, 0.0, 1.0)
         );
-        approx_eq!(
-            Vec3,
+        assert_eq!(
             Vec3::with(1.0, -90.0, 0.0).to_cartesian(),
             Vec3::with(-1.0, 0.0, 0.0)
         );
-        approx_eq!(
-            Vec3,
+        assert_eq!(
             Vec3::with(1.0, 0.0, -90.0).to_cartesian(),
             Vec3::with(0.0, -1.0, 0.0)
         );
-        approx_eq!(
-            Vec3,
+        assert_eq!(
             Vec3::with(1.0, 180.0, 0.0).to_cartesian(),
             Vec3::with(0.0, 0.0, -1.0)
         );
 
         let sqrt2 = 2.0_f32.sqrt();
 
-        approx_eq!(
-            Vec3,
+        assert_eq!(
             Vec3::with(sqrt2, 45.0, 0.0).to_cartesian(),
             Vec3::with(1.0, 0.0, 1.0)
         );
-        approx_eq!(
-            Vec3,
-            Vec3::with(sqrt2, 45.0, 90.0).to_cartesian(),
+        assert_eq!(
+            Vec3::with(sqrt2, 0.0, 45.0).to_cartesian(),
             Vec3::with(0.0, 1.0, 1.0)
         );
-        approx_eq!(
-            Vec3,
+        assert_eq!(
             Vec3::with(sqrt2, 90.0, 45.0).to_cartesian(),
             Vec3::with(1.0, 1.0, 0.0)
         );
+        assert_eq!(
+            Vec3::with(sqrt2, -90.0, 45.0).to_cartesian(),
+            Vec3::with(-1.0, 1.0, 0.0)
+        );
+        assert_eq!(
+            Vec3::with(sqrt2, 123.4, 90.0).to_cartesian(),
+            Vec3::with(0.0, sqrt2, 0.0)
+        );
+    }
+
+    impl Vec3 {
+        fn test_rotate(&self, angles: [f32; 3]) -> Vec3 {
+            let m: Mat4 = Quaternion::new(angles.into()).into();
+            (m * Vec4::from((self, 1.0))).xyz()
+        }
+    }
+
+    #[wasm_bindgen_test]
+    fn test_quaternion_rotation() {
+        let actual = Vec3::with(1.0, 0.0, 0.0).test_rotate([90.0, 0.0, 0.0]);
+        assert_eq!(actual, Vec3::with(1.0, 0.0, 0.0));
+        let actual = Vec3::with(1.0, 0.0, 0.0).test_rotate([0.0, 90.0, 0.0]);
+        assert_eq!(actual, Vec3::with(0.0, 0.0, -1.0));
+        let actual = Vec3::with(1.0, 0.0, 0.0).test_rotate([0.0, 0.0, 90.0]);
+        assert_eq!(actual, Vec3::with(0.0, 1.0, 0.0));
+
+        let actual = Vec3::with(0.0, 1.0, 0.0).test_rotate([90.0, 0.0, 0.0]);
+        assert_eq!(actual, Vec3::with(0.0, 0.0, 1.0));
+        let actual = Vec3::with(0.0, 1.0, 0.0).test_rotate([0.0, 90.0, 0.0]);
+        assert_eq!(actual, Vec3::with(0.0, 1.0, 0.0));
+        let actual = Vec3::with(0.0, 1.0, 0.0).test_rotate([0.0, 0.0, 90.0]);
+        assert_eq!(actual, Vec3::with(-1.0, 0.0, 0.0));
+
+        let actual = Vec3::with(0.0, 0.0, 1.0).test_rotate([90.0, 0.0, 0.0]);
+        assert_eq!(actual, Vec3::with(0.0, -1.0, 0.0));
+        let actual = Vec3::with(0.0, 0.0, 1.0).test_rotate([0.0, 90.0, 0.0]);
+        assert_eq!(actual, Vec3::with(1.0, 0.0, 0.0));
+        let actual = Vec3::with(0.0, 0.0, 1.0).test_rotate([0.0, 0.0, 90.0]);
+        assert_eq!(actual, Vec3::with(0.0, 0.0, 1.0));
     }
 }
