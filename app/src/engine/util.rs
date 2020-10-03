@@ -8,12 +8,14 @@ use crate::util::math::Vec3;
 use crate::util::opengl::{Context, Framebuffer, Renderbuffer, Texture2D};
 
 pub fn generate_buffers(
-    model_indices: &[u8],
-    model_vertices: &[f32],
-    vertices: &mut [f32],
+    model_indices: &[u8], model_vertices: &[f32], vertices: &mut [f32],
     normals: &mut [f32],
 ) {
-    debug_assert_eq!(model_indices.len() % 3, 0, "model_indices of wrong length");
+    debug_assert_eq!(
+        model_indices.len() % 3,
+        0,
+        "model_indices of wrong length"
+    );
     debug_assert_eq!(
         model_vertices.len() % 3,
         0,
@@ -84,7 +86,9 @@ pub struct OffscreenBuffer {
 }
 
 impl OffscreenBuffer {
-    pub fn new(ctx: &Rc<Context>, width: i32, height: i32) -> Result<Self, Error> {
+    pub fn new(
+        ctx: &Rc<Context>, width: i32, height: i32,
+    ) -> Result<Self, Error> {
         let mut colorbuffer = Texture2D::create(ctx)?;
         colorbuffer.bind();
         colorbuffer.tex_image_2d(width, height, None)?;
@@ -101,7 +105,8 @@ impl OffscreenBuffer {
         framebuffer.renderbuffer_as_depthbuffer(&depthbuffer);
         {
             let status = framebuffer.check_status();
-            if status != ::web_sys::WebGlRenderingContext::FRAMEBUFFER_COMPLETE {
+            if status != ::web_sys::WebGlRenderingContext::FRAMEBUFFER_COMPLETE
+            {
                 ::log::error!("framebuffer incomplete: {}", status)
             }
         }
@@ -170,7 +175,12 @@ pub mod tests {
         let model_indices: [u8; 3 * 3] = [0, 1, 2, 0, 1, 3, 0, 1, 4];
         let mut vertices: [f32; 3 * 9] = [0.0; 3 * 9];
         let mut normals: [f32; 3 * 9] = [0.0; 3 * 9];
-        generate_buffers(&model_indices, &model_vertices, &mut vertices, &mut normals);
+        generate_buffers(
+            &model_indices,
+            &model_vertices,
+            &mut vertices,
+            &mut normals,
+        );
 
         let expect_vertices: [f32; 3 * 9] = [
             0.0, 0.0, 0.0, //br

@@ -28,7 +28,9 @@ static ALLOC: ::wee_alloc::WeeAlloc = ::wee_alloc::WeeAlloc::INIT;
 #[wasm_bindgen(start)]
 pub fn wasm_main() -> Result<(), JsValue> {
     #[cfg(feature = "console_error_panic_hook")]
-    ::std::panic::set_hook(::std::boxed::Box::new(::console_error_panic_hook::hook));
+    ::std::panic::set_hook(::std::boxed::Box::new(
+        ::console_error_panic_hook::hook,
+    ));
     ::wasm_logger::init(::wasm_logger::Config::new(::log::Level::Trace));
     ::log::info!("wasmgame init");
     Ok(())
@@ -70,41 +72,50 @@ impl Console {
         let engine = engine::Engine::new(_game.clone());
 
         let game0 = _game.clone();
-        let _on_resize = event::Listener::new(&window, "resize", move |event| {
-            game0.borrow_mut().on_resize(event)
-        })?;
+        let _on_resize =
+            event::Listener::new(&window, "resize", move |event| {
+                game0.borrow_mut().on_resize(event)
+            })?;
         let game0 = _game.clone();
-        let _on_click = event::Listener::new(&ctx.canvas, "click", move |event| {
-            game0.borrow_mut().on_click(event)
-        })?;
+        let _on_click =
+            event::Listener::new(&ctx.canvas, "click", move |event| {
+                game0.borrow_mut().on_click(event)
+            })?;
         let game0 = _game.clone();
-        let _on_mousedown = event::Listener::new(&ctx.canvas, "mousedown", move |event| {
-            game0.borrow_mut().on_mousedown(event)
-        })?;
+        let _on_mousedown =
+            event::Listener::new(&ctx.canvas, "mousedown", move |event| {
+                game0.borrow_mut().on_mousedown(event)
+            })?;
         let game0 = _game.clone();
-        let _on_mousemove = event::Listener::new(&ctx.canvas, "mousemove", move |event| {
-            game0.borrow_mut().on_mousemove(event)
-        })?;
+        let _on_mousemove =
+            event::Listener::new(&ctx.canvas, "mousemove", move |event| {
+                game0.borrow_mut().on_mousemove(event)
+            })?;
         let game0 = _game.clone();
-        let _on_mouseup = event::Listener::new(&window, "mouseup", move |event| {
-            game0.borrow_mut().on_mouseup(event)
-        })?;
+        let _on_mouseup =
+            event::Listener::new(&window, "mouseup", move |event| {
+                game0.borrow_mut().on_mouseup(event)
+            })?;
         let game0 = _game.clone();
-        let _on_touchstart = event::Listener::new(&ctx.canvas, "touchstart", move |event| {
-            game0.borrow_mut().on_touchstart(event)
-        })?;
+        let _on_touchstart =
+            event::Listener::new(&ctx.canvas, "touchstart", move |event| {
+                game0.borrow_mut().on_touchstart(event)
+            })?;
         let game0 = _game.clone();
-        let _on_touchmove = event::Listener::new(&ctx.canvas, "touchmove", move |event| {
-            game0.borrow_mut().on_touchmove(event)
-        })?;
+        let _on_touchmove =
+            event::Listener::new(&ctx.canvas, "touchmove", move |event| {
+                game0.borrow_mut().on_touchmove(event)
+            })?;
         let game0 = _game.clone();
-        let _on_touchend = event::Listener::new(&ctx.canvas, "touchend", move |event| {
-            game0.borrow_mut().on_touchend(event)
-        })?;
+        let _on_touchend =
+            event::Listener::new(&ctx.canvas, "touchend", move |event| {
+                game0.borrow_mut().on_touchend(event)
+            })?;
         let game0 = _game.clone();
-        let _on_touchcancel = event::Listener::new(&ctx.canvas, "touchcancel", move |event| {
-            game0.borrow_mut().on_touchcancel(event)
-        })?;
+        let _on_touchcancel =
+            event::Listener::new(&ctx.canvas, "touchcancel", move |event| {
+                game0.borrow_mut().on_touchcancel(event)
+            })?;
         Ok(Console {
             engine,
             _game,

@@ -27,7 +27,9 @@ pub trait Renderer {
 
 type RequestAnimationFrameCallback = Closure<dyn FnMut(f64) + 'static>;
 
-fn request_animation_frame_helper(callback: Option<&RequestAnimationFrameCallback>) {
+fn request_animation_frame_helper(
+    callback: Option<&RequestAnimationFrameCallback>,
+) {
     ::web_sys::window()
         .unwrap()
         .request_animation_frame(callback.unwrap().as_ref().unchecked_ref())
@@ -53,28 +55,39 @@ impl Engine {
         // leaks.
         // TODO: Check if renderer, callback instances not freed.
         // TODO: See if there's a better/cleaner way to do this.
-        let callback = Rc::new(RefCell::new(None as Option<RequestAnimationFrameCallback>));
+        let callback = Rc::new(RefCell::new(
+            None as Option<RequestAnimationFrameCallback>,
+        ));
         let c0 = callback.clone();
         let self0 = self.clone();
-        *callback.borrow_mut() = Some(Closure::wrap(Box::new(move |millis: f64| {
-            if self0.renderer.borrow().done() {
-                ::log::debug!("framerate: {:?}", self0.framerate.borrow().rate());
-                let _ = c0.borrow_mut().take();
-                ::log::info!("wasmgame ending");
-                return;
-            }
+        *callback.borrow_mut() =
+            Some(Closure::wrap(Box::new(move |millis: f64| {
+                if self0.renderer.borrow().done() {
+                    ::log::debug!(
+                        "framerate: {:?}",
+                        self0.framerate.borrow().rate()
+                    );
+                    let _ = c0.borrow_mut().take();
+                    ::log::info!("wasmgame ending");
+                    return;
+                }
 
-            let t = Time::from_millis(millis);
-            match self0.renderer.borrow_mut().render(t) {
-                Ok(true) => self0.framerate.borrow_mut().record_timestamp(t),
-                Ok(false) => (),
-                Err(error) => ::log::error!("{:?}", error),
-            }
+                let t = Time::from_millis(millis);
+                match self0.renderer.borrow_mut().render(t) {
+                    Ok(true) => {
+                        self0.framerate.borrow_mut().record_timestamp(t)
+                    }
+                    Ok(false) => (),
+                    Err(error) => ::log::error!("{:?}", error),
+                }
 
-            let self1 = self0.clone();
-            let c1 = c0.clone();
-            ::wasm_bindgen_futures::spawn_local(self1.prepare_next_frame(c1, t));
-        }) as Box<dyn FnMut(f64) + 'static>));
+                let self1 = self0.clone();
+                let c1 = c0.clone();
+                ::wasm_bindgen_futures::spawn_local(
+                    self1.prepare_next_frame(c1, t),
+                );
+            })
+                as Box<dyn FnMut(f64) + 'static>));
 
         // first frame always gets timestamp=0.
         // TODO: or just pass performance.now()?
@@ -88,8 +101,7 @@ impl Engine {
     // TODO: replace with requestPostAnimationFrame() once available.
     async fn prepare_next_frame(
         self: Rc<Self>,
-        callback: Rc<RefCell<Option<RequestAnimationFrameCallback>>>,
-        t: Time,
+        callback: Rc<RefCell<Option<RequestAnimationFrameCallback>>>, t: Time,
     ) {
         self.renderer.borrow_mut().update(t).unwrap();
         request_animation_frame_helper(callback.borrow().as_ref());
@@ -134,7 +146,9 @@ impl Into<JsValue> for Error {
 }
 
 impl ::std::fmt::Debug for Error {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> Result<(), ::std::fmt::Error> {
+    fn fmt(
+        &self, f: &mut ::std::fmt::Formatter<'_>,
+    ) -> Result<(), ::std::fmt::Error> {
         match self {
             Error::Internal(msg) => f.write_str(msg),
             Error::JsValue(v) => f.write_str(v.as_string().unwrap().as_str()),

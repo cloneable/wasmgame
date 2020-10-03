@@ -136,7 +136,9 @@ impl ::std::default::Default for Vec3 {
 }
 
 impl ::std::fmt::Debug for Vec3 {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> Result<(), ::std::fmt::Error> {
+    fn fmt(
+        &self, f: &mut ::std::fmt::Formatter<'_>,
+    ) -> Result<(), ::std::fmt::Error> {
         f.debug_list()
             .entry(&self.x)
             .entry(&self.y)
@@ -493,7 +495,9 @@ impl ::std::convert::From<(&Vec3, f32)> for Vec4 {
 }
 
 impl ::std::fmt::Debug for Vec4 {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> Result<(), ::std::fmt::Error> {
+    fn fmt(
+        &self, f: &mut ::std::fmt::Formatter<'_>,
+    ) -> Result<(), ::std::fmt::Error> {
         f.debug_list()
             .entry(&self.x)
             .entry(&self.y)
@@ -934,7 +938,9 @@ impl Mat4 {
 }
 
 impl ::std::fmt::Debug for Mat4 {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> Result<(), ::std::fmt::Error> {
+    fn fmt(
+        &self, f: &mut ::std::fmt::Formatter<'_>,
+    ) -> Result<(), ::std::fmt::Error> {
         #[allow(unsafe_code)]
         unsafe {
             f.debug_list().entries(&self.columns).finish()
@@ -990,10 +996,22 @@ impl ::std::ops::Mul<Vec4> for Mat4 {
     fn mul(self, v: Vec4) -> Vec4 {
         let m = &self;
         Vec4 {
-            x: m[(0, 0)] * v.x + m[(1, 0)] * v.y + m[(2, 0)] * v.z + m[(3, 0)] * v.w,
-            y: m[(0, 1)] * v.x + m[(1, 1)] * v.y + m[(2, 1)] * v.z + m[(3, 1)] * v.w,
-            z: m[(0, 2)] * v.x + m[(1, 2)] * v.y + m[(2, 2)] * v.z + m[(3, 2)] * v.w,
-            w: m[(0, 3)] * v.x + m[(1, 3)] * v.y + m[(2, 3)] * v.z + m[(3, 3)] * v.w,
+            x: m[(0, 0)] * v.x
+                + m[(1, 0)] * v.y
+                + m[(2, 0)] * v.z
+                + m[(3, 0)] * v.w,
+            y: m[(0, 1)] * v.x
+                + m[(1, 1)] * v.y
+                + m[(2, 1)] * v.z
+                + m[(3, 1)] * v.w,
+            z: m[(0, 2)] * v.x
+                + m[(1, 2)] * v.y
+                + m[(2, 2)] * v.z
+                + m[(3, 2)] * v.w,
+            w: m[(0, 3)] * v.x
+                + m[(1, 3)] * v.y
+                + m[(2, 3)] * v.z
+                + m[(3, 3)] * v.w,
         }
     }
 }
@@ -1003,10 +1021,22 @@ impl ::std::ops::Mul<&Vec4> for &Mat4 {
     fn mul(self, v: &Vec4) -> Vec4 {
         let m = &self;
         Vec4 {
-            x: m[(0, 0)] * v.x + m[(1, 0)] * v.y + m[(2, 0)] * v.z + m[(3, 0)] * v.w,
-            y: m[(0, 1)] * v.x + m[(1, 1)] * v.y + m[(2, 1)] * v.z + m[(3, 1)] * v.w,
-            z: m[(0, 2)] * v.x + m[(1, 2)] * v.y + m[(2, 2)] * v.z + m[(3, 2)] * v.w,
-            w: m[(0, 3)] * v.x + m[(1, 3)] * v.y + m[(2, 3)] * v.z + m[(3, 3)] * v.w,
+            x: m[(0, 0)] * v.x
+                + m[(1, 0)] * v.y
+                + m[(2, 0)] * v.z
+                + m[(3, 0)] * v.w,
+            y: m[(0, 1)] * v.x
+                + m[(1, 1)] * v.y
+                + m[(2, 1)] * v.z
+                + m[(3, 1)] * v.w,
+            z: m[(0, 2)] * v.x
+                + m[(1, 2)] * v.y
+                + m[(2, 2)] * v.z
+                + m[(3, 2)] * v.w,
+            w: m[(0, 3)] * v.x
+                + m[(1, 3)] * v.y
+                + m[(2, 3)] * v.z
+                + m[(3, 3)] * v.w,
         }
     }
 }

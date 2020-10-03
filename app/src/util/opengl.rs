@@ -31,9 +31,14 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn from_canvas(canvas: &::web_sys::HtmlCanvasElement) -> Result<Self, JsValue> {
+    pub fn from_canvas(
+        canvas: &::web_sys::HtmlCanvasElement,
+    ) -> Result<Self, JsValue> {
         let gl = canvas
-            .get_context_with_context_options("webgl", &::web_sys::WebGlContextAttributes::new())
+            .get_context_with_context_options(
+                "webgl",
+                &::web_sys::WebGlContextAttributes::new(),
+            )
             .expect("getContext failed")
             .expect("unsupported context type")
             .dyn_into::<WebGL>()
@@ -97,7 +102,9 @@ impl VertexArrayObject {
         let vao = ctx
             .vertex_array_object_ext
             .create_vertex_array_oes()
-            .ok_or_else(|| JsValue::from_str("create_vertex_array_oes vao error"))?;
+            .ok_or_else(|| {
+                JsValue::from_str("create_vertex_array_oes vao error")
+            })?;
         let id = ctx.next_object_id();
         Ok(VertexArrayObject {
             ctx: ctx.clone(),
@@ -143,10 +150,9 @@ pub struct ArrayBuffer {
 
 impl ArrayBuffer {
     pub fn create(ctx: &Rc<Context>) -> Result<Self, JsValue> {
-        let buffer = ctx
-            .gl
-            .create_buffer()
-            .ok_or_else(|| JsValue::from_str("create_buffer vbo_vertices error"))?;
+        let buffer = ctx.gl.create_buffer().ok_or_else(|| {
+            JsValue::from_str("create_buffer vbo_vertices error")
+        })?;
         let id = ctx.next_object_id();
         Ok(ArrayBuffer {
             ctx: ctx.clone(),
@@ -174,9 +180,11 @@ impl ArrayBuffer {
 
     pub fn allocate_dynamic(&mut self, size: usize) -> &mut Self {
         self.ctx.bound_array_buffer.assert_bound(self.id);
-        self.ctx
-            .gl
-            .buffer_data_with_i32(WebGL::ARRAY_BUFFER, size as i32, WebGL::DYNAMIC_DRAW);
+        self.ctx.gl.buffer_data_with_i32(
+            WebGL::ARRAY_BUFFER,
+            size as i32,
+            WebGL::DYNAMIC_DRAW,
+        );
         self
     }
 
@@ -194,7 +202,9 @@ impl ArrayBuffer {
         self
     }
 
-    pub fn set_buffer_sub_data(&mut self, offset: i32, data: &[f32]) -> &mut Self {
+    pub fn set_buffer_sub_data(
+        &mut self, offset: i32, data: &[f32],
+    ) -> &mut Self {
         self.ctx.bound_array_buffer.assert_bound(self.id);
         #[allow(unsafe_code)]
         unsafe {
@@ -208,15 +218,24 @@ impl ArrayBuffer {
         self
     }
 
-    pub fn set_vertex_attribute_pointer_vec3(&mut self, attribute: Attribute) -> &mut Self {
+    pub fn set_vertex_attribute_pointer_vec3(
+        &mut self, attribute: Attribute,
+    ) -> &mut Self {
         self.ctx.bound_array_buffer.assert_bound(self.id);
-        self.ctx
-            .gl
-            .vertex_attrib_pointer_with_i32(attribute.0, 3, WebGL::FLOAT, false, 3 * 4, 0);
+        self.ctx.gl.vertex_attrib_pointer_with_i32(
+            attribute.0,
+            3,
+            WebGL::FLOAT,
+            false,
+            3 * 4,
+            0,
+        );
         self
     }
 
-    pub fn set_vertex_attribute_pointer_mat4(&mut self, attribute: Attribute) -> &mut Self {
+    pub fn set_vertex_attribute_pointer_mat4(
+        &mut self, attribute: Attribute,
+    ) -> &mut Self {
         self.ctx.bound_array_buffer.assert_bound(self.id);
         for i in 0..attribute.1 {
             self.ctx.gl.vertex_attrib_pointer_with_i32(
@@ -231,12 +250,15 @@ impl ArrayBuffer {
         self
     }
 
-    pub fn set_vertex_attrib_divisor(&mut self, attribute: Attribute, divisor: usize) -> &mut Self {
+    pub fn set_vertex_attrib_divisor(
+        &mut self, attribute: Attribute, divisor: usize,
+    ) -> &mut Self {
         self.ctx.bound_array_buffer.assert_bound(self.id);
         for i in 0..attribute.1 {
-            self.ctx
-                .instanced_arrays_ext
-                .vertex_attrib_divisor_angle(attribute.0 + i as u32, divisor as u32);
+            self.ctx.instanced_arrays_ext.vertex_attrib_divisor_angle(
+                attribute.0 + i as u32,
+                divisor as u32,
+            );
         }
         self
     }
@@ -256,11 +278,15 @@ pub struct Uniform {
 }
 
 impl Uniform {
-    pub fn find(ctx: &Rc<Context>, program: &Program, name: &str) -> Result<Self, JsValue> {
+    pub fn find(
+        ctx: &Rc<Context>, program: &Program, name: &str,
+    ) -> Result<Self, JsValue> {
         let location = ctx
             .gl
             .get_uniform_location(&program.program, name)
-            .ok_or_else(|| JsValue::from_str("get_uniform_location error: view"))?;
+            .ok_or_else(|| {
+                JsValue::from_str("get_uniform_location error: view")
+            })?;
         Ok(Uniform {
             ctx: ctx.clone(),
             location,
@@ -268,9 +294,11 @@ impl Uniform {
     }
 
     pub fn set_mat4(&mut self, data: &[f32]) {
-        self.ctx
-            .gl
-            .uniform_matrix4fv_with_f32_array(Some(&self.location), false, data);
+        self.ctx.gl.uniform_matrix4fv_with_f32_array(
+            Some(&self.location),
+            false,
+            data,
+        );
     }
 }
 
@@ -303,10 +331,9 @@ pub struct Program {
 
 impl Program {
     pub fn create(ctx: &Rc<Context>) -> Result<Self, JsValue> {
-        let program = ctx
-            .gl
-            .create_program()
-            .ok_or_else(|| JsValue::from_str("Unable to create program object"))?;
+        let program = ctx.gl.create_program().ok_or_else(|| {
+            JsValue::from_str("Unable to create program object")
+        })?;
         Ok(Program {
             ctx: ctx.clone(),
             program,
@@ -361,7 +388,9 @@ pub enum ShaderType {
 }
 
 impl Shader {
-    pub fn create(ctx: &Rc<Context>, type_: ShaderType) -> Result<Self, JsValue> {
+    pub fn create(
+        ctx: &Rc<Context>, type_: ShaderType,
+    ) -> Result<Self, JsValue> {
         let pt = match type_ {
             ShaderType::Vertex => WebGL::VERTEX_SHADER,
             ShaderType::Fragment => WebGL::FRAGMENT_SHADER,
@@ -465,19 +494,19 @@ impl Framebuffer {
     }
 
     pub fn read_pixels(
-        &self,
-        x: i32,
-        y: i32,
-        width: i32,
-        height: i32,
-        format: u32,
-        type_: u32,
-        pixels: &mut [u8],
+        &self, x: i32, y: i32, width: i32, height: i32, format: u32,
+        type_: u32, pixels: &mut [u8],
     ) -> Result<(), JsValue> {
         self.ctx.bound_framebuffer.assert_bound(self.id);
-        self.ctx
-            .gl
-            .read_pixels_with_opt_u8_array(x, y, width, height, format, type_, Some(pixels))
+        self.ctx.gl.read_pixels_with_opt_u8_array(
+            x,
+            y,
+            width,
+            height,
+            format,
+            type_,
+            Some(pixels),
+        )
     }
 }
 
@@ -577,10 +606,7 @@ impl Texture2D {
     }
 
     pub fn tex_image_2d(
-        &mut self,
-        width: i32,
-        height: i32,
-        pixels: Option<&[u8]>,
+        &mut self, width: i32, height: i32, pixels: Option<&[u8]>,
     ) -> Result<(), JsValue> {
         self.ctx.bound_texture.assert_bound(self.id);
         self.ctx

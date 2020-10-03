@@ -27,7 +27,12 @@ impl Scene {
         camera
             .set_position(0.5, 1.4, 3.0)
             .set_target(0.0, 0.0, 0.0)
-            .set_frustum(35.0, ctx.width() as f32 / ctx.height() as f32, 0.1, 100.0)
+            .set_frustum(
+                35.0,
+                ctx.width() as f32 / ctx.height() as f32,
+                0.1,
+                100.0,
+            )
             .refresh();
         let hexatile = models::Hexatile::new(ctx)?;
         Ok(Scene { hexatile, camera })
@@ -69,7 +74,11 @@ impl Game {
             ctx: ctx.clone(),
             last_render: Time::from_millis(0.0),
             scene,
-            offscreen: engine::util::OffscreenBuffer::new(ctx, ctx.width(), ctx.height())?,
+            offscreen: engine::util::OffscreenBuffer::new(
+                ctx,
+                ctx.width(),
+                ctx.height(),
+            )?,
             picker_program,
             program,
             mouse_down: None,

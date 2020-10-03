@@ -22,26 +22,26 @@ pub struct Listener {
 
 impl Listener {
     pub fn new<E, F>(
-        target: &EventTarget,
-        type_: &'static str,
-        callback: F,
+        target: &EventTarget, type_: &'static str, callback: F,
     ) -> Result<Self, JsValue>
     where
         E: JsCast,
         F: FnMut(&E) + 'static,
     {
         let mut cb = callback;
-        let closure = Rc::new(RefCell::new(Some(Closure::wrap(
-            Box::new(move |e: &Event| {
+        let closure = Rc::new(RefCell::new(Some(Closure::wrap(Box::new(
+            move |e: &Event| {
                 e.prevent_default();
                 cb(e.unchecked_ref::<E>());
-            }) as Box<dyn FnMut(&Event) + 'static>,
-        ))));
-        target.add_event_listener_with_callback_and_add_event_listener_options(
-            type_,
-            closure.borrow().as_ref().unwrap().as_ref().unchecked_ref(),
-            ::web_sys::AddEventListenerOptions::new().passive(false),
-        )?;
+            },
+        )
+            as Box<dyn FnMut(&Event) + 'static>))));
+        target
+            .add_event_listener_with_callback_and_add_event_listener_options(
+                type_,
+                closure.borrow().as_ref().unwrap().as_ref().unchecked_ref(),
+                ::web_sys::AddEventListenerOptions::new().passive(false),
+            )?;
         Ok(Listener {
             target: target.clone(),
             type_,
@@ -71,7 +71,9 @@ impl TouchEventWrapper<'_> {
 }
 
 impl ::std::fmt::Debug for TouchEventWrapper<'_> {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> Result<(), ::std::fmt::Error> {
+    fn fmt(
+        &self, f: &mut ::std::fmt::Formatter<'_>,
+    ) -> Result<(), ::std::fmt::Error> {
         f.write_str("all=")?;
         let mut l = f.debug_list();
         let touches = self.0.touches();

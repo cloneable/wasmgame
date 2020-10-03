@@ -63,7 +63,9 @@ impl Camera {
         self
     }
 
-    pub fn set_frustum(&mut self, fov: f32, aspect: f32, near: f32, far: f32) -> &mut Self {
+    pub fn set_frustum(
+        &mut self, fov: f32, aspect: f32, near: f32, far: f32,
+    ) -> &mut Self {
         self.fov = fov;
         self.aspect = aspect;
         self.near = near;
@@ -114,15 +116,18 @@ pub struct Model {
 
 impl Model {
     pub fn new(
-        ctx: &Rc<Context>,
-        indexed_vertices: &'static [f32],
-        indices: &'static [u8],
-        num_instances: usize,
+        ctx: &Rc<Context>, indexed_vertices: &'static [f32],
+        indices: &'static [u8], num_instances: usize,
     ) -> Result<Self, Error> {
         assert!(num_instances > 0);
         let mut vertices: Vec<f32> = vec![0.0; indices.len() * 3];
         let mut normals: Vec<f32> = vec![0.0; indices.len() * 3];
-        util::generate_buffers(indices, indexed_vertices, &mut vertices, &mut normals);
+        util::generate_buffers(
+            indices,
+            indexed_vertices,
+            &mut vertices,
+            &mut normals,
+        );
 
         let mut instances: Vec<Instance> = Vec::with_capacity(num_instances);
         instances.resize_with(num_instances, Instance::new);
