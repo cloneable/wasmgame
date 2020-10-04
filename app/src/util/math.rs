@@ -2,10 +2,10 @@ use ::std::convert::{From, Into};
 use ::std::option::{Option, Option::None, Option::Some};
 use ::std::result::Result;
 
-pub fn look_at(eye: &Vec3, center: &Vec3, up: &Vec3) -> Mat4 {
+pub fn look_at(eye: Vec3, center: Vec3, up: Vec3) -> Mat4 {
     let forward = (center - eye).normalize();
     let side = forward.cross(up).normalize();
-    let up = side.cross(&forward);
+    let up = side.cross(forward);
     Mat4::from([
         [side.x, up.x, -forward.x, 0.0],
         [side.y, up.y, -forward.y, 0.0],
@@ -59,10 +59,10 @@ impl Vec3 {
     }
 
     pub fn length(&self) -> f32 {
-        self.dot(self).sqrt()
+        self.dot(*self).sqrt()
     }
 
-    pub fn cross(&self, other: &Vec3) -> Vec3 {
+    pub fn cross(&self, other: Vec3) -> Vec3 {
         Vec3 {
             x: self.y * other.z - self.z * other.y,
             y: self.z * other.x - self.x * other.z,
@@ -70,7 +70,7 @@ impl Vec3 {
         }
     }
 
-    pub fn dot(&self, other: &Vec3) -> f32 {
+    pub fn dot(&self, other: Vec3) -> f32 {
         self.x * other.x + self.y * other.y + self.z * other.z
     }
 
@@ -165,14 +165,6 @@ impl ::std::ops::AddAssign<Vec3> for Vec3 {
     }
 }
 
-impl ::std::ops::AddAssign<&Vec3> for Vec3 {
-    fn add_assign(&mut self, other: &Vec3) {
-        self.x += other.x;
-        self.y += other.y;
-        self.z += other.z;
-    }
-}
-
 impl ::std::ops::Add<Vec3> for Vec3 {
     type Output = Vec3;
     fn add(self, other: Vec3) -> Vec3 {
@@ -184,49 +176,8 @@ impl ::std::ops::Add<Vec3> for Vec3 {
     }
 }
 
-impl ::std::ops::Add<Vec3> for &Vec3 {
-    type Output = Vec3;
-    fn add(self, other: Vec3) -> Vec3 {
-        Vec3 {
-            x: self.x + other.x,
-            y: self.y + other.y,
-            z: self.z + other.z,
-        }
-    }
-}
-
-impl ::std::ops::Add<&Vec3> for Vec3 {
-    type Output = Vec3;
-    fn add(self, other: &Vec3) -> Vec3 {
-        Vec3 {
-            x: self.x + other.x,
-            y: self.y + other.y,
-            z: self.z + other.z,
-        }
-    }
-}
-
-impl ::std::ops::Add<&Vec3> for &Vec3 {
-    type Output = Vec3;
-    fn add(self, other: &Vec3) -> Vec3 {
-        Vec3 {
-            x: self.x + other.x,
-            y: self.y + other.y,
-            z: self.z + other.z,
-        }
-    }
-}
-
 impl ::std::ops::SubAssign<Vec3> for Vec3 {
     fn sub_assign(&mut self, other: Vec3) {
-        self.x -= other.x;
-        self.y -= other.y;
-        self.z -= other.z;
-    }
-}
-
-impl ::std::ops::SubAssign<&Vec3> for Vec3 {
-    fn sub_assign(&mut self, other: &Vec3) {
         self.x -= other.x;
         self.y -= other.y;
         self.z -= other.z;
@@ -244,39 +195,6 @@ impl ::std::ops::Sub<Vec3> for Vec3 {
     }
 }
 
-impl ::std::ops::Sub<Vec3> for &Vec3 {
-    type Output = Vec3;
-    fn sub(self, other: Vec3) -> Vec3 {
-        Vec3 {
-            x: self.x - other.x,
-            y: self.y - other.y,
-            z: self.z - other.z,
-        }
-    }
-}
-
-impl ::std::ops::Sub<&Vec3> for Vec3 {
-    type Output = Vec3;
-    fn sub(self, other: &Vec3) -> Vec3 {
-        Vec3 {
-            x: self.x - other.x,
-            y: self.y - other.y,
-            z: self.z - other.z,
-        }
-    }
-}
-
-impl ::std::ops::Sub<&Vec3> for &Vec3 {
-    type Output = Vec3;
-    fn sub(self, other: &Vec3) -> Vec3 {
-        Vec3 {
-            x: self.x - other.x,
-            y: self.y - other.y,
-            z: self.z - other.z,
-        }
-    }
-}
-
 impl ::std::ops::MulAssign<f32> for Vec3 {
     fn mul_assign(&mut self, scalar: f32) {
         self.x *= scalar;
@@ -286,17 +204,6 @@ impl ::std::ops::MulAssign<f32> for Vec3 {
 }
 
 impl ::std::ops::Mul<f32> for Vec3 {
-    type Output = Vec3;
-    fn mul(self, scalar: f32) -> Vec3 {
-        Vec3 {
-            x: self.x * scalar,
-            y: self.y * scalar,
-            z: self.z * scalar,
-        }
-    }
-}
-
-impl ::std::ops::Mul<f32> for &Vec3 {
     type Output = Vec3;
     fn mul(self, scalar: f32) -> Vec3 {
         Vec3 {
@@ -326,29 +233,7 @@ impl ::std::ops::Div<f32> for Vec3 {
     }
 }
 
-impl ::std::ops::Div<f32> for &Vec3 {
-    type Output = Vec3;
-    fn div(self, scalar: f32) -> Vec3 {
-        Vec3 {
-            x: self.x / scalar,
-            y: self.y / scalar,
-            z: self.z / scalar,
-        }
-    }
-}
-
 impl ::std::ops::Neg for Vec3 {
-    type Output = Vec3;
-    fn neg(self) -> Vec3 {
-        Vec3 {
-            x: -self.x,
-            y: -self.y,
-            z: -self.z,
-        }
-    }
-}
-
-impl ::std::ops::Neg for &Vec3 {
     type Output = Vec3;
     fn neg(self) -> Vec3 {
         Vec3 {
@@ -421,10 +306,10 @@ impl Vec4 {
     }
 
     pub fn length(&self) -> f32 {
-        self.dot(self).sqrt()
+        self.dot(*self).sqrt()
     }
 
-    pub fn dot(&self, other: &Vec4) -> f32 {
+    pub fn dot(&self, other: Vec4) -> f32 {
         self.x * other.x + //br
         self.y * other.y + //br
         self.z * other.z + //br
@@ -483,17 +368,6 @@ impl ::std::convert::From<(Vec3, f32)> for Vec4 {
     }
 }
 
-impl ::std::convert::From<(&Vec3, f32)> for Vec4 {
-    fn from(v: (&Vec3, f32)) -> Vec4 {
-        Vec4 {
-            x: v.0.x,
-            y: v.0.y,
-            z: v.0.z,
-            w: v.1,
-        }
-    }
-}
-
 impl ::std::fmt::Debug for Vec4 {
     fn fmt(
         &self, f: &mut ::std::fmt::Formatter<'_>,
@@ -516,15 +390,6 @@ impl ::std::ops::AddAssign<Vec4> for Vec4 {
     }
 }
 
-impl ::std::ops::AddAssign<&Vec4> for Vec4 {
-    fn add_assign(&mut self, other: &Vec4) {
-        self.x += other.x;
-        self.y += other.y;
-        self.z += other.z;
-        self.w += other.w;
-    }
-}
-
 impl ::std::ops::Add<Vec4> for Vec4 {
     type Output = Vec4;
     fn add(self, other: Vec4) -> Vec4 {
@@ -537,53 +402,8 @@ impl ::std::ops::Add<Vec4> for Vec4 {
     }
 }
 
-impl ::std::ops::Add<Vec4> for &Vec4 {
-    type Output = Vec4;
-    fn add(self, other: Vec4) -> Vec4 {
-        Vec4 {
-            x: self.x + other.x,
-            y: self.y + other.y,
-            z: self.z + other.z,
-            w: self.w + other.w,
-        }
-    }
-}
-
-impl ::std::ops::Add<&Vec4> for Vec4 {
-    type Output = Vec4;
-    fn add(self, other: &Vec4) -> Vec4 {
-        Vec4 {
-            x: self.x + other.x,
-            y: self.y + other.y,
-            z: self.z + other.z,
-            w: self.w + other.w,
-        }
-    }
-}
-
-impl ::std::ops::Add<&Vec4> for &Vec4 {
-    type Output = Vec4;
-    fn add(self, other: &Vec4) -> Vec4 {
-        Vec4 {
-            x: self.x + other.x,
-            y: self.y + other.y,
-            z: self.z + other.z,
-            w: self.w + other.w,
-        }
-    }
-}
-
 impl ::std::ops::SubAssign<Vec4> for Vec4 {
     fn sub_assign(&mut self, other: Vec4) {
-        self.x -= other.x;
-        self.y -= other.y;
-        self.z -= other.z;
-        self.w -= other.w;
-    }
-}
-
-impl ::std::ops::SubAssign<&Vec4> for Vec4 {
-    fn sub_assign(&mut self, other: &Vec4) {
         self.x -= other.x;
         self.y -= other.y;
         self.z -= other.z;
@@ -603,42 +423,6 @@ impl ::std::ops::Sub<Vec4> for Vec4 {
     }
 }
 
-impl ::std::ops::Sub<Vec4> for &Vec4 {
-    type Output = Vec4;
-    fn sub(self, other: Vec4) -> Vec4 {
-        Vec4 {
-            x: self.x - other.x,
-            y: self.y - other.y,
-            z: self.z - other.z,
-            w: self.w - other.w,
-        }
-    }
-}
-
-impl ::std::ops::Sub<&Vec4> for Vec4 {
-    type Output = Vec4;
-    fn sub(self, other: &Vec4) -> Vec4 {
-        Vec4 {
-            x: self.x - other.x,
-            y: self.y - other.y,
-            z: self.z - other.z,
-            w: self.w - other.w,
-        }
-    }
-}
-
-impl ::std::ops::Sub<&Vec4> for &Vec4 {
-    type Output = Vec4;
-    fn sub(self, other: &Vec4) -> Vec4 {
-        Vec4 {
-            x: self.x - other.x,
-            y: self.y - other.y,
-            z: self.z - other.z,
-            w: self.w - other.w,
-        }
-    }
-}
-
 impl ::std::ops::MulAssign<f32> for Vec4 {
     fn mul_assign(&mut self, scalar: f32) {
         self.x *= scalar;
@@ -649,18 +433,6 @@ impl ::std::ops::MulAssign<f32> for Vec4 {
 }
 
 impl ::std::ops::Mul<f32> for Vec4 {
-    type Output = Vec4;
-    fn mul(self, scalar: f32) -> Vec4 {
-        Vec4 {
-            x: self.x * scalar,
-            y: self.y * scalar,
-            z: self.z * scalar,
-            w: self.w * scalar,
-        }
-    }
-}
-
-impl ::std::ops::Mul<f32> for &Vec4 {
     type Output = Vec4;
     fn mul(self, scalar: f32) -> Vec4 {
         Vec4 {
@@ -693,31 +465,7 @@ impl ::std::ops::Div<f32> for Vec4 {
     }
 }
 
-impl ::std::ops::Div<f32> for &Vec4 {
-    type Output = Vec4;
-    fn div(self, scalar: f32) -> Vec4 {
-        Vec4 {
-            x: self.x / scalar,
-            y: self.y / scalar,
-            z: self.z / scalar,
-            w: self.w / scalar,
-        }
-    }
-}
-
 impl ::std::ops::Neg for Vec4 {
-    type Output = Vec4;
-    fn neg(self) -> Vec4 {
-        Vec4 {
-            x: -self.x,
-            y: -self.y,
-            z: -self.z,
-            w: -self.w,
-        }
-    }
-}
-
-impl ::std::ops::Neg for &Vec4 {
     type Output = Vec4;
     fn neg(self) -> Vec4 {
         Vec4 {
@@ -937,6 +685,14 @@ impl Mat4 {
     }
 }
 
+impl ::std::clone::Clone for Mat4 {
+    fn clone(&self) -> Self {
+        Mat4 {
+            buf: unsafe { self.buf.clone() },
+        }
+    }
+}
+
 impl ::std::fmt::Debug for Mat4 {
     fn fmt(
         &self, f: &mut ::std::fmt::Formatter<'_>,
@@ -944,15 +700,6 @@ impl ::std::fmt::Debug for Mat4 {
         #[allow(unsafe_code)]
         unsafe {
             f.debug_list().entries(&self.columns).finish()
-        }
-    }
-}
-
-impl ::std::cmp::PartialEq for Mat4 {
-    fn eq(&self, other: &Mat4) -> bool {
-        #[allow(unsafe_code)]
-        unsafe {
-            self.buf == other.buf
         }
     }
 }
@@ -979,12 +726,13 @@ impl ::std::ops::IndexMut<(usize, usize)> for Mat4 {
 impl ::std::ops::Mul<&Mat4> for &Mat4 {
     type Output = Mat4;
     fn mul(self, m: &Mat4) -> Mat4 {
+        // TODO: unroll loops
         let mut u = Mat4::new();
         for j in 0..4 {
             let c: Vec4 = m.column(j).into();
             for i in 0..4 {
                 let r: Vec4 = self.row(i).into();
-                u[(j, i)] = r.dot(&c);
+                u[(j, i)] = r.dot(c);
             }
         }
         u
@@ -994,31 +742,6 @@ impl ::std::ops::Mul<&Mat4> for &Mat4 {
 impl ::std::ops::Mul<Vec4> for Mat4 {
     type Output = Vec4;
     fn mul(self, v: Vec4) -> Vec4 {
-        let m = &self;
-        Vec4 {
-            x: m[(0, 0)] * v.x
-                + m[(1, 0)] * v.y
-                + m[(2, 0)] * v.z
-                + m[(3, 0)] * v.w,
-            y: m[(0, 1)] * v.x
-                + m[(1, 1)] * v.y
-                + m[(2, 1)] * v.z
-                + m[(3, 1)] * v.w,
-            z: m[(0, 2)] * v.x
-                + m[(1, 2)] * v.y
-                + m[(2, 2)] * v.z
-                + m[(3, 2)] * v.w,
-            w: m[(0, 3)] * v.x
-                + m[(1, 3)] * v.y
-                + m[(2, 3)] * v.z
-                + m[(3, 3)] * v.w,
-        }
-    }
-}
-
-impl ::std::ops::Mul<&Vec4> for &Mat4 {
-    type Output = Vec4;
-    fn mul(self, v: &Vec4) -> Vec4 {
         let m = &self;
         Vec4 {
             x: m[(0, 0)] * v.x
@@ -1070,6 +793,32 @@ impl Quaternion {
             x: s.x * c.y * c.z - c.x * s.y * s.z,
             y: c.x * s.y * c.z + s.x * c.y * s.z,
             z: c.x * c.y * s.z - s.x * s.y * c.z,
+        }
+    }
+
+    pub fn from_to(from: Vec3, to: Vec3) -> Self {
+        let v = from.cross(to);
+        Quaternion {
+            w: 1.0 + from.dot(to),
+            x: v.x,
+            y: v.y,
+            z: v.z,
+        }
+        .normalize()
+    }
+
+    fn length(&self) -> f32 {
+        (self.w * self.w + self.x * self.x + self.y * self.y + self.z * self.z)
+            .sqrt()
+    }
+
+    fn normalize(&self) -> Quaternion {
+        let len = self.length();
+        Quaternion {
+            w: self.w / len,
+            x: self.x / len,
+            y: self.y / len,
+            z: self.z / len,
         }
     }
 }
@@ -1127,6 +876,15 @@ pub mod tests {
         }
     }
 
+    impl ::std::cmp::PartialEq for Mat4 {
+        fn eq(&self, other: &Mat4) -> bool {
+            #[allow(unsafe_code)]
+            unsafe {
+                self.buf == other.buf
+            }
+        }
+    }
+
     #[wasm_bindgen_test]
     fn test_vec3_approx_eq() {
         let v1 = Vec3::with(1.0, 0.0, 0.0);
@@ -1138,7 +896,7 @@ pub mod tests {
     fn test_vec4_dot() {
         let v1 = Vec4::with(1.0, 5.0, 9.0, 13.0);
         let v2 = Vec4::with(2.0, 2.0, 2.0, 2.0);
-        assert_eq!(v1.dot(&v2), (1 * 2 + 5 * 2 + 9 * 2 + 13 * 2) as f32);
+        assert_eq!(v1.dot(v2), (1 * 2 + 5 * 2 + 9 * 2 + 13 * 2) as f32);
     }
 
     #[wasm_bindgen_test]
@@ -1365,7 +1123,7 @@ pub mod tests {
     impl Vec3 {
         fn test_rotate(&self, angles: [f32; 3]) -> Vec3 {
             let m: Mat4 = Quaternion::new(angles.into()).into();
-            (m * Vec4::from((self, 1.0))).xyz()
+            (m * Vec4::from((*self, 1.0))).xyz()
         }
     }
 

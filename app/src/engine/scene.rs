@@ -74,7 +74,7 @@ impl Camera {
     }
 
     pub fn refresh(&mut self) -> &mut Self {
-        self.view = look_at(&self.position, &self.target, &self.up);
+        self.view = look_at(self.position, self.target, self.up);
         self.projection = project(self.fov, self.aspect, self.near, self.far);
         self
     }

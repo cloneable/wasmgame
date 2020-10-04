@@ -52,7 +52,7 @@ pub fn generate_buffers(
             model_vertices[ci + 2],
         );
 
-        let n = (&b - &a).cross(&(&c - &a)).normalize();
+        let n = (b - a).cross(c - a).normalize();
 
         let j = i * 3;
         vertices[j] = a.x;
