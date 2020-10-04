@@ -304,9 +304,10 @@ impl Instance {
     }
 
     pub fn refresh(&mut self, view: &Mat4) {
-        let mut m = Mat4::rotation(self.rotation);
-        m.scale(self.scale);
-        m.translate(self.position);
+        let t = Mat4::translation(self.position);
+        let s = Mat4::scaling(self.scale);
+        let r = Mat4::rotation(self.rotation);
+        let m = t * r * s;
         let mat_model_view = (view * &m).to_3x3();
         let normals = match mat_model_view.invert() {
             Some(inv) => inv.transpose(),
