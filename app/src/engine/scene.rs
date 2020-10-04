@@ -1,5 +1,4 @@
 use ::std::clone::Clone;
-use ::std::convert::Into;
 use ::std::option::{Option::None, Option::Some};
 use ::std::rc::Rc;
 use ::std::result::{Result, Result::Ok};
@@ -9,7 +8,7 @@ use ::std::{vec, vec::Vec};
 use super::attrib;
 use super::util;
 use crate::engine::Error;
-use crate::util::math::{look_at, project, Mat4, Quaternion, Vec3, Vec4};
+use crate::util::math::{look_at, project, Mat4, Vec3, Vec4};
 use crate::util::opengl::{ArrayBuffer, Context, VertexArrayObject};
 
 pub trait Drawable {
@@ -44,8 +43,8 @@ impl Camera {
             aspect: 1.0,
             near: 0.1,
             far: 1000.0,
-            view: Mat4::new(),
-            projection: Mat4::new(),
+            view: Mat4::identity(),
+            projection: Mat4::identity(),
         }
     }
 
@@ -280,8 +279,8 @@ impl Instance {
             scale: Vec3::with(1.0, 1.0, 1.0),
             rotation: Vec3::with(0.0, 0.0, 0.0),
             color: Vec4::with(1.0, 1.0, 1.0, 1.0),
-            model: Mat4::IDENTITY,
-            normals: Mat4::IDENTITY,
+            model: Mat4::identity(),
+            normals: Mat4::identity(),
         }
     }
 
@@ -305,7 +304,7 @@ impl Instance {
     }
 
     pub fn refresh(&mut self, view: &Mat4) {
-        let mut m: Mat4 = Quaternion::new(self.rotation).into();
+        let mut m = Mat4::rotation(self.rotation);
         m.scale(self.scale);
         m.translate(self.position);
         let mat_model_view = (view * &m).to_3x3();

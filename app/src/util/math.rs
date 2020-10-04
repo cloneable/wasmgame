@@ -345,18 +345,6 @@ impl ::std::default::Default for Vec4 {
     }
 }
 
-// TODO: remove this.
-impl ::std::convert::From<[f32; 4]> for Vec4 {
-    fn from(buf: [f32; 4]) -> Vec4 {
-        Vec4 {
-            x: buf[0],
-            y: buf[1],
-            z: buf[2],
-            w: buf[3],
-        }
-    }
-}
-
 impl ::std::convert::From<(Vec3, f32)> for Vec4 {
     fn from(v: (Vec3, f32)) -> Vec4 {
         Vec4 {
@@ -494,17 +482,41 @@ pub union Mat4 {
 }
 
 impl Mat4 {
-    pub const IDENTITY: Mat4 = Mat4 {
-        buf: [
-            1.0, 0.0, 0.0, 0.0, //br
-            0.0, 1.0, 0.0, 0.0, //br
-            0.0, 0.0, 1.0, 0.0, //br
-            0.0, 0.0, 0.0, 1.0, //br
-        ],
-    };
+    pub fn identity() -> Self {
+        Mat4 {
+            buf: [
+                1.0, 0.0, 0.0, 0.0, //br
+                0.0, 1.0, 0.0, 0.0, //br
+                0.0, 0.0, 1.0, 0.0, //br
+                0.0, 0.0, 0.0, 1.0, //br
+            ],
+        }
+    }
 
-    pub fn new() -> Self {
-        Mat4 { buf: [0.0; 16] }
+    pub fn scaling(v: Vec3) -> Self {
+        Mat4 {
+            buf: [
+                v.x, 0.0, 0.0, 0.0, //br
+                0.0, v.y, 0.0, 0.0, //br
+                0.0, 0.0, v.z, 0.0, //br
+                0.0, 0.0, 0.0, 1.0, //br
+            ],
+        }
+    }
+
+    pub fn translation(v: Vec3) -> Self {
+        Mat4 {
+            buf: [
+                1.0, 0.0, 0.0, 0.0, //br
+                0.0, 1.0, 0.0, 0.0, //br
+                0.0, 0.0, 1.0, 0.0, //br
+                v.x, v.y, v.z, 1.0, //br
+            ],
+        }
+    }
+
+    pub fn rotation(v: Vec3) -> Self {
+        Quaternion::new(v).into()
     }
 
     pub fn slice(&self) -> &[f32] {
@@ -723,19 +735,47 @@ impl ::std::ops::IndexMut<(usize, usize)> for Mat4 {
     }
 }
 
+macro_rules! colrowdot {
+    ( $m1:ident, $m2:ident, $c:literal, $r:literal) => {
+        $m1[$c * 4] * $m2[$r]
+            + $m1[$c * 4 + 1] * $m2[$r + 4]
+            + $m1[$c * 4 + 2] * $m2[$r + 8]
+            + $m1[$c * 4 + 3] * $m2[$r + 12]
+    };
+}
+
 impl ::std::ops::Mul<&Mat4> for &Mat4 {
     type Output = Mat4;
     fn mul(self, m: &Mat4) -> Mat4 {
-        // TODO: unroll loops
-        let mut u = Mat4::new();
-        for j in 0..4 {
-            let c: Vec4 = m.column(j).into();
-            for i in 0..4 {
-                let r: Vec4 = self.row(i).into();
-                u[(j, i)] = r.dot(c);
-            }
+        let u = unsafe { &self.buf };
+        let v = unsafe { &m.buf };
+        Mat4 {
+            buf: [
+                colrowdot!(v, u, 0, 0),
+                colrowdot!(v, u, 0, 1),
+                colrowdot!(v, u, 0, 2),
+                colrowdot!(v, u, 0, 3),
+                colrowdot!(v, u, 1, 0),
+                colrowdot!(v, u, 1, 1),
+                colrowdot!(v, u, 1, 2),
+                colrowdot!(v, u, 1, 3),
+                colrowdot!(v, u, 2, 0),
+                colrowdot!(v, u, 2, 1),
+                colrowdot!(v, u, 2, 2),
+                colrowdot!(v, u, 2, 3),
+                colrowdot!(v, u, 3, 0),
+                colrowdot!(v, u, 3, 1),
+                colrowdot!(v, u, 3, 2),
+                colrowdot!(v, u, 3, 3),
+            ],
         }
-        u
+    }
+}
+
+impl ::std::ops::Mul<Mat4> for Mat4 {
+    type Output = Mat4;
+    fn mul(self, m: Mat4) -> Mat4 {
+        &self * &m
     }
 }
 
@@ -776,7 +816,7 @@ impl ::std::convert::From<[[f32; 4]; 4]> for Mat4 {
     }
 }
 
-pub struct Quaternion {
+struct Quaternion {
     w: f32,
     x: f32,
     y: f32,
@@ -784,7 +824,7 @@ pub struct Quaternion {
 }
 
 impl Quaternion {
-    pub fn new(angles: Vec3) -> Self {
+    fn new(angles: Vec3) -> Self {
         let rad = angles * (::std::f32::consts::PI / 180.0 * 0.5);
         let c = rad.apply(f32::cos);
         let s = rad.apply(f32::sin);
@@ -796,7 +836,7 @@ impl Quaternion {
         }
     }
 
-    pub fn from_to(from: Vec3, to: Vec3) -> Self {
+    fn from_to(from: Vec3, to: Vec3) -> Self {
         let v = from.cross(to);
         Quaternion {
             w: 1.0 + from.dot(to),
@@ -950,7 +990,7 @@ pub mod tests {
             75.0, 38.0, -3.0, -48.0, //br
             103.0, 50.0, -7.0, -68.0, //br
         ]);
-        assert_eq!(&m1 * &m2, m3);
+        assert_eq!(m1 * m2, m3);
     }
 
     #[wasm_bindgen_test]
