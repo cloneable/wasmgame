@@ -195,6 +195,25 @@ impl ::std::ops::Sub<Vec3> for Vec3 {
     }
 }
 
+impl ::std::ops::MulAssign<Vec3> for Vec3 {
+    fn mul_assign(&mut self, v: Vec3) {
+        self.x *= v.x;
+        self.y *= v.y;
+        self.z *= v.z;
+    }
+}
+
+impl ::std::ops::Mul<Vec3> for Vec3 {
+    type Output = Vec3;
+    fn mul(self, v: Vec3) -> Vec3 {
+        Vec3 {
+            x: self.x * v.x,
+            y: self.y * v.y,
+            z: self.z * v.z,
+        }
+    }
+}
+
 impl ::std::ops::MulAssign<f32> for Vec3 {
     fn mul_assign(&mut self, scalar: f32) {
         self.x *= scalar;
@@ -214,6 +233,36 @@ impl ::std::ops::Mul<f32> for Vec3 {
     }
 }
 
+impl ::std::ops::Mul<Vec3> for f32 {
+    type Output = Vec3;
+    fn mul(self, v: Vec3) -> Vec3 {
+        Vec3 {
+            x: self * v.x,
+            y: self * v.y,
+            z: self * v.z,
+        }
+    }
+}
+
+impl ::std::ops::DivAssign<Vec3> for Vec3 {
+    fn div_assign(&mut self, v: Vec3) {
+        self.x /= v.x;
+        self.y /= v.y;
+        self.z /= v.z;
+    }
+}
+
+impl ::std::ops::Div<Vec3> for Vec3 {
+    type Output = Vec3;
+    fn div(self, v: Vec3) -> Vec3 {
+        Vec3 {
+            x: self.x / v.x,
+            y: self.y / v.y,
+            z: self.z / v.z,
+        }
+    }
+}
+
 impl ::std::ops::DivAssign<f32> for Vec3 {
     fn div_assign(&mut self, scalar: f32) {
         self.x /= scalar;
@@ -229,6 +278,17 @@ impl ::std::ops::Div<f32> for Vec3 {
             x: self.x / scalar,
             y: self.y / scalar,
             z: self.z / scalar,
+        }
+    }
+}
+
+impl ::std::ops::Div<Vec3> for f32 {
+    type Output = Vec3;
+    fn div(self, v: Vec3) -> Vec3 {
+        Vec3 {
+            x: self / v.x,
+            y: self / v.y,
+            z: self / v.z,
         }
     }
 }
@@ -516,7 +576,7 @@ impl Mat4 {
     }
 
     pub fn rotation(v: Vec3) -> Self {
-        Quaternion::new(v).into()
+        Quat::rotation(v).into()
     }
 
     pub fn slice(&self) -> &[f32] {
@@ -737,10 +797,14 @@ impl ::std::ops::IndexMut<(usize, usize)> for Mat4 {
 
 macro_rules! colrowdot {
     ( $m1:ident, $m2:ident, $c:literal, $r:literal) => {
-        $m1[$c * 4] * $m2[$r]
-            + $m1[$c * 4 + 1] * $m2[$r + 4]
-            + $m1[$c * 4 + 2] * $m2[$r + 8]
-            + $m1[$c * 4 + 3] * $m2[$r + 12]
+        $m1[$c * 4].mul_add(
+            $m2[$r],
+            $m1[$c * 4 + 1].mul_add(
+                $m2[$r + 4],
+                $m1[$c * 4 + 2]
+                    .mul_add($m2[$r + 8], $m1[$c * 4 + 3] * $m2[$r + 12]),
+            ),
+        )
     };
 }
 
@@ -816,19 +880,29 @@ impl ::std::convert::From<[[f32; 4]; 4]> for Mat4 {
     }
 }
 
-struct Quaternion {
+#[derive(Copy, Clone)]
+struct Quat {
     w: f32,
     x: f32,
     y: f32,
     z: f32,
 }
 
-impl Quaternion {
-    fn new(angles: Vec3) -> Self {
+impl Quat {
+    fn identity() -> Self {
+        Quat {
+            w: 1.0,
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        }
+    }
+
+    fn rotation(angles: Vec3) -> Self {
         let rad = angles * (::std::f32::consts::PI / 180.0 * 0.5);
         let c = rad.apply(f32::cos);
         let s = rad.apply(f32::sin);
-        Quaternion {
+        Quat {
             w: c.x * c.y * c.z + s.x * s.y * s.z,
             x: s.x * c.y * c.z - c.x * s.y * s.z,
             y: c.x * s.y * c.z + s.x * c.y * s.z,
@@ -838,7 +912,7 @@ impl Quaternion {
 
     fn from_to(from: Vec3, to: Vec3) -> Self {
         let v = from.cross(to);
-        Quaternion {
+        Quat {
             w: 1.0 + from.dot(to),
             x: v.x,
             y: v.y,
@@ -852,19 +926,87 @@ impl Quaternion {
             .sqrt()
     }
 
-    fn normalize(&self) -> Quaternion {
+    fn normalize(&self) -> Quat {
         let len = self.length();
-        Quaternion {
+        Quat {
             w: self.w / len,
             x: self.x / len,
             y: self.y / len,
             z: self.z / len,
         }
     }
+
+    fn invert(&self) -> Quat {
+        Quat {
+            w: self.w,
+            x: -self.x,
+            y: -self.y,
+            z: -self.z,
+        }
+    }
 }
 
-impl From<Quaternion> for Mat4 {
-    fn from(q: Quaternion) -> Self {
+impl ::std::fmt::Display for Quat {
+    fn fmt(
+        &self, f: &mut ::std::fmt::Formatter<'_>,
+    ) -> Result<(), ::std::fmt::Error> {
+        f.debug_list()
+            .entry(&self.w)
+            .entry(&self.x)
+            .entry(&self.y)
+            .entry(&self.z)
+            .finish()
+    }
+}
+
+impl ::std::fmt::Debug for Quat {
+    fn fmt(
+        &self, f: &mut ::std::fmt::Formatter<'_>,
+    ) -> Result<(), ::std::fmt::Error> {
+        f.debug_tuple("Quat")
+            .field(&self.w)
+            .field(&self.x)
+            .field(&self.y)
+            .field(&self.z)
+            .finish()
+    }
+}
+
+impl From<Vec3> for Quat {
+    fn from(v: Vec3) -> Self {
+        Quat {
+            w: 0.0,
+            x: v.x,
+            y: v.y,
+            z: v.z,
+        }
+    }
+}
+
+impl ::std::ops::Mul<Quat> for Quat {
+    type Output = Quat;
+    fn mul(self, q: Quat) -> Quat {
+        Quat {
+            w: self.w * q.w - self.x * q.w - self.y * q.w - self.z * q.w,
+            x: self.w * q.x + self.x * q.x - self.y * q.x + self.z * q.x,
+            y: self.w * q.y + self.x * q.y + self.y * q.y - self.z * q.y,
+            z: self.w * q.z - self.x * q.z + self.y * q.z + self.z * q.z,
+        }
+    }
+}
+
+impl From<Quat> for Vec3 {
+    fn from(q: Quat) -> Vec3 {
+        Vec3 {
+            x: q.x,
+            y: q.y,
+            z: q.z,
+        }
+    }
+}
+
+impl From<Quat> for Mat4 {
+    fn from(q: Quat) -> Self {
         let xx = q.x * q.x;
         let yy = q.y * q.y;
         let zz = q.z * q.z;
@@ -1162,7 +1304,7 @@ pub mod tests {
 
     impl Vec3 {
         fn test_rotate(&self, angles: [f32; 3]) -> Vec3 {
-            let m: Mat4 = Quaternion::new(angles.into()).into();
+            let m: Mat4 = Quat::rotation(angles.into()).into();
             (m * Vec4::from((*self, 1.0))).xyz()
         }
     }
