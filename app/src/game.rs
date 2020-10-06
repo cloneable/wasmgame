@@ -88,8 +88,7 @@ impl Game {
     }
 
     pub fn init(&mut self) -> Result<(), Error> {
-        // TODO: refactor why camera is pulled in.
-        self.scene.hexatile.init(&self.scene.camera);
+        self.scene.hexatile.init();
         self.offscreen.activate();
         Ok(())
     }
@@ -279,7 +278,7 @@ fn target_rect(e: &::web_sys::Event) -> (i32, i32, i32, i32) {
 impl engine::Renderer for Game {
     fn update(&mut self, t: Time) -> Result<(), Error> {
         self.last_render = t;
-        self.scene.hexatile.update(&self.scene.camera);
+        self.scene.hexatile.update();
         self.program.activate();
         self.program.set_view(self.scene.camera.view_matrix());
         self.picker_program.activate();

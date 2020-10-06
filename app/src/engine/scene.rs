@@ -12,8 +12,8 @@ use crate::util::math::{look_at, project, Mat4, Vec3, Vec4};
 use crate::util::opengl::{ArrayBuffer, Context, VertexArrayObject};
 
 pub trait Drawable {
-    fn init(&mut self, camera: &Camera);
-    fn update(&mut self, camera: &Camera);
+    fn init(&mut self);
+    fn update(&mut self);
     fn stage(&mut self);
     fn draw(&self);
     fn unstage(&mut self);
@@ -303,15 +303,15 @@ impl Instance {
         self.color = rgba;
     }
 
-    pub fn refresh(&mut self, view: &Mat4) {
+    pub fn refresh(&mut self) {
         let t = Mat4::translation(self.position);
         let s = Mat4::scaling(self.scale);
         let r = Mat4::rotation(self.rotation);
         let m = t * r * s;
-        let mat_model_view = (view * &m).to_3x3();
-        let normals = match mat_model_view.invert() {
+        let n = m.to_3x3();
+        let normals = match n.invert() {
             Some(inv) => inv.transpose(),
-            None => mat_model_view,
+            None => n,
         };
         self.model = m;
         self.normals = normals;
