@@ -11,6 +11,86 @@ use crate::engine::Error;
 use crate::util::math::{look_at, project, Mat4, Vec3, Vec4};
 use crate::util::opengl::{ArrayBuffer, Context, VertexArrayObject};
 
+pub struct Object {
+    position: Vec3,
+    scaling: Vec3,
+    rotation: Vec3,
+
+    model: Mat4,
+    model_stale: bool,
+}
+
+impl Object {
+    pub fn new() -> Self {
+        Object {
+            position: Vec3::new(),
+            scaling: Vec3::with(1.0, 1.0, 1.0),
+            rotation: Vec3::new(),
+            model: Mat4::identity(),
+            model_stale: false,
+        }
+    }
+
+    pub fn position(&self) -> Vec3 {
+        self.position
+    }
+
+    pub fn set_position(&mut self, v: Vec3) {
+        self.position = v;
+        self.model_stale = true;
+    }
+
+    pub fn translate(&mut self, v: Vec3) {
+        self.position += v;
+        self.model_stale = true;
+    }
+
+    pub fn scaling(&self) -> Vec3 {
+        self.scaling
+    }
+
+    pub fn set_scaling(&mut self, v: Vec3) {
+        self.scaling = v;
+        self.model_stale = true;
+    }
+
+    pub fn scale_uniform(&mut self, s: f32) {
+        self.scaling *= s;
+        self.model_stale = true;
+    }
+
+    pub fn scale(&mut self, v: Vec3) {
+        self.scaling *= v;
+        self.model_stale = true;
+    }
+
+    pub fn rotation(&self) -> Vec3 {
+        self.rotation
+    }
+
+    pub fn set_rotation(&mut self, v: Vec3) {
+        self.rotation = v;
+        self.model_stale = true;
+    }
+
+    pub fn rotate(&mut self, v: Vec3) {
+        self.rotation += v;
+        self.model_stale = true;
+    }
+
+    pub fn refresh(&mut self) -> bool {
+        if self.model_stale {
+            let s = Mat4::scaling(self.scaling);
+            let r = Mat4::rotation(self.rotation);
+            let t = Mat4::translation(self.position);
+            self.model = t * r * s;
+            self.model_stale = false;
+            return true;
+        }
+        return false;
+    }
+}
+
 pub trait Drawable {
     fn init(&mut self);
     fn update(&mut self);
@@ -22,7 +102,9 @@ pub trait Drawable {
 pub struct Camera {
     position: Vec3,
     target: Vec3,
+
     up: Vec3,
+    rotation: Vec3,
 
     fov: f32,
     aspect: f32,
@@ -30,22 +112,35 @@ pub struct Camera {
     far: f32,
 
     view: Mat4,
+    view_stale: bool,
     projection: Mat4,
+    projection_stale: bool,
 }
 
 impl Camera {
     pub fn new() -> Self {
         Camera {
             position: Vec3::with(0.0, 0.0, 1.0),
-            target: Vec3::with(0.0, 0.0, 0.0),
+            target: Vec3::new(),
             up: Vec3::with(0.0, 1.0, 0.0),
+            rotation: Vec3::new(),
             fov: 90.0,
             aspect: 1.0,
             near: 0.1,
             far: 1000.0,
             view: Mat4::identity(),
+            view_stale: true,
             projection: Mat4::identity(),
+            projection_stale: true,
         }
+    }
+
+    pub fn set_rotation(&mut self, x: f32, y: f32) -> &mut Self {
+        self.rotation.x = f32::min(f32::max(x, -180.0), 180.0);
+        self.rotation.y = f32::min(f32::max(y, -90.0), 90.0);
+        self.rotation.z = 0.0;
+        self.view_stale = true;
+        self
     }
 
     pub fn position(&self) -> Vec3 {
@@ -54,11 +149,13 @@ impl Camera {
 
     pub fn set_position(&mut self, x: f32, y: f32, z: f32) -> &mut Self {
         self.position = Vec3::with(x, y, z);
+        self.view_stale = true;
         self
     }
 
     pub fn set_target(&mut self, x: f32, y: f32, z: f32) -> &mut Self {
         self.target = Vec3::with(x, y, z);
+        self.view_stale = true;
         self
     }
 
@@ -69,13 +166,27 @@ impl Camera {
         self.aspect = aspect;
         self.near = near;
         self.far = far;
+        self.projection_stale = true;
         self
     }
 
-    pub fn refresh(&mut self) -> &mut Self {
-        self.view = look_at(self.position, self.target, self.up);
-        self.projection = project(self.fov, self.aspect, self.near, self.far);
-        self
+    pub fn refresh(&mut self) -> bool {
+        let mut changed = false;
+        if self.view_stale {
+            let m = Mat4::rotation(self.rotation);
+            let position =
+                (m * Vec4::from_vec3(self.target - self.position, 1.0)).xyz();
+            self.view = look_at(position, self.target, self.up);
+            self.view_stale = false;
+            changed = true;
+        }
+        if self.projection_stale {
+            self.projection =
+                project(self.fov, self.aspect, self.near, self.far);
+            self.projection_stale = false;
+            changed = true;
+        }
+        changed
     }
 
     pub fn view_matrix(&self) -> &Mat4 {
@@ -160,7 +271,7 @@ impl Model {
             self.instance_id.push(1.0);
             self.instance_id.push(1.0);
             self.instance_model_data
-                .extend_from_slice(instance.model.slice());
+                .extend_from_slice(instance.object.model.slice());
             self.instance_normals_data
                 .extend_from_slice(instance.normals.slice());
             i += 1;
@@ -218,7 +329,7 @@ impl Model {
         self.instance_normals_data.clear();
         for instance in self.instances.iter_mut() {
             self.instance_model_data
-                .extend_from_slice(instance.model.slice());
+                .extend_from_slice(instance.object.model.slice());
             self.instance_normals_data
                 .extend_from_slice(instance.normals.slice());
         }
@@ -263,57 +374,35 @@ impl ::std::ops::IndexMut<usize> for Model {
 }
 
 pub struct Instance {
-    pub position: Vec3,
-    pub scale: Vec3,
-    pub rotation: Vec3,
+    pub object: Object,
     pub color: Vec4,
-
-    pub model: Mat4,
     pub normals: Mat4,
 }
 
 impl Instance {
     pub fn new() -> Self {
         Instance {
-            position: Vec3::with(0.0, 0.0, 0.0),
-            scale: Vec3::with(1.0, 1.0, 1.0),
-            rotation: Vec3::with(0.0, 0.0, 0.0),
+            object: Object::new(),
             color: Vec4::with(1.0, 1.0, 1.0, 1.0),
-            model: Mat4::identity(),
             normals: Mat4::identity(),
         }
-    }
-
-    pub fn translate(&mut self, v: Vec3) {
-        self.position += v;
-    }
-
-    pub fn scale(&mut self, scalars: Vec3) {
-        // TODO: Add Hadamard product to Vec34?
-        self.scale.x *= scalars.x;
-        self.scale.y *= scalars.y;
-        self.scale.z *= scalars.z;
-    }
-
-    pub fn rotate(&mut self, angles: Vec3) {
-        self.rotation += angles;
     }
 
     pub fn color(&mut self, rgba: Vec4) {
         self.color = rgba;
     }
 
-    pub fn refresh(&mut self) {
-        let t = Mat4::translation(self.position);
-        let s = Mat4::scaling(self.scale);
-        let r = Mat4::rotation(self.rotation);
-        let m = t * r * s;
-        let n = m.to_3x3();
-        let normals = match n.invert() {
-            Some(inv) => inv.transpose(),
-            None => n,
-        };
-        self.model = m;
-        self.normals = normals;
+    pub fn refresh(&mut self) -> bool {
+        if self.object.refresh() {
+            self.normals = {
+                let m = self.object.model.to_3x3();
+                match m.invert() {
+                    Some(inv) => inv.transpose(),
+                    None => m,
+                }
+            };
+            return true;
+        }
+        return false;
     }
 }
