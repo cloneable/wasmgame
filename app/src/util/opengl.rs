@@ -1,5 +1,5 @@
 use ::log;
-use ::std::cell::RefCell;
+use ::std::cell::Cell;
 use ::std::clone::Clone;
 use ::std::convert::From;
 use ::std::convert::Into;
@@ -22,7 +22,7 @@ pub struct Context {
     /// https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.AngleInstancedArrays.html
     pub instanced_arrays_ext: ::web_sys::AngleInstancedArrays,
 
-    next_object_id: RefCell<u32>,
+    next_object_id: Cell<u32>,
     bound_vertex_array_buffer: BindingTracker,
     bound_array_buffer: BindingTracker,
     bound_framebuffer: BindingTracker,
@@ -63,7 +63,7 @@ impl Context {
             gl,
             vertex_array_object_ext,
             instanced_arrays_ext,
-            next_object_id: RefCell::new(1),
+            next_object_id: Cell::new(1),
             bound_vertex_array_buffer: BindingTracker::new(),
             bound_array_buffer: BindingTracker::new(),
             bound_framebuffer: BindingTracker::new(),
@@ -77,8 +77,8 @@ impl Context {
     }
 
     pub fn next_object_id(&self) -> u32 {
-        let id = *self.next_object_id.borrow();
-        *self.next_object_id.borrow_mut() = id + 1;
+        let id = self.next_object_id.get();
+        self.next_object_id.set(id + 1);
         id
     }
 
@@ -635,21 +635,21 @@ impl ::std::ops::Drop for Texture2D {
 
 struct BindingTracker {
     #[cfg(debug_assertions)]
-    bound_id: RefCell<u32>,
+    bound_id: Cell<u32>,
 }
 
 impl BindingTracker {
     fn new() -> Self {
         BindingTracker {
             #[cfg(debug_assertions)]
-            bound_id: RefCell::new(0),
+            bound_id: Cell::new(0),
         }
     }
 
     #[cfg(debug_assertions)]
     fn assert_bound(&self, id: u32) {
         use ::std::panic;
-        ::std::debug_assert_eq!(*self.bound_id.borrow(), id);
+        ::std::debug_assert_eq!(self.bound_id.get(), id);
     }
 
     #[cfg(not(debug_assertions))]
@@ -658,9 +658,9 @@ impl BindingTracker {
     #[cfg(debug_assertions)]
     fn assert_bound_then_unbind(&self, id: u32) {
         use ::std::panic;
-        let mut id_ref = self.bound_id.borrow_mut();
-        ::std::debug_assert_eq!(*id_ref, id);
-        *id_ref = 0;
+        let bound_id = self.bound_id.get();
+        ::std::debug_assert_eq!(bound_id, id);
+        self.bound_id.set(0);
     }
 
     #[cfg(not(debug_assertions))]
@@ -669,7 +669,7 @@ impl BindingTracker {
     #[cfg(debug_assertions)]
     fn assert_unbound(&self, id: u32) {
         use ::std::panic;
-        ::std::debug_assert_ne!(*self.bound_id.borrow(), id);
+        ::std::debug_assert_ne!(self.bound_id.get(), id);
     }
 
     #[cfg(not(debug_assertions))]
@@ -678,9 +678,9 @@ impl BindingTracker {
     #[cfg(debug_assertions)]
     fn assert_unbound_then_bind(&self, id: u32) {
         use ::std::panic;
-        let mut id_ref = self.bound_id.borrow_mut();
-        ::std::debug_assert_ne!(*id_ref, id);
-        *id_ref = id;
+        let bound_id = self.bound_id.get();
+        ::std::debug_assert_ne!(bound_id, id);
+        self.bound_id.set(id);
     }
 
     #[cfg(not(debug_assertions))]
