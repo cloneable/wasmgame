@@ -8,23 +8,23 @@ edition = "2018"
 crate-type = ["cdylib"]
 
 [dependencies]
-cfg-if = "0.1"
-console_error_panic_hook = { version = "0.1", optional = true }
-log = { version = "0.4", features = ["max_level_trace", "release_max_level_info"] }
-js-sys = "0.3"
+cfg-if = "1.0.0"
+console_error_panic_hook = { version = "0.1.6", optional = true }
+log = { version = "0.4.11", features = ["max_level_trace", "release_max_level_info"] }
+js-sys = "0.3.45"
 wasm-bindgen = "0.2.68"
-wasm-bindgen-futures = "0.4"
+wasm-bindgen-futures = "0.4.18"
 wasm-bindgen-macro = "0.2.68"
-wasm-logger = "0.2"
+wasm-logger = "0.2.0"
 wasmgame-macros = { path = "../macros" }
-wee_alloc = { version = "0.4", optional = true }
+wee_alloc = { version = "0.4.5", optional = true }
 
 [dev-dependencies]
-wasm-bindgen-test = "0.3"
-float-cmp = "0.8"
+wasm-bindgen-test = "0.3.18"
+float-cmp = "0.8.0"
 
 [dependencies.web-sys]
-version = "0.3"
+version = "0.3.45"
 features = [
   # DOM
   'Document',
