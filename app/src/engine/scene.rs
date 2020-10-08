@@ -2,11 +2,12 @@ use ::std::clone::Clone;
 use ::std::option::{Option::None, Option::Some};
 use ::std::rc::Rc;
 use ::std::result::{Result, Result::Ok};
-use ::std::{assert, panic};
+use ::std::{assert, debug_assert, panic};
 use ::std::{vec, vec::Vec};
 
 use super::attrib;
 use super::util;
+use crate::engine::time::Time;
 use crate::engine::Error;
 use crate::util::math::{look_at, project, Mat4, Vec3, Vec4};
 use crate::util::opengl::{ArrayBuffer, Context, VertexArrayObject};
@@ -78,7 +79,7 @@ impl Object {
         self.model_stale = true;
     }
 
-    pub fn refresh(&mut self) -> bool {
+    pub fn update(&mut self, t: Time) -> bool {
         if self.model_stale {
             let s = Mat4::scaling(self.scaling);
             let r = Mat4::rotation(self.rotation);
@@ -93,7 +94,7 @@ impl Object {
 
 pub trait Drawable {
     fn init(&mut self);
-    fn update(&mut self);
+    fn update(&mut self, t: Time);
     fn stage(&mut self);
     fn draw(&self);
     fn unstage(&mut self);
@@ -170,7 +171,7 @@ impl Camera {
         self
     }
 
-    pub fn refresh(&mut self) -> bool {
+    pub fn update(&mut self, t: Time) -> bool {
         let mut changed = false;
         if self.view_stale {
             let m = Mat4::rotation(self.rotation);
@@ -190,10 +191,12 @@ impl Camera {
     }
 
     pub fn view_matrix(&self) -> &Mat4 {
+        debug_assert!(!self.view_stale);
         &self.view
     }
 
     pub fn projection_matrix(&self) -> &Mat4 {
+        debug_assert!(!self.projection_stale);
         &self.projection
     }
 }
@@ -324,10 +327,11 @@ impl Model {
         self.vao.unbind();
     }
 
-    pub fn refresh(&mut self) {
+    pub fn update(&mut self, t: Time) {
         self.instance_model_data.clear();
         self.instance_normals_data.clear();
         for instance in self.instances.iter_mut() {
+            instance.update(t);
             self.instance_model_data
                 .extend_from_slice(instance.object.model.slice());
             self.instance_normals_data
@@ -392,8 +396,8 @@ impl Instance {
         self.color = rgba;
     }
 
-    pub fn refresh(&mut self) -> bool {
-        if self.object.refresh() {
+    pub fn update(&mut self, t: Time) -> bool {
+        if self.object.update(t) {
             self.normals = {
                 let m = self.object.model.to_3x3();
                 match m.invert() {

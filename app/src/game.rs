@@ -32,8 +32,7 @@ impl Scene {
                 ctx.width() as f32 / ctx.height() as f32,
                 0.1,
                 100.0,
-            )
-            .refresh();
+            );
         let hexatile = models::Hexatile::new(ctx)?;
         Ok(Scene { hexatile, camera })
     }
@@ -144,10 +143,11 @@ impl Game {
             let y = e.client_y() - top;
             let new_x = self.camera_position.x + (x - ox) as f32 / 100.0;
             let new_z = self.camera_position.z + (-y + oy) as f32 / 100.0;
-            self.scene
-                .camera
-                .set_position(new_x, self.camera_position.y, new_z)
-                .refresh();
+            self.scene.camera.set_position(
+                new_x,
+                self.camera_position.y,
+                new_z,
+            );
             ::log::trace!("MOVE at {:?}: {},{}", e.time_stamp(), x, y);
         }
     }
@@ -190,10 +190,11 @@ impl Game {
                 let (ox, oy) = self.mouse_down.unwrap();
                 let new_x = self.camera_position.x + (x - ox) as f32 / 100.0;
                 let new_z = self.camera_position.z + (-y + oy) as f32 / 100.0;
-                self.scene
-                    .camera
-                    .set_position(new_x, self.camera_position.y, new_z)
-                    .refresh();
+                self.scene.camera.set_position(
+                    new_x,
+                    self.camera_position.y,
+                    new_z,
+                );
             }
         }
     }
@@ -212,10 +213,11 @@ impl Game {
                 let (ox, oy) = self.mouse_down.unwrap();
                 let new_x = self.camera_position.x + (x - ox) as f32 / 100.0;
                 let new_z = self.camera_position.z + (-y + oy) as f32 / 100.0;
-                self.scene
-                    .camera
-                    .set_position(new_x, self.camera_position.y, new_z)
-                    .refresh();
+                self.scene.camera.set_position(
+                    new_x,
+                    self.camera_position.y,
+                    new_z,
+                );
                 self.mouse_down = None;
                 self.touch_id = None;
                 ::log::debug!(
@@ -243,10 +245,11 @@ impl Game {
                 let (ox, oy) = self.mouse_down.unwrap();
                 let new_x = self.camera_position.x + (x - ox) as f32 / 100.0;
                 let new_z = self.camera_position.z + (-y + oy) as f32 / 100.0;
-                self.scene
-                    .camera
-                    .set_position(new_x, self.camera_position.y, new_z)
-                    .refresh();
+                self.scene.camera.set_position(
+                    new_x,
+                    self.camera_position.y,
+                    new_z,
+                );
                 self.mouse_down = None;
                 self.touch_id = None;
                 ::log::debug!(
@@ -278,7 +281,8 @@ fn target_rect(e: &::web_sys::Event) -> (i32, i32, i32, i32) {
 impl engine::Renderer for Game {
     fn update(&mut self, t: Time) -> Result<(), Error> {
         self.last_render = t;
-        self.scene.hexatile.update();
+        self.scene.hexatile.update(t);
+        self.scene.camera.update(t);
         self.program.activate();
         self.program.set_view(self.scene.camera.view_matrix());
         self.picker_program.activate();
