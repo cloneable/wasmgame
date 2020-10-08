@@ -397,7 +397,10 @@ impl Instance {
             self.normals = {
                 let m = self.object.model.to_3x3();
                 match m.invert() {
-                    Some(inv) => inv.transpose(),
+                    Some(mut inv) => {
+                        inv.transpose();
+                        inv
+                    }
                     None => m,
                 }
             };

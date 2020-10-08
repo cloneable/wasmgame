@@ -586,19 +586,32 @@ impl Mat4 {
         }
     }
 
-    pub fn column(&self, i: usize) -> [f32; 4] {
+    fn buf_mut(&mut self) -> &mut [f32; 16] {
         #[allow(unsafe_code)]
         unsafe {
-            self.columns[i]
+            &mut self.buf
         }
     }
 
-    pub fn row(&self, i: usize) -> [f32; 4] {
+    fn row(&self, i: usize) -> [f32; 4] {
         [self[(0, i)], self[(1, i)], self[(2, i)], self[(3, i)]]
     }
 
-    pub fn transpose(&self) -> Mat4 {
-        Mat4::from([self.row(0), self.row(1), self.row(2), self.row(3)])
+    fn swap(buf: &mut [f32; 16], c: usize, r: usize) {
+        let i = c * 4 + r;
+        let j = r * 4 + c;
+        let tmp = buf[i];
+        buf[i] = buf[j];
+        buf[j] = tmp;
+    }
+
+    pub fn transpose(&mut self) {
+        let buf = self.buf_mut();
+        for c in 0..4 {
+            for r in 0..c {
+                Mat4::swap(buf, c, r);
+            }
+        }
     }
 
     pub fn scale(&mut self, v: Vec3) {
@@ -1109,6 +1122,24 @@ pub mod tests {
             [9.0, 10.0, 11.0, 12.0],
             [13.0, 14.0, 15.0, 16.0],
         ]);
+        assert_eq!(m1, m2);
+    }
+
+    #[wasm_bindgen_test]
+    fn test_mat4_transpose() {
+        let mut m1 = Mat4::from([
+            1.0, 2.0, 3.0, 4.0, //br
+            5.0, 6.0, 7.0, 8.0, //br
+            9.0, 10.0, 11.0, 12.0, //br
+            13.0, 14.0, 15.0, 16.0, //br
+        ]);
+        let m2 = Mat4::from([
+            1.0, 5.0, 9.0, 13.0, //br
+            2.0, 6.0, 10.0, 14.0, //br
+            3.0, 7.0, 11.0, 15.0, //br
+            4.0, 8.0, 12.0, 16.0, //br
+        ]);
+        m1.transpose();
         assert_eq!(m1, m2);
     }
 
