@@ -10,17 +10,13 @@ use ::std::string::String;
 
 use ::wasm_bindgen::JsCast;
 use ::wasm_bindgen::JsValue;
-use ::web_sys::WebGlRenderingContext as WebGL;
+use ::web_sys::WebGl2RenderingContext as WebGL;
 
 pub struct Context {
     /// https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.HtmlCanvasElement.html
     pub canvas: ::web_sys::HtmlCanvasElement,
-    /// https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.WebGlRenderingContext.html
+    /// https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.WebGl2RenderingContext.html
     pub gl: WebGL,
-    /// https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.OesVertexArrayObject.html
-    pub vertex_array_object_ext: ::web_sys::OesVertexArrayObject,
-    /// https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.AngleInstancedArrays.html
-    pub instanced_arrays_ext: ::web_sys::AngleInstancedArrays,
 
     next_object_id: Cell<u32>,
     bound_vertex_array_buffer: BindingTracker,
@@ -36,24 +32,13 @@ impl Context {
     ) -> Result<Self, JsValue> {
         let gl = canvas
             .get_context_with_context_options(
-                "webgl",
+                "webgl2",
                 &::web_sys::WebGlContextAttributes::new(),
             )
             .expect("getContext failed")
             .expect("unsupported context type")
             .dyn_into::<WebGL>()
             .expect("context of unexpected type");
-        let vertex_array_object_ext = gl
-            .get_extension("OES_vertex_array_object")
-            .unwrap()
-            .unwrap()
-            .unchecked_into::<::web_sys::OesVertexArrayObject>();
-        // TODO: try ANGLEInstancedArrays if ANGLE_instanced_arrays doesn't work.
-        let instanced_arrays_ext = gl
-            .get_extension("ANGLE_instanced_arrays")
-            .unwrap()
-            .unwrap()
-            .unchecked_into::<::web_sys::AngleInstancedArrays>();
         // TODO: find better place for this. some init func?
         gl.enable(WebGL::CULL_FACE);
         gl.enable(WebGL::DEPTH_TEST);
@@ -61,8 +46,6 @@ impl Context {
         Ok(Context {
             canvas: canvas.clone(),
             gl,
-            vertex_array_object_ext,
-            instanced_arrays_ext,
             next_object_id: Cell::new(1),
             bound_vertex_array_buffer: BindingTracker::new(),
             bound_array_buffer: BindingTracker::new(),
@@ -99,12 +82,9 @@ pub struct VertexArrayObject {
 
 impl VertexArrayObject {
     pub fn create(ctx: &Rc<Context>) -> Result<Self, JsValue> {
-        let vao = ctx
-            .vertex_array_object_ext
-            .create_vertex_array_oes()
-            .ok_or_else(|| {
-                JsValue::from_str("create_vertex_array_oes vao error")
-            })?;
+        let vao = ctx.gl.create_vertex_array().ok_or_else(|| {
+            JsValue::from_str("create_vertex_array vao error")
+        })?;
         let id = ctx.next_object_id();
         Ok(VertexArrayObject {
             ctx: ctx.clone(),
@@ -117,9 +97,7 @@ impl VertexArrayObject {
         self.ctx
             .bound_vertex_array_buffer
             .assert_unbound_then_bind(self.id);
-        self.ctx
-            .vertex_array_object_ext
-            .bind_vertex_array_oes(Some(&self.vao));
+        self.ctx.gl.bind_vertex_array(Some(&self.vao));
         self
     }
 
@@ -127,7 +105,7 @@ impl VertexArrayObject {
         self.ctx
             .bound_vertex_array_buffer
             .assert_bound_then_unbind(self.id);
-        self.ctx.vertex_array_object_ext.bind_vertex_array_oes(None);
+        self.ctx.gl.bind_vertex_array(None);
         self
     }
 }
@@ -136,9 +114,7 @@ impl ::std::ops::Drop for VertexArrayObject {
     fn drop(&mut self) {
         log::debug!("deleting vao");
         self.ctx.bound_vertex_array_buffer.assert_unbound(self.id);
-        self.ctx
-            .vertex_array_object_ext
-            .delete_vertex_array_oes(Some(&self.vao));
+        self.ctx.gl.delete_vertex_array(Some(&self.vao));
     }
 }
 
@@ -255,10 +231,9 @@ impl ArrayBuffer {
     ) -> &mut Self {
         self.ctx.bound_array_buffer.assert_bound(self.id);
         for i in 0..attribute.1 {
-            self.ctx.instanced_arrays_ext.vertex_attrib_divisor_angle(
-                attribute.0 + i as u32,
-                divisor as u32,
-            );
+            self.ctx
+                .gl
+                .vertex_attrib_divisor(attribute.0 + i as u32, divisor as u32);
         }
         self
     }
