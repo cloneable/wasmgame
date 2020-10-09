@@ -57,23 +57,22 @@ impl HexatileProgram {
     }
 }
 
-const HEXATILE_VERTEX_SHADER: &str = r#"
-#version 100
+const HEXATILE_VERTEX_SHADER: &str = r#"#version 300 es
 
 // per vertex
-attribute vec3 position;
-attribute vec3 normal;
+layout(location=0) in vec3 position;
+layout(location=1) in vec3 normal;
 // per instance
-attribute vec3 color;
-attribute mat4 model;
-attribute mat4 normals;
+layout(location=2) in vec3 color;
+layout(location=4) in mat4 model;
+layout(location=8) in mat4 normals;
 
 uniform mat4 view;
 uniform mat4 projection;
 
 // TODO: combine these two.
-varying highp vec3 basecolor;
-varying highp vec3 lighting;
+out highp vec3 basecolor;
+out highp vec3 lighting;
 
 void main() {
     gl_Position = projection * view * model * vec4(position, 1.0);
@@ -90,13 +89,14 @@ void main() {
 }
 "#;
 
-const HEXATILE_FRAGMENT_SHADER: &str = r#"
-#version 100
+const HEXATILE_FRAGMENT_SHADER: &str = r#"#version 300 es
 
-varying highp vec3 basecolor;
-varying highp vec3 lighting;
+in highp vec3 basecolor;
+in highp vec3 lighting;
+
+layout(location=0) out highp vec4 fragcolor;
 
 void main() {
-    gl_FragColor = vec4(basecolor * lighting, 1.0);
+    fragcolor = vec4(basecolor * lighting, 1.0);
 }
 "#;

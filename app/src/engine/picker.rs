@@ -55,19 +55,18 @@ impl PickerProgram {
     }
 }
 
-const PICKER_VERTEX_SHADER: &str = r#"
-#version 100
+const PICKER_VERTEX_SHADER: &str = r#"#version 300 es
 
 // per vertex
-attribute vec3 position;
+layout(location=0) in vec3 position;
 // per instance
-attribute highp vec3 instance_id;
-attribute mat4 model;
+layout(location=3) in vec3 instance_id;
+layout(location=4) in mat4 model;
 
 uniform mat4 view;
 uniform mat4 projection;
 
-varying highp vec4 codecolor;
+out highp vec4 codecolor;
 
 void main() {
     gl_Position = projection * view * model * vec4(position, 1.0);
@@ -75,12 +74,13 @@ void main() {
 }
 "#;
 
-const PICKER_FRAGMENT_SHADER: &str = r#"
-#version 100
+const PICKER_FRAGMENT_SHADER: &str = r#"#version 300 es
 
-varying highp vec4 codecolor;
+in highp vec4 codecolor;
+
+layout(location=0) out highp vec4 fragcolor;
 
 void main() {
-    gl_FragColor = codecolor;
+    fragcolor = codecolor;
 }
 "#;
