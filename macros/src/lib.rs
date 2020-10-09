@@ -28,8 +28,11 @@ fn process_input(input: Input) -> Result<::obj::Obj> {
     let path = input.obj_path.value();
     let cwd = ::std::env::current_dir()
         .map_err(|err| ::syn::Error::new(input.obj_path.span(), err))?;
-    let o: ::obj::Obj = ::obj::Obj::load(cwd.join(path))
-        .map_err(|err| ::syn::Error::new(input.obj_path.span(), err))?;
+    let o: ::obj::Obj = ::obj::Obj::load_with_config(
+        cwd.join(path),
+        ::obj::LoadConfig { strict: true },
+    )
+    .map_err(|err| ::syn::Error::new(input.obj_path.span(), err))?;
     Ok(o)
 }
 
