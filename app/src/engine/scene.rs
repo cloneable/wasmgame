@@ -79,7 +79,7 @@ impl Object {
         self.model_stale = true;
     }
 
-    pub fn update(&mut self, t: Time) -> bool {
+    pub fn update(&mut self, _t: Time) -> bool {
         if self.model_stale {
             let s = Mat4::scaling(self.scaling);
             let r = Mat4::rotation(self.rotation);
@@ -171,7 +171,7 @@ impl Camera {
         self
     }
 
-    pub fn update(&mut self, t: Time) -> bool {
+    pub fn update(&mut self, _t: Time) -> bool {
         let mut changed = false;
         if self.view_stale {
             let m = Mat4::rotation(self.rotation);

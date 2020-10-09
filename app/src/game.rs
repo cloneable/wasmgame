@@ -33,6 +33,7 @@ impl Scene {
                 0.1,
                 100.0,
             );
+        camera.update(Time::from_millis(0.0));
         let hexatile = models::Hexatile::new(ctx)?;
         Ok(Scene { hexatile, camera })
     }
@@ -281,8 +282,8 @@ fn target_rect(e: &::web_sys::Event) -> (i32, i32, i32, i32) {
 impl engine::Renderer for Game {
     fn update(&mut self, t: Time) -> Result<(), Error> {
         self.last_render = t;
-        self.scene.hexatile.update(t);
         self.scene.camera.update(t);
+        self.scene.hexatile.update(t);
         self.program.activate();
         self.program.set_view(self.scene.camera.view_matrix());
         self.picker_program.activate();
