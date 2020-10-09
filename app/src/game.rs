@@ -304,8 +304,8 @@ impl engine::Renderer for Game {
         self.program.activate();
         self.ctx.gl.clear_color(0.8, 0.7, 0.6, 1.0);
         self.ctx.gl.clear(
-            ::web_sys::WebGlRenderingContext::COLOR_BUFFER_BIT
-                | ::web_sys::WebGlRenderingContext::DEPTH_BUFFER_BIT,
+            ::web_sys::WebGl2RenderingContext::COLOR_BUFFER_BIT
+                | ::web_sys::WebGl2RenderingContext::DEPTH_BUFFER_BIT,
         );
         self.scene.hexatile.draw();
 
@@ -314,8 +314,8 @@ impl engine::Renderer for Game {
         self.offscreen.activate();
         self.ctx.gl.clear_color(0.0, 0.0, 0.0, 0.0);
         self.ctx.gl.clear(
-            ::web_sys::WebGlRenderingContext::COLOR_BUFFER_BIT
-                | ::web_sys::WebGlRenderingContext::DEPTH_BUFFER_BIT,
+            ::web_sys::WebGl2RenderingContext::COLOR_BUFFER_BIT
+                | ::web_sys::WebGl2RenderingContext::DEPTH_BUFFER_BIT,
         );
         self.scene.hexatile.draw();
 

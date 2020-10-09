@@ -105,7 +105,7 @@ impl OffscreenBuffer {
         framebuffer.renderbuffer_as_depthbuffer(&depthbuffer);
         {
             let status = framebuffer.check_status();
-            if status != ::web_sys::WebGlRenderingContext::FRAMEBUFFER_COMPLETE
+            if status != ::web_sys::WebGl2RenderingContext::FRAMEBUFFER_COMPLETE
             {
                 ::log::error!("framebuffer incomplete: {}", status)
             }
@@ -143,8 +143,8 @@ impl OffscreenBuffer {
             y,
             1,
             1,
-            ::web_sys::WebGlRenderingContext::RGBA,
-            ::web_sys::WebGlRenderingContext::UNSIGNED_BYTE,
+            ::web_sys::WebGl2RenderingContext::RGBA,
+            ::web_sys::WebGl2RenderingContext::UNSIGNED_BYTE,
             &mut buf[..],
         )?;
         Ok(buf)

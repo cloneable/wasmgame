@@ -351,8 +351,8 @@ impl Model {
     }
 
     pub fn draw(&self) {
-        self.ctx.instanced_arrays_ext.draw_arrays_instanced_angle(
-            ::web_sys::WebGlRenderingContext::TRIANGLES,
+        self.ctx.gl.draw_arrays_instanced(
+            ::web_sys::WebGl2RenderingContext::TRIANGLES,
             0,
             self.vertices.len() as i32 / 3,
             self.instances.len() as i32,

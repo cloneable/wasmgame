@@ -44,17 +44,14 @@ features = [
   'TouchList',
   'UiEvent',
   # WebGL
+  'WebGl2RenderingContext',
   'WebGlBuffer',
   'WebGlContextAttributes',
   'WebGlFramebuffer',
   'WebGlProgram',
   'WebGlRenderbuffer',
-  'WebGlRenderingContext',
   'WebGlShader',
   'WebGlTexture',
   'WebGlUniformLocation',
   'WebGlVertexArrayObject',
-  # WebGL extensions
-  'AngleInstancedArrays',
-  'OesVertexArrayObject',
 ]
