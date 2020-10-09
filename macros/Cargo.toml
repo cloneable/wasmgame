@@ -6,3 +6,8 @@ edition = "2018"
 
 [lib]
 proc-macro = true
+
+[dependencies]
+obj-rs = "0.6.2"
+syn = "1.0.42"
+quote = "1.0.7"
