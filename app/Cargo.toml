@@ -8,7 +8,6 @@ edition = "2018"
 crate-type = ["cdylib"]
 
 [dependencies]
-cfg-if = "1.0.0"
 console_error_panic_hook = { version = "0.1.6", optional = true }
 log = { version = "0.4.11", features = ["max_level_trace", "release_max_level_info"] }
 js-sys = "0.3.45"
