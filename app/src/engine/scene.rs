@@ -191,9 +191,11 @@ impl Camera {
     pub fn update(&mut self, _t: Time) -> bool {
         let mut changed = false;
         if self.view_stale {
-            let m = Mat4::rotation(self.rotation);
-            let position =
-                (m * Vec4::from_vec3(self.target - self.position, 1.0)).xyz();
+            // TODO: Fix orbital rotation.
+            // let m = Mat4::rotation(self.rotation);
+            // let position =
+            //     (m * Vec4::from_vec3(self.target - self.position, 1.0)).xyz();
+            let position = self.position;
             self.view = look_at(position, self.target, self.up);
             self.view_stale = false;
             changed = true;
