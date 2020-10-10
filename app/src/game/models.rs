@@ -17,7 +17,7 @@ pub struct WeirdCube {
 impl WeirdCube {
     pub fn new(ctx: &Rc<Context>) -> Result<Self, Error> {
         Ok(WeirdCube {
-            model: Model::new(ctx, assets::OBJECTS[0].data().into(), 1)?,
+            model: Model::new(ctx, assets::OBJECTS[0], 1)?,
         })
     }
 }
@@ -55,7 +55,7 @@ pub struct Hexatile {
 impl Hexatile {
     pub fn new(ctx: &Rc<Context>) -> Result<Self, Error> {
         Ok(Hexatile {
-            model: Model::new(ctx, assets::OBJECTS[1].data().into(), 3)?,
+            model: Model::new(ctx, assets::OBJECTS[1], 3)?,
         })
     }
 }

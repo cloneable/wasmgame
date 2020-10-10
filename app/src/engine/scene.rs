@@ -11,6 +11,24 @@ use crate::engine::Error;
 use crate::util::math::{look_at, project, Mat4, Vec3, Vec4};
 use crate::util::opengl::{ArrayBuffer, Context, VertexArrayObject};
 
+#[derive(Copy, Clone)]
+pub struct ObjectData {
+    pub name: &'static str,
+    pub buf: &'static [f32],
+    pub start: usize,
+    pub end: usize,
+}
+
+impl ObjectData {
+    pub fn name(&self) -> &'static str {
+        self.name
+    }
+
+    pub fn data(&self) -> &'static [f32] {
+        &self.buf[self.start..self.end]
+    }
+}
+
 pub struct Object {
     position: Vec3,
     scaling: Vec3,
@@ -203,7 +221,7 @@ impl Camera {
 pub struct Model {
     ctx: Rc<Context>,
 
-    vertex_data: Vec<f32>,
+    object_data: ObjectData,
 
     instances: Vec<Instance>,
 
@@ -227,7 +245,7 @@ pub struct Model {
 
 impl Model {
     pub fn new(
-        ctx: &Rc<Context>, vertex_data: Vec<f32>, num_instances: usize,
+        ctx: &Rc<Context>, object_data: ObjectData, num_instances: usize,
     ) -> Result<Self, Error> {
         assert!(num_instances > 0);
 
@@ -236,7 +254,7 @@ impl Model {
 
         Ok(Model {
             ctx: ctx.clone(),
-            vertex_data,
+            object_data,
             instances,
             vao: VertexArrayObject::create(ctx)?,
             vbo_vertex: ArrayBuffer::create(ctx)?,
@@ -272,7 +290,7 @@ impl Model {
 
         self.vbo_vertex
             .bind()
-            .set_buffer_data(&self.vertex_data)
+            .set_buffer_data(&self.object_data.data())
             .set_vertex_attribute_pointer_vec3(attrib::POSITION, 6, 0)
             .set_vertex_attribute_pointer_vec3(attrib::NORMAL, 6, 3)
             .unbind();
@@ -338,7 +356,7 @@ impl Model {
         self.ctx.gl.draw_arrays_instanced(
             ::web_sys::WebGl2RenderingContext::TRIANGLES,
             0,
-            self.vertex_data.len() as i32 / (3 + 3),
+            self.object_data.data().len() as i32 / (3 + 3),
             self.instances.len() as i32,
         );
     }

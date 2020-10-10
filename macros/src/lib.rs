@@ -97,8 +97,9 @@ fn generate_output(objs: Vec<::obj::Obj>) -> TokenStream {
             }
             let obj_end = points.len();
             objects_code.push(quote! {
-                Object {
+                ObjectData {
                     name: #name,
+                    buf: &VERTEX_DATA,
                     start: #obj_start,
                     end: #obj_end,
                 }
@@ -110,25 +111,11 @@ fn generate_output(objs: Vec<::obj::Obj>) -> TokenStream {
     let num_objects = objects_code.len();
 
     let t = quote! {
-        pub struct Object {
-            name: &'static str,
-            start: usize,
-            end: usize,
-        }
+        use crate::engine::scene::ObjectData;
 
-        impl Object {
-            pub fn name(&self) -> &'static str {
-                self.name
-            }
+        static VERTEX_DATA: [f32; #num_points] = [ #(#points),* ];
 
-            pub fn data(&self) -> &'static [f32] {
-                &OBJECT_DATA[self.start..self.end]
-            }
-        }
-
-        static OBJECT_DATA: [f32; #num_points] = [ #(#points),* ];
-
-        pub static OBJECTS: [Object; #num_objects] = [
+        pub static OBJECTS: [ObjectData; #num_objects] = [
             #(#objects_code),*
         ];
     };
