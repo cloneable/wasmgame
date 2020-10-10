@@ -1,12 +1,10 @@
 use ::std::convert::Into;
 use ::std::rc::Rc;
 use ::std::result::{Result, Result::Ok};
-use ::std::{vec, vec::Vec};
 
 use super::assets;
 use crate::engine;
 use crate::engine::time::Time;
-use crate::engine::util;
 use crate::util::math::Vec4;
 use crate::util::opengl::Context;
 use engine::scene::Model;
@@ -56,15 +54,8 @@ pub struct Hexatile {
 
 impl Hexatile {
     pub fn new(ctx: &Rc<Context>) -> Result<Self, Error> {
-        let mut vertex_data: Vec<f32> =
-            vec![0.0; HEXATILE_INDICES.len() * (3 + 3)];
-        util::generate_interleaved_buffer(
-            &HEXATILE_INDICES,
-            &HEXATILE_VERTICES,
-            &mut vertex_data,
-        );
         Ok(Hexatile {
-            model: Model::new(ctx, vertex_data, 3)?,
+            model: Model::new(ctx, assets::OBJECTS[1].data().into(), 3)?,
         })
     }
 }
@@ -105,53 +96,3 @@ impl engine::scene::Drawable for Hexatile {
         self.model.unselect();
     }
 }
-
-const HEX_R: f32 = 0.8660254037844386 * 0.5; //((1.0 - 0.5 * 0.5) as f64).sqrt();
-
-//    c-----b
-//   /       \
-//  d    y    a
-//   \       /
-//    e-----f
-static HEXATILE_VERTICES: [f32; 3 * (6 + 6)] = [
-    // bottom
-    0.5, 0.0, 0.0, // 0:a
-    0.25, 0.0, -HEX_R, // 1:b
-    -0.25, 0.0, -HEX_R, // 2:c
-    -0.5, 0.0, 0.0, // 3:d
-    -0.25, 0.0, HEX_R, // 4:e
-    0.25, 0.0, HEX_R, // 5:f
-    // top
-    0.5, 0.2, 0.0, // 6:a
-    0.25, 0.2, -HEX_R, // 7:b
-    -0.25, 0.2, -HEX_R, // 8:c
-    -0.5, 0.2, 0.0, // 9:d
-    -0.25, 0.2, HEX_R, // 10:e
-    0.25, 0.2, HEX_R, // 11:f
-];
-
-static HEXATILE_INDICES: [u8; 3 * (4 + 4 + 12)] = [
-    // top (CCW fan)
-    6, 7, 8, //br
-    6, 8, 9, //br
-    6, 9, 10, //br
-    6, 10, 11, //br
-    // bottom (CW fan)
-    0, 5, 4, //br
-    0, 4, 3, //br
-    0, 3, 2, //br
-    0, 2, 1, //br
-    // sides (strip)
-    0, 1, 7, //br
-    0, 7, 6, //br
-    1, 2, 8, //br
-    1, 8, 7, //br
-    2, 3, 9, //br
-    2, 9, 8, //br
-    3, 4, 10, //br
-    3, 10, 9, //br
-    4, 5, 11, //br
-    4, 11, 10, //br
-    5, 0, 6, //br
-    5, 6, 11, //br
-];

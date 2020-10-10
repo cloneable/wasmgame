@@ -11,37 +11,38 @@ use ::obj::{IndexTuple, ObjData, SimplePolygon};
 use ::proc_macro::TokenStream;
 use ::quote::quote;
 use ::syn::parse::{Parse, ParseStream};
-use ::syn::{parse_macro_input, LitStr, Result};
+use ::syn::punctuated::Punctuated;
+use ::syn::{parse_macro_input, LitStr, Result, Token};
 
 struct Input {
-    obj_path: LitStr,
+    obj_path: Punctuated<LitStr, Token![,]>,
 }
 
 impl Parse for Input {
     fn parse(input: ParseStream) -> Result<Self> {
-        let lookahead = input.lookahead1();
-        if lookahead.peek(LitStr) {
-            Ok(Input {
-                obj_path: input.parse()?,
-            })
-        } else {
-            Err(lookahead.error())
-        }
+        Ok(Input {
+            obj_path: input.parse_terminated(<LitStr as Parse>::parse)?,
+        })
     }
 }
 
-fn process_input(input: Input) -> Result<::obj::Obj> {
-    let path = input.obj_path.value();
-    let cwd = ::std::env::current_dir()
-        .map_err(|err| ::syn::Error::new(input.obj_path.span(), err))?;
-    let mut o: ::obj::Obj = ::obj::Obj::load_with_config(
-        cwd.join(path),
-        ::obj::LoadConfig { strict: true },
-    )
-    .map_err(|err| ::syn::Error::new(input.obj_path.span(), err))?;
-    o.load_mtls()
-        .map_err(|err| ::syn::Error::new(input.obj_path.span(), err))?;
-    Ok(o)
+fn process_input(input: Input) -> Result<Vec<::obj::Obj>> {
+    let cwd = ::std::env::current_dir().map_err(|err| {
+        ::syn::Error::new(input.obj_path.first().unwrap().span(), err)
+    })?;
+    let mut objs = Vec::new();
+    for path in input.obj_path {
+        let p = path.value();
+        let mut o: ::obj::Obj = ::obj::Obj::load_with_config(
+            cwd.join(p),
+            ::obj::LoadConfig { strict: true },
+        )
+        .map_err(|err| ::syn::Error::new(path.span(), err))?;
+        o.load_mtls()
+            .map_err(|err| ::syn::Error::new(path.span(), err))?;
+        objs.push(o);
+    }
+    Ok(objs)
 }
 
 fn append_vertex(data: &ObjData, v: IndexTuple, points: &mut Vec<f32>) {
@@ -81,26 +82,28 @@ fn append_triangles(data: &ObjData, p: &SimplePolygon, points: &mut Vec<f32>) {
     }
 }
 
-fn generate_output(o: ::obj::Obj) -> TokenStream {
-    let data = &o.data;
-    let mut points = Vec::<f32>::with_capacity(2000);
-    let mut objects_code = Vec::with_capacity(data.objects.len());
-    for ob in &data.objects {
-        let name = &ob.name;
-        let obj_start = points.len();
-        for g in &ob.groups {
-            for p in &g.polys {
-                append_triangles(data, p, &mut points);
+fn generate_output(objs: Vec<::obj::Obj>) -> TokenStream {
+    let mut points = Vec::with_capacity(2000);
+    let mut objects_code = Vec::with_capacity(objs.len());
+    for o in objs {
+        let data = &o.data;
+        for ob in &data.objects {
+            let name = &ob.name;
+            let obj_start = points.len();
+            for g in &ob.groups {
+                for p in &g.polys {
+                    append_triangles(data, p, &mut points);
+                }
             }
+            let obj_end = points.len();
+            objects_code.push(quote! {
+                Object {
+                    name: #name,
+                    start: #obj_start,
+                    end: #obj_end,
+                }
+            });
         }
-        let obj_end = points.len();
-        objects_code.push(quote! {
-            Object {
-                name: #name,
-                start: #obj_start,
-                end: #obj_end,
-            }
-        });
     }
     let num_points = points.len();
     assert_eq!(num_points % 6, 0);
@@ -133,9 +136,9 @@ fn generate_output(o: ::obj::Obj) -> TokenStream {
 }
 
 #[proc_macro]
-pub fn load_obj(tokens: TokenStream) -> TokenStream {
+pub fn load_objs(tokens: TokenStream) -> TokenStream {
     match process_input(parse_macro_input!(tokens)) {
         Err(err) => TokenStream::from(err.to_compile_error()),
-        Ok(o) => generate_output(o),
+        Ok(objs) => generate_output(objs),
     }
 }
