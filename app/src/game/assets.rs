@@ -1,4 +1,4 @@
-static WEIRD_CUBE_OBJ: &'static [u8] = include_bytes!("../../assets/cube.obj");
-static WEIRD_CUBE_MTL: &'static [u8] = include_bytes!("../../assets/cube.mtl");
+const _WEIRD_CUBE_OBJ: &[u8] = include_bytes!("../../assets/cube.obj");
+const _WEIRD_CUBE_MTL: &[u8] = include_bytes!("../../assets/cube.mtl");
 
-static X: &'static str = ::wasmgame_macros::load_obj!("app/assets/cube.obj");
+::wasmgame_macros::load_obj!("app/assets/cube.obj");
