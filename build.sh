@@ -25,7 +25,7 @@ case "$1" in
     ;;
 esac
 
-(cd app && cargo build --features="$BUILD_FEATURES" $BUILD_FLAGS --target=wasm32-unknown-unknown)
+(cd app && cargo --offline build --features="$BUILD_FEATURES" $BUILD_FLAGS --target=wasm32-unknown-unknown)
 rm -rf wbg
 mkdir wbg
 wasm-bindgen --target web --out-dir wbg --no-typescript ./target/wasm32-unknown-unknown/"$BUILD_TYPE"/wasmgame.wasm
