@@ -1,9 +1,11 @@
 use ::std::convert::Into;
 use ::std::rc::Rc;
 use ::std::result::{Result, Result::Ok};
+use ::std::{vec, vec::Vec};
 
 use crate::engine;
 use crate::engine::time::Time;
+use crate::engine::util;
 use crate::util::math::Vec4;
 use crate::util::opengl::Context;
 use engine::scene::Model;
@@ -15,8 +17,15 @@ pub struct Hexatile {
 
 impl Hexatile {
     pub fn new(ctx: &Rc<Context>) -> Result<Self, Error> {
+        let mut vertex_data: Vec<f32> =
+            vec![0.0; HEXATILE_INDICES.len() * (3 + 3)];
+        util::generate_interleaved_buffer(
+            &HEXATILE_INDICES,
+            &HEXATILE_VERTICES,
+            &mut vertex_data,
+        );
         Ok(Hexatile {
-            model: Model::new(ctx, &HEXATILE_VERTICES, &HEXATILE_INDICES, 3)?,
+            model: Model::new(ctx, vertex_data, 3)?,
         })
     }
 }

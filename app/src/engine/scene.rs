@@ -2,11 +2,10 @@ use ::std::clone::Clone;
 use ::std::option::{Option::None, Option::Some};
 use ::std::rc::Rc;
 use ::std::result::{Result, Result::Ok};
+use ::std::vec::Vec;
 use ::std::{assert, debug_assert, panic};
-use ::std::{vec, vec::Vec};
 
 use super::attrib;
-use super::util;
 use crate::engine::time::Time;
 use crate::engine::Error;
 use crate::util::math::{look_at, project, Mat4, Vec3, Vec4};
@@ -204,7 +203,7 @@ impl Camera {
 pub struct Model {
     ctx: Rc<Context>,
 
-    vertices: Vec<f32>,
+    vertex_data: Vec<f32>,
 
     instances: Vec<Instance>,
 
@@ -228,23 +227,16 @@ pub struct Model {
 
 impl Model {
     pub fn new(
-        ctx: &Rc<Context>, indexed_vertices: &'static [f32],
-        indices: &'static [u8], num_instances: usize,
+        ctx: &Rc<Context>, vertex_data: Vec<f32>, num_instances: usize,
     ) -> Result<Self, Error> {
         assert!(num_instances > 0);
-        let mut vertices: Vec<f32> = vec![0.0; indices.len() * (3 + 3)];
-        util::generate_interleaved_buffer(
-            indices,
-            indexed_vertices,
-            &mut vertices,
-        );
 
         let mut instances: Vec<Instance> = Vec::with_capacity(num_instances);
         instances.resize_with(num_instances, Instance::new);
 
         Ok(Model {
             ctx: ctx.clone(),
-            vertices,
+            vertex_data,
             instances,
             vao: VertexArrayObject::create(ctx)?,
             vbo_vertex: ArrayBuffer::create(ctx)?,
@@ -280,7 +272,7 @@ impl Model {
 
         self.vbo_vertex
             .bind()
-            .set_buffer_data(&self.vertices)
+            .set_buffer_data(&self.vertex_data)
             .set_vertex_attribute_pointer_vec3(attrib::POSITION, 6, 0)
             .set_vertex_attribute_pointer_vec3(attrib::NORMAL, 6, 3)
             .unbind();
@@ -346,7 +338,7 @@ impl Model {
         self.ctx.gl.draw_arrays_instanced(
             ::web_sys::WebGl2RenderingContext::TRIANGLES,
             0,
-            self.vertices.len() as i32 / (3 + 3),
+            self.vertex_data.len() as i32 / (3 + 3),
             self.instances.len() as i32,
         );
     }
