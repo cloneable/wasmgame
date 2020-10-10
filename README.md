@@ -14,4 +14,6 @@ Some sites I use daily while developing this.
 * [The wasmbind-gen guide](https://rustwasm.github.io/docs/wasm-bindgen/introduction.html)
 * [WebGL API on MDN](https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API)
 * [WebGL 2.0 spec](https://www.khronos.org/registry/webgl/specs/latest/2.0/)
+* [OpenGL ES 3.0 spec](https://www.khronos.org/registry/OpenGL/specs/es/3.0/es_spec_3.0.pdf) (pdf)
+* [GLSL ES 3.0 spec](https://www.khronos.org/registry/OpenGL/specs/es/3.0/GLSL_ES_Specification_3.00.pdf) (pdf)
 * [Learn OpenGL](https://learnopengl.com/)
