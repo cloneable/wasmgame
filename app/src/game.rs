@@ -27,10 +27,10 @@ impl Scene {
     pub fn new(ctx: &Rc<Context>) -> Result<Self, Error> {
         let mut camera = Camera::new();
         camera
-            .set_position(0.5, 1.4, 3.0)
+            .set_position(0.5, 1.0, 3.0)
             .set_target(0.0, 0.0, 0.0)
             .set_frustum(
-                35.0,
+                60.0,
                 ctx.width() as f32 / ctx.height() as f32,
                 0.1,
                 100.0,
