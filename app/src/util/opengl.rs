@@ -195,7 +195,7 @@ impl ArrayBuffer {
     }
 
     pub fn set_vertex_attribute_pointer_vec3(
-        &mut self, attribute: Attribute,
+        &mut self, attribute: Attribute, stride: usize, offset: usize,
     ) -> &mut Self {
         self.ctx.bound_array_buffer.assert_bound(self.id);
         self.ctx.gl.vertex_attrib_pointer_with_i32(
@@ -203,8 +203,8 @@ impl ArrayBuffer {
             3,
             WebGL::FLOAT,
             false,
-            3 * 4,
-            0,
+            stride as i32 * 4,
+            offset as i32 * 4,
         );
         self
     }

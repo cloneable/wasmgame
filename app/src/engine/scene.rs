@@ -205,7 +205,6 @@ pub struct Model {
     ctx: Rc<Context>,
 
     vertices: Vec<f32>,
-    normals: Vec<f32>,
 
     instances: Vec<Instance>,
 
@@ -233,13 +232,11 @@ impl Model {
         indices: &'static [u8], num_instances: usize,
     ) -> Result<Self, Error> {
         assert!(num_instances > 0);
-        let mut vertices: Vec<f32> = vec![0.0; indices.len() * 3];
-        let mut normals: Vec<f32> = vec![0.0; indices.len() * 3];
-        util::generate_buffers(
+        let mut vertices: Vec<f32> = vec![0.0; indices.len() * (3 + 3)];
+        util::generate_interleaved_buffer(
             indices,
             indexed_vertices,
             &mut vertices,
-            &mut normals,
         );
 
         let mut instances: Vec<Instance> = Vec::with_capacity(num_instances);
@@ -248,7 +245,6 @@ impl Model {
         Ok(Model {
             ctx: ctx.clone(),
             vertices,
-            normals,
             instances,
             vao: VertexArrayObject::create(ctx)?,
             vbo_vertex: ArrayBuffer::create(ctx)?,
@@ -285,23 +281,19 @@ impl Model {
         self.vbo_vertex
             .bind()
             .set_buffer_data(&self.vertices)
-            .set_vertex_attribute_pointer_vec3(attrib::POSITION)
-            .unbind();
-        self.vbo_normals
-            .bind()
-            .set_buffer_data(&self.normals)
-            .set_vertex_attribute_pointer_vec3(attrib::NORMAL)
+            .set_vertex_attribute_pointer_vec3(attrib::POSITION, 6, 0)
+            .set_vertex_attribute_pointer_vec3(attrib::NORMAL, 6, 3)
             .unbind();
         self.vbo_instance_color
             .bind()
             .set_buffer_data(&self.instance_color)
-            .set_vertex_attribute_pointer_vec3(attrib::INSTANCE_COLOR)
+            .set_vertex_attribute_pointer_vec3(attrib::INSTANCE_COLOR, 3, 0)
             .set_vertex_attrib_divisor(attrib::INSTANCE_COLOR, 1)
             .unbind();
         self.vbo_instance_id
             .bind()
             .set_buffer_data(&self.instance_id)
-            .set_vertex_attribute_pointer_vec3(attrib::INSTANCE_ID)
+            .set_vertex_attribute_pointer_vec3(attrib::INSTANCE_ID, 3, 0)
             .set_vertex_attrib_divisor(attrib::INSTANCE_ID, 1)
             .unbind();
         self.vbo_instance_models
@@ -354,7 +346,7 @@ impl Model {
         self.ctx.gl.draw_arrays_instanced(
             ::web_sys::WebGl2RenderingContext::TRIANGLES,
             0,
-            self.vertices.len() as i32 / 3,
+            self.vertices.len() as i32 / (3 + 3),
             self.instances.len() as i32,
         );
     }

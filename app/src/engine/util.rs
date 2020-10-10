@@ -7,9 +7,8 @@ use crate::engine::Error;
 use crate::util::math::Vec3;
 use crate::util::opengl::{Context, Framebuffer, Renderbuffer, Texture2D};
 
-pub fn generate_buffers(
-    model_indices: &[u8], model_vertices: &[f32], vertices: &mut [f32],
-    normals: &mut [f32],
+pub fn generate_interleaved_buffer(
+    model_indices: &[u8], model_vertices: &[f32], buf: &mut [f32],
 ) {
     debug_assert_eq!(
         model_indices.len() % 3,
@@ -22,14 +21,9 @@ pub fn generate_buffers(
         "model_vertices of wrong length"
     );
     debug_assert_eq!(
-        vertices.len(),
-        model_indices.len() * 3,
+        buf.len(),
+        model_indices.len() * (3 + 3),
         "bad number of vertices"
-    );
-    debug_assert_eq!(
-        normals.len(),
-        model_indices.len() * 3,
-        "bad number of normals"
     );
     let mut i = 0;
     while i < model_indices.len() {
@@ -52,28 +46,33 @@ pub fn generate_buffers(
             model_vertices[ci + 2],
         );
 
+        let j = i * (3 + 3);
+
         let n = (b - a).cross(c - a).normalize();
 
-        let j = i * 3;
-        vertices[j] = a.x;
-        vertices[j + 1] = a.y;
-        vertices[j + 2] = a.z;
-        vertices[j + 3] = b.x;
-        vertices[j + 4] = b.y;
-        vertices[j + 5] = b.z;
-        vertices[j + 6] = c.x;
-        vertices[j + 7] = c.y;
-        vertices[j + 8] = c.z;
+        buf[j] = a.x;
+        buf[j + 1] = a.y;
+        buf[j + 2] = a.z;
 
-        normals[j] = n.x;
-        normals[j + 1] = n.y;
-        normals[j + 2] = n.z;
-        normals[j + 3] = n.x;
-        normals[j + 4] = n.y;
-        normals[j + 5] = n.z;
-        normals[j + 6] = n.x;
-        normals[j + 7] = n.y;
-        normals[j + 8] = n.z;
+        buf[j + 3] = n.x;
+        buf[j + 4] = n.y;
+        buf[j + 5] = n.z;
+
+        buf[j + 6] = b.x;
+        buf[j + 7] = b.y;
+        buf[j + 8] = b.z;
+
+        buf[j + 9] = n.x;
+        buf[j + 10] = n.y;
+        buf[j + 11] = n.z;
+
+        buf[j + 12] = c.x;
+        buf[j + 13] = c.y;
+        buf[j + 14] = c.z;
+
+        buf[j + 15] = n.x;
+        buf[j + 16] = n.y;
+        buf[j + 17] = n.z;
 
         i += 3;
     }
@@ -173,38 +172,31 @@ pub mod tests {
             0.0, 1.0, 0.0, //br
         ];
         let model_indices: [u8; 3 * 3] = [0, 1, 2, 0, 1, 3, 0, 1, 4];
-        let mut vertices: [f32; 3 * 9] = [0.0; 3 * 9];
-        let mut normals: [f32; 3 * 9] = [0.0; 3 * 9];
-        generate_buffers(
-            &model_indices,
-            &model_vertices,
-            &mut vertices,
-            &mut normals,
-        );
+        let mut buf: [f32; (3 + 3) * 9] = [0.0; (3 + 3) * 9];
+        generate_interleaved_buffer(&model_indices, &model_vertices, &mut buf);
 
-        let expect_vertices: [f32; 3 * 9] = [
+        let expect_buf: [f32; (3 + 3) * 9] = [
             0.0, 0.0, 0.0, //br
+            0.0, 1.0, 0.0, //br
             1.0, 0.0, 0.0, //br
+            0.0, 1.0, 0.0, //br
             1.0, 0.0, -1.0, //br
+            0.0, 1.0, 0.0, //br
+            //br
             0.0, 0.0, 0.0, //br
+            0.0, -1.0, 0.0, //br
             1.0, 0.0, 0.0, //br
+            0.0, -1.0, 0.0, //br
             1.0, 0.0, 1.0, //br
+            0.0, -1.0, 0.0, //br
+            //br
             0.0, 0.0, 0.0, //br
+            0.0, 0.0, 1.0, //br
             1.0, 0.0, 0.0, //br
-            0.0, 1.0, 0.0, //br
-        ];
-        let expect_normals: [f32; 3 * 9] = [
-            0.0, 1.0, 0.0, //br
-            0.0, 1.0, 0.0, //br
-            0.0, 1.0, 0.0, //br
-            0.0, -1.0, 0.0, //br
-            0.0, -1.0, 0.0, //br
-            0.0, -1.0, 0.0, //br
             0.0, 0.0, 1.0, //br
-            0.0, 0.0, 1.0, //br
+            0.0, 1.0, 0.0, //br
             0.0, 0.0, 1.0, //br
         ];
-        assert_eq!(vertices, expect_vertices);
-        assert_eq!(normals, expect_normals);
+        assert_eq!(buf, expect_buf);
     }
 }
