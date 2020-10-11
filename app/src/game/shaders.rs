@@ -8,19 +8,19 @@ use crate::util::opengl::{
     Context, Program, Shader, ShaderType::Fragment, ShaderType::Vertex, Uniform,
 };
 
-pub struct HexatileProgram {
+pub struct MaterialShader {
     program: Program,
 
     view: Uniform,
     projection: Uniform,
 }
 
-impl HexatileProgram {
+impl MaterialShader {
     pub fn new(ctx: &Rc<Context>) -> Result<Self, Error> {
         let mut vertex_shader = Shader::create(ctx, Vertex)?;
-        vertex_shader.compile_source(HEXATILE_VERTEX_SHADER)?;
+        vertex_shader.compile_source(MATERIAL_VERTEX_SHADER)?;
         let mut fragment_shader = Shader::create(ctx, Fragment)?;
-        fragment_shader.compile_source(HEXATILE_FRAGMENT_SHADER)?;
+        fragment_shader.compile_source(MATERIAL_FRAGMENT_SHADER)?;
 
         let mut program = Program::create(ctx)?;
         program.attach_shader(&vertex_shader);
@@ -37,7 +37,7 @@ impl HexatileProgram {
         let view = Uniform::find(ctx, &program, "view")?;
         let projection = Uniform::find(ctx, &program, "projection")?;
 
-        Ok(HexatileProgram {
+        Ok(MaterialShader {
             program,
             view,
             projection,
@@ -57,7 +57,7 @@ impl HexatileProgram {
     }
 }
 
-const HEXATILE_VERTEX_SHADER: &str = r#"#version 300 es
+const MATERIAL_VERTEX_SHADER: &str = r#"#version 300 es
 
 // per vertex
 layout(location=0) in vec3 position;
@@ -84,7 +84,7 @@ void main() {
 }
 "#;
 
-const HEXATILE_FRAGMENT_SHADER: &str = r#"#version 300 es
+const MATERIAL_FRAGMENT_SHADER: &str = r#"#version 300 es
 
 in highp vec3 f_fragpos;
 in highp vec3 f_normal;
@@ -147,7 +147,7 @@ void main() {
     highp float distance = length(light.position - f_fragpos);
     highp float attenuation = 1.0 / (
         light.constant +
-        light.linear * distance + 
+        light.linear * distance +
         light.quadratic * (distance * distance)
     );
 

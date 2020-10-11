@@ -53,8 +53,8 @@ pub struct Game {
     scene: Scene,
     offscreen: engine::util::OffscreenBuffer,
 
-    picker_program: engine::picker::PickerProgram,
-    program: shaders::HexatileProgram,
+    picker_shader: engine::picker::PickerShader,
+    material_shader: shaders::MaterialShader,
 
     mouse_down: Option<(i32, i32)>,
     touch_id: Option<i32>,
@@ -65,15 +65,15 @@ impl Game {
     pub fn new(ctx: &Rc<Context>) -> Result<Self, Error> {
         let scene = Scene::new(ctx)?;
 
-        let mut picker_program = engine::picker::PickerProgram::new(ctx)?;
-        picker_program.activate();
-        picker_program.set_view(scene.camera.view_matrix());
-        picker_program.set_projection(scene.camera.projection_matrix());
+        let mut picker_shader = engine::picker::PickerShader::new(ctx)?;
+        picker_shader.activate();
+        picker_shader.set_view(scene.camera.view_matrix());
+        picker_shader.set_projection(scene.camera.projection_matrix());
 
-        let mut program = shaders::HexatileProgram::new(ctx)?;
-        program.activate();
-        program.set_view(scene.camera.view_matrix());
-        program.set_projection(scene.camera.projection_matrix());
+        let mut material_shader = shaders::MaterialShader::new(ctx)?;
+        material_shader.activate();
+        material_shader.set_view(scene.camera.view_matrix());
+        material_shader.set_projection(scene.camera.projection_matrix());
 
         let camera_position = scene.camera.position();
 
@@ -86,8 +86,8 @@ impl Game {
                 ctx.width(),
                 ctx.height(),
             )?,
-            picker_program,
-            program,
+            picker_shader,
+            material_shader,
             mouse_down: None,
             touch_id: None,
             camera_position,
@@ -293,11 +293,11 @@ impl engine::Renderer for Game {
         self.scene.camera.update(t);
         self.scene.hexatile.update(t);
         self.scene.cube.update(t);
-        self.program.activate();
-        self.program.set_view(self.scene.camera.view_matrix());
-        self.picker_program.activate();
-        self.picker_program
+        self.material_shader.activate();
+        self.material_shader
             .set_view(self.scene.camera.view_matrix());
+        self.picker_shader.activate();
+        self.picker_shader.set_view(self.scene.camera.view_matrix());
         Ok(())
     }
 
@@ -307,7 +307,7 @@ impl engine::Renderer for Game {
         }
 
         self.offscreen.deactivate();
-        self.program.activate();
+        self.material_shader.activate();
         self.ctx.gl.clear_color(0.8, 0.7, 0.6, 1.0);
         self.ctx.gl.clear(
             ::web_sys::WebGl2RenderingContext::COLOR_BUFFER_BIT
@@ -321,7 +321,7 @@ impl engine::Renderer for Game {
         self.scene.hexatile.draw();
 
         // for read_pixels.
-        self.picker_program.activate();
+        self.picker_shader.activate();
         self.offscreen.activate();
         self.ctx.gl.clear_color(0.0, 0.0, 0.0, 0.0);
         self.ctx.gl.clear(

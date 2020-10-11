@@ -8,14 +8,14 @@ use crate::util::opengl::{
     Context, Program, Shader, ShaderType::Fragment, ShaderType::Vertex, Uniform,
 };
 
-pub struct PickerProgram {
+pub struct PickerShader {
     program: Program,
 
     view: Uniform,
     projection: Uniform,
 }
 
-impl PickerProgram {
+impl PickerShader {
     pub fn new(ctx: &Rc<Context>) -> Result<Self, Error> {
         let mut vertex_shader = Shader::create(ctx, Vertex)?;
         vertex_shader.compile_source(PICKER_VERTEX_SHADER)?;
@@ -35,7 +35,7 @@ impl PickerProgram {
         let view = Uniform::find(ctx, &program, "view")?;
         let projection = Uniform::find(ctx, &program, "projection")?;
 
-        Ok(PickerProgram {
+        Ok(PickerShader {
             program,
             view,
             projection,
