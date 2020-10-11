@@ -70,33 +70,87 @@ layout(location=8) in mat4 normals;
 uniform mat4 view;
 uniform mat4 projection;
 
-// TODO: combine these two.
-out highp vec3 basecolor;
-out highp vec3 lighting;
+out highp vec3 f_fragpos;
+out highp vec3 f_normal;
+out highp vec3 f_basecolor;
+out highp vec3 f_lighting;
 
 void main() {
-    gl_Position = projection * view * model * vec4(position, 1.0);
-    basecolor = color;
-
-    // TODO: define uniforms for these.
-    highp vec3 ambientLightColor = vec3(0.1, 0.1, 0.1);
-    highp vec3 directionalLightColor = vec3(1.0, 1.0, 1.0);
-    highp vec3 directionalLight = normalize(vec3(3.0, 3.0, 5.0));
-
-    highp vec4 transformedNormal = normalize(normals * vec4(normal, 1.0));
-    highp float intensity = max(dot(transformedNormal.xyz, directionalLight), 0.0);
-    lighting = ambientLightColor + (directionalLightColor * intensity);
+    vec4 pos = model * vec4(position, 1.0);
+    gl_Position = projection * view * pos;
+    f_fragpos = vec3(pos);
+    f_normal = vec3(normals * vec4(normal, 1.0));
+    f_basecolor = color;
 }
 "#;
 
 const HEXATILE_FRAGMENT_SHADER: &str = r#"#version 300 es
 
-in highp vec3 basecolor;
-in highp vec3 lighting;
+in highp vec3 f_fragpos;
+in highp vec3 f_normal;
+in highp vec3 f_basecolor;
 
 layout(location=0) out highp vec4 fragcolor;
 
+struct Light {
+    highp vec3 position;
+
+    highp float ambient;
+    highp float diffuse;
+    highp float specular;
+
+    highp float constant;
+    highp float linear;
+    highp float quadratic;
+};
+
+struct Material {
+    highp vec3 ambient;
+    highp vec3 diffuse;
+    highp vec3 specular;
+    highp float shininess;
+};
+
 void main() {
-    fragcolor = vec4(basecolor * lighting, 1.0);
+    highp vec3 cameraPos = vec3(0.5, 1.0, 3.0);
+
+    // TODO: Define uniform for light source(s).
+    Light light = Light(
+        vec3(1.5, 3.0, 2.0),
+        0.2,
+        0.5,
+        1.0,
+        1.0,
+        0.03,
+        0.002
+    );
+
+    // TODO: Define uniform for material(s).
+    Material material = Material(
+        f_basecolor,
+        f_basecolor,
+        vec3(0.5, 0.5, 0.5),
+        32.0
+    );
+
+    highp vec3 ambient = vec3(light.ambient) * material.ambient;
+
+    highp vec3 lightDir = normalize(light.position - f_fragpos);
+    highp float diff = max(dot(f_normal, lightDir), 0.0);
+    highp vec3 diffuse = vec3(light.diffuse) * (diff * material.diffuse);
+
+    highp vec3 viewDir = normalize(cameraPos - f_fragpos);
+    highp vec3 reflectDir = reflect(-lightDir, f_normal);
+    highp float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
+    highp vec3 specular = vec3(light.specular) * (spec * material.specular);
+
+    highp float distance = length(light.position - f_fragpos);
+    highp float attenuation = 1.0 / (
+        light.constant +
+        light.linear * distance + 
+        light.quadratic * (distance * distance)
+    );
+
+    fragcolor = vec4((ambient + diffuse + specular) * attenuation, 1.0);
 }
 "#;
