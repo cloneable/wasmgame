@@ -21,6 +21,7 @@ pub struct Context {
     next_object_id: Cell<u32>,
     bound_vertex_array_buffer: BindingTracker,
     bound_array_buffer: BindingTracker,
+    bound_uniform_buffer: BindingTracker,
     bound_framebuffer: BindingTracker,
     bound_renderbuffer: BindingTracker,
     bound_texture: BindingTracker,
@@ -49,6 +50,7 @@ impl Context {
             next_object_id: Cell::new(1),
             bound_vertex_array_buffer: BindingTracker::new(),
             bound_array_buffer: BindingTracker::new(),
+            bound_uniform_buffer: BindingTracker::new(),
             bound_framebuffer: BindingTracker::new(),
             bound_renderbuffer: BindingTracker::new(),
             bound_texture: BindingTracker::new(),
@@ -274,6 +276,78 @@ impl Uniform {
             false,
             data,
         );
+    }
+}
+
+pub struct UniformBuffer {
+    ctx: Rc<Context>,
+    id: u32,
+    buffer: ::web_sys::WebGlBuffer,
+}
+
+impl UniformBuffer {
+    pub fn create(ctx: &Rc<Context>) -> Result<Self, JsValue> {
+        let buffer = ctx.gl.create_buffer().ok_or_else(|| {
+            JsValue::from_str("UniformBuffer: create_buffer error")
+        })?;
+        let id = ctx.next_object_id();
+        Ok(UniformBuffer {
+            ctx: ctx.clone(),
+            id,
+            buffer,
+        })
+    }
+
+    pub fn bind(&mut self) -> &mut Self {
+        self.ctx
+            .bound_uniform_buffer
+            .assert_unbound_then_bind(self.id);
+        self.ctx
+            .gl
+            .bind_buffer(WebGL::UNIFORM_BUFFER, Some(&self.buffer));
+        self
+    }
+
+    pub fn unbind(&mut self) {
+        self.ctx
+            .bound_uniform_buffer
+            .assert_bound_then_unbind(self.id);
+        self.ctx.gl.bind_buffer(WebGL::UNIFORM_BUFFER, None);
+    }
+
+    pub fn bind_buffer_base(&mut self, target: usize) -> &mut Self {
+        self.ctx.gl.bind_buffer_base(
+            WebGL::UNIFORM_BUFFER,
+            target as u32,
+            Some(&self.buffer),
+        );
+        self
+    }
+
+    pub fn allocate_dynamic(&mut self, size: usize) -> &mut Self {
+        self.ctx.bound_uniform_buffer.assert_bound(self.id);
+        self.ctx.gl.buffer_data_with_i32(
+            WebGL::UNIFORM_BUFFER,
+            size as i32,
+            WebGL::DYNAMIC_DRAW,
+        );
+        self
+    }
+
+    pub fn set_buffer_sub_data(
+        &mut self, offset: i32, data: &[f32],
+    ) -> &mut Self {
+        self.ctx.bound_uniform_buffer.assert_bound(self.id);
+        #[allow(unsafe_code)]
+        unsafe {
+            let view = ::js_sys::Float32Array::view(data);
+            self.ctx.gl.buffer_sub_data_with_i32_and_array_buffer_view(
+                WebGL::UNIFORM_BUFFER,
+                offset,
+                &view,
+            );
+        }
+        self
     }
 }
 
