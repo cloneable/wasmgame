@@ -1,4 +1,3 @@
-
 #[derive(Copy, Clone, Default, PartialOrd, PartialEq, Debug)]
 pub struct Time(f64);
 
@@ -55,7 +54,7 @@ impl Framerate {
     pub fn rate(&self) -> Rate {
         let len = self.buf.len();
         let first = self.buf[self.index];
-        let last = self.buf[(self.index - 1 + len) % len];
+        let last = self.buf[(self.index + (len - 1)) % len];
         len / (last - first)
     }
 }
