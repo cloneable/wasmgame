@@ -21,7 +21,6 @@ use ::web_sys;
 
 use crate::util::event;
 use crate::util::opengl::Context;
-use engine::Drawable;
 use game::Game;
 
 #[cfg(feature = "wee_alloc")]
@@ -71,7 +70,6 @@ impl Console {
         let _game = Rc::new(RefCell::new(
             Game::new(&ctx).map_err(Into::<JsValue>::into)?,
         ));
-        _game.borrow_mut().init().map_err(Into::<JsValue>::into)?;
         let engine_loop = engine::core::Loop::new(&window, _game.clone());
 
         let game0 = _game.clone();
