@@ -19,7 +19,6 @@ use engine::Error;
 
 struct Scene {
     hexatile: models::Hexatile,
-    cube: models::WeirdCube,
     camera: Camera,
 }
 
@@ -37,12 +36,7 @@ impl Scene {
             );
         camera.update(Time::from_millis(0.0));
         let hexatile = models::Hexatile::new(ctx)?;
-        let cube = models::WeirdCube::new(ctx)?;
-        Ok(Scene {
-            hexatile,
-            cube,
-            camera,
-        })
+        Ok(Scene { hexatile, camera })
     }
 }
 
@@ -96,7 +90,6 @@ impl Game {
 
     pub fn init(&mut self) -> Result<(), Error> {
         self.scene.hexatile.init();
-        self.scene.cube.init();
         self.offscreen.activate();
         Ok(())
     }
@@ -292,7 +285,6 @@ impl engine::Renderer for Game {
         self.last_render = t;
         self.scene.camera.update(t);
         self.scene.hexatile.update(t);
-        self.scene.cube.update(t);
         self.material_shader.activate();
         self.material_shader
             .set_view(self.scene.camera.view_matrix());
@@ -314,21 +306,20 @@ impl engine::Renderer for Game {
                 | ::web_sys::WebGl2RenderingContext::DEPTH_BUFFER_BIT,
         );
 
-        self.scene.cube.stage();
-        self.scene.cube.draw();
-
         self.scene.hexatile.stage();
+        self.material_shader.activate();
         self.scene.hexatile.draw();
 
         // for read_pixels.
-        self.picker_shader.activate();
         self.offscreen.activate();
         self.ctx.gl.clear_color(0.0, 0.0, 0.0, 0.0);
         self.ctx.gl.clear(
             ::web_sys::WebGl2RenderingContext::COLOR_BUFFER_BIT
                 | ::web_sys::WebGl2RenderingContext::DEPTH_BUFFER_BIT,
         );
+
         self.scene.hexatile.draw();
+        self.picker_shader.activate();
 
         self.scene.hexatile.unstage();
 
