@@ -71,7 +71,7 @@ impl Console {
             Game::new(&ctx).map_err(Into::<JsValue>::into)?,
         ));
         _game.borrow_mut().init().map_err(Into::<JsValue>::into)?;
-        let engine_loop = engine::core::Loop::new(_game.clone());
+        let engine_loop = engine::core::Loop::new(&window, _game.clone());
 
         let game0 = _game.clone();
         let _on_resize =

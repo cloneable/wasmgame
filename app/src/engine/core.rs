@@ -14,36 +14,37 @@ use super::time::{Framerate, Time};
 use super::Error;
 
 pub trait LoopHandler {
+    fn init(&mut self) -> Result<(), Error> {
+        Ok(())
+    }
     fn update(&mut self, t: Time) -> Result<(), Error>;
     fn draw(&mut self, t: Time) -> Result<bool, Error>;
-    fn done(&self) -> bool;
+    fn done(&self) -> bool {
+        false
+    }
 }
 
 type RequestAnimationFrameCallback = Closure<dyn FnMut(f64) + 'static>;
 
-fn request_animation_frame_helper(
-    callback: Option<&RequestAnimationFrameCallback>,
-) {
-    ::web_sys::window()
-        .unwrap()
-        .request_animation_frame(callback.unwrap().as_ref().unchecked_ref())
-        .unwrap();
-}
-
 pub struct Loop {
+    window: ::web_sys::Window,
     handler: Rc<RefCell<dyn LoopHandler>>,
     framerate: RefCell<Framerate>,
 }
 
 impl Loop {
-    pub fn new(handler: Rc<RefCell<dyn LoopHandler>>) -> Rc<Self> {
+    pub fn new(
+        window: &::web_sys::Window, handler: Rc<RefCell<dyn LoopHandler>>,
+    ) -> Rc<Self> {
         Rc::new(Loop {
+            window: window.clone(),
             handler,
             framerate: RefCell::new(Framerate::new()),
         })
     }
 
     pub fn start(self: &Rc<Self>) -> Result<(), Error> {
+        self.handler.borrow_mut().init()?;
         // Part of this is taken from the wasm-bindgen guide.
         // This kinda works for now, but needs to be checked for
         // leaks.
@@ -98,6 +99,14 @@ impl Loop {
         callback: Rc<RefCell<Option<RequestAnimationFrameCallback>>>, t: Time,
     ) {
         self.handler.borrow_mut().update(t).unwrap();
-        request_animation_frame_helper(callback.borrow().as_ref());
+        self.request_animation_frame_helper(callback.borrow().as_ref());
+    }
+
+    fn request_animation_frame_helper(
+        self: Rc<Self>, callback: Option<&RequestAnimationFrameCallback>,
+    ) {
+        self.window
+            .request_animation_frame(callback.unwrap().as_ref().unchecked_ref())
+            .unwrap();
     }
 }
