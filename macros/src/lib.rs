@@ -12,35 +12,59 @@ use ::proc_macro::TokenStream;
 use ::quote::quote;
 use ::syn::parse::{Parse, ParseStream};
 use ::syn::punctuated::Punctuated;
-use ::syn::{parse_macro_input, LitStr, Result, Token};
+use ::syn::{parse_macro_input, Ident, LitStr, Result, Token};
+
+struct IdentPathMapping {
+    ident: Ident,
+    _eq: Token![=],
+    path: LitStr,
+}
+
+impl Parse for IdentPathMapping {
+    fn parse(input: ParseStream) -> Result<Self> {
+        Ok(IdentPathMapping {
+            ident: input.parse()?,
+            _eq: input.parse()?,
+            path: input.parse()?,
+        })
+    }
+}
 
 struct Input {
-    obj_path: Punctuated<LitStr, Token![,]>,
+    mappings: Punctuated<IdentPathMapping, Token![,]>,
 }
 
 impl Parse for Input {
     fn parse(input: ParseStream) -> Result<Self> {
         Ok(Input {
-            obj_path: input.parse_terminated(<LitStr as Parse>::parse)?,
+            mappings: input.parse_terminated(IdentPathMapping::parse)?,
         })
     }
 }
 
-fn process_input(input: Input) -> Result<Vec<::obj::Obj>> {
+struct IdentObjMapping {
+    ident: Ident,
+    obj: ::obj::Obj,
+}
+
+fn process_input(input: Input) -> Result<Vec<IdentObjMapping>> {
     let cwd = ::std::env::current_dir().map_err(|err| {
-        ::syn::Error::new(input.obj_path.first().unwrap().span(), err)
+        ::syn::Error::new(input.mappings.first().unwrap().ident.span(), err)
     })?;
-    let mut objs = Vec::new();
-    for path in input.obj_path {
-        let p = path.value();
+    let mut objs = Vec::<IdentObjMapping>::new();
+    for mapping in input.mappings {
+        let p = mapping.path.value();
         let mut o: ::obj::Obj = ::obj::Obj::load_with_config(
             cwd.join(p),
             ::obj::LoadConfig { strict: true },
         )
-        .map_err(|err| ::syn::Error::new(path.span(), err))?;
+        .map_err(|err| ::syn::Error::new(mapping.path.span(), err))?;
         o.load_mtls()
-            .map_err(|err| ::syn::Error::new(path.span(), err))?;
-        objs.push(o);
+            .map_err(|err| ::syn::Error::new(mapping.path.span(), err))?;
+        objs.push(IdentObjMapping {
+            ident: mapping.ident,
+            obj: o,
+        });
     }
     Ok(objs)
 }
@@ -82,11 +106,12 @@ fn append_triangles(data: &ObjData, p: &SimplePolygon, points: &mut Vec<f32>) {
     }
 }
 
-fn generate_output(objs: Vec<::obj::Obj>) -> TokenStream {
+fn generate_output(mappings: Vec<IdentObjMapping>) -> TokenStream {
     let mut points = Vec::with_capacity(2000);
-    let mut objects_code = Vec::with_capacity(objs.len());
-    for o in objs {
-        let data = &o.data;
+    let mut objects_code = Vec::with_capacity(mappings.len());
+    for mapping in mappings {
+        let ident = mapping.ident;
+        let data = &mapping.obj.data;
         for ob in &data.objects {
             let name = &ob.name;
             let obj_start = points.len();
@@ -97,27 +122,24 @@ fn generate_output(objs: Vec<::obj::Obj>) -> TokenStream {
             }
             let obj_end = points.len();
             objects_code.push(quote! {
-                ObjectData {
+                pub static #ident: ObjectData = ObjectData {
                     name: #name,
                     buf: &VERTEX_DATA,
                     start: #obj_start,
                     end: #obj_end,
-                }
+                };
             });
         }
     }
     let num_points = points.len();
     assert_eq!(num_points % 6, 0);
-    let num_objects = objects_code.len();
 
     let t = quote! {
         use crate::engine::scene::ObjectData;
 
         static VERTEX_DATA: [f32; #num_points] = [ #(#points),* ];
 
-        pub static OBJECTS: [ObjectData; #num_objects] = [
-            #(#objects_code),*
-        ];
+        #(#objects_code),*
     };
     TokenStream::from(t)
 }

@@ -17,7 +17,7 @@ pub struct Hexatile {
 impl Hexatile {
     pub fn new(ctx: &Rc<Context>) -> Result<Self, Error> {
         Ok(Hexatile {
-            model: Model::new(ctx, assets::OBJECTS[0], 3)?,
+            model: Model::new(ctx, assets::HEXATILE, 3)?,
         })
     }
 }
