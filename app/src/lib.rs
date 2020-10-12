@@ -21,6 +21,7 @@ use ::web_sys;
 
 use crate::util::event;
 use crate::util::opengl::Context;
+use engine::Drawable;
 use game::Game;
 
 #[cfg(feature = "wee_alloc")]

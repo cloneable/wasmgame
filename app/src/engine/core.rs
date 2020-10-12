@@ -13,12 +13,8 @@ use ::wasm_bindgen::JsCast;
 use super::time::{Framerate, Time};
 use super::Error;
 
-pub trait LoopHandler {
-    fn init(&mut self) -> Result<(), Error> {
-        Ok(())
-    }
-    fn update(&mut self, t: Time) -> Result<(), Error>;
-    fn draw(&mut self, t: Time) -> Result<bool, Error>;
+// TODO: Use event or sth else to terminate loop and drop LookHandler.
+pub trait LoopHandler: super::Drawable {
     fn done(&self) -> bool {
         false
     }
@@ -68,11 +64,8 @@ impl Loop {
                 }
 
                 let t = Time::from_millis(millis);
-                match self0.handler.borrow_mut().draw(t) {
-                    Ok(true) => {
-                        self0.framerate.borrow_mut().record_timestamp(t)
-                    }
-                    Ok(false) => (),
+                match self0.handler.borrow_mut().draw() {
+                    Ok(_) => self0.framerate.borrow_mut().record_timestamp(t),
                     Err(error) => ::log::error!("{:?}", error),
                 }
 

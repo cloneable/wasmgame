@@ -12,6 +12,19 @@ use ::std::string::ToString;
 
 use ::wasm_bindgen::JsValue;
 
+use time::Time;
+
+pub trait Bindable {
+    fn bind(&mut self);
+    fn unbind(&mut self);
+}
+
+pub trait Drawable {
+    fn init(&mut self) -> Result<(), Error>;
+    fn update(&mut self, t: Time) -> Result<(), Error>;
+    fn draw(&mut self) -> Result<(), Error>;
+}
+
 pub mod attrib {
     use crate::util::opengl::Attribute;
 

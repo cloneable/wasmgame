@@ -22,8 +22,8 @@ impl Hexatile {
     }
 }
 
-impl engine::scene::Drawable for Hexatile {
-    fn init(&mut self) {
+impl engine::Drawable for Hexatile {
+    fn init(&mut self) -> Result<(), Error> {
         self.model[0].object.translate([0.0, 0.55, 0.0].into());
         self.model[0].color(Vec4::with_rgb(0x19, 0x19, 0x70)); // midnightblue
 
@@ -32,10 +32,10 @@ impl engine::scene::Drawable for Hexatile {
         self.model[2].object.translate([0.0, -0.55, 0.0].into());
         self.model[2].color(Vec4::with_rgb(0xff, 0xb6, 0xc1)); // lightpink
 
-        self.model.init();
+        self.model.init()
     }
 
-    fn update(&mut self, t: Time) {
+    fn update(&mut self, t: Time) -> Result<(), Error> {
         let period = Duration::from_millis(3000.0);
         let offset = Duration::from_millis(500.0);
 
@@ -49,18 +49,20 @@ impl engine::scene::Drawable for Hexatile {
         self.model[0].object.rotate([0.0, deg1, 0.0].into());
         self.model[1].object.rotate([0.0, deg2, 0.0].into());
         self.model[2].object.rotate([0.0, deg3, 0.0].into());
-        self.model.update(t);
+        self.model.update(t)
     }
 
-    fn stage(&mut self) {
-        self.model.select();
+    fn draw(&mut self) -> Result<(), Error> {
+        self.model.draw()
+    }
+}
+
+impl engine::Bindable for Hexatile {
+    fn bind(&mut self) {
+        self.model.bind();
     }
 
-    fn draw(&self) {
-        self.model.draw();
-    }
-
-    fn unstage(&mut self) {
-        self.model.unselect();
+    fn unbind(&mut self) {
+        self.model.unbind();
     }
 }

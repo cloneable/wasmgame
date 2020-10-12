@@ -13,8 +13,9 @@ use crate::engine;
 use crate::util::event;
 use crate::util::math::Vec3;
 use crate::util::opengl::Context;
-use engine::scene::{Camera, Drawable};
-use engine::time::{Duration, Time};
+use engine::scene::Camera;
+use engine::time::Time;
+use engine::Bindable;
 use engine::Error;
 
 struct Scene {
@@ -86,12 +87,6 @@ impl Game {
             touch_id: None,
             camera_position,
         })
-    }
-
-    pub fn init(&mut self) -> Result<(), Error> {
-        self.scene.hexatile.init();
-        self.offscreen.activate();
-        Ok(())
     }
 
     pub fn on_click(&mut self, e: &::web_sys::MouseEvent) {
@@ -280,11 +275,17 @@ fn target_rect(e: &::web_sys::Event) -> (i32, i32, i32, i32) {
     )
 }
 
-impl engine::core::LoopHandler for Game {
+impl engine::Drawable for Game {
+    fn init(&mut self) -> Result<(), Error> {
+        self.scene.hexatile.init()?;
+        self.offscreen.activate();
+        Ok(())
+    }
+
     fn update(&mut self, t: Time) -> Result<(), Error> {
         self.last_render = t;
         self.scene.camera.update(t);
-        self.scene.hexatile.update(t);
+        self.scene.hexatile.update(t)?;
         self.material_shader.activate();
         self.material_shader
             .set_view(self.scene.camera.view_matrix());
@@ -293,11 +294,7 @@ impl engine::core::LoopHandler for Game {
         Ok(())
     }
 
-    fn draw(&mut self, t: Time) -> Result<bool, Error> {
-        if t - self.last_render > Duration::from_millis(100.0) {
-            return Ok(false);
-        }
-
+    fn draw(&mut self) -> Result<(), Error> {
         self.offscreen.deactivate();
         self.material_shader.activate();
         self.ctx.gl.clear_color(0.8, 0.7, 0.6, 1.0);
@@ -306,9 +303,9 @@ impl engine::core::LoopHandler for Game {
                 | ::web_sys::WebGl2RenderingContext::DEPTH_BUFFER_BIT,
         );
 
-        self.scene.hexatile.stage();
+        self.scene.hexatile.bind();
         self.material_shader.activate();
-        self.scene.hexatile.draw();
+        self.scene.hexatile.draw()?;
 
         // for read_pixels.
         self.offscreen.activate();
@@ -318,14 +315,16 @@ impl engine::core::LoopHandler for Game {
                 | ::web_sys::WebGl2RenderingContext::DEPTH_BUFFER_BIT,
         );
 
-        self.scene.hexatile.draw();
+        self.scene.hexatile.draw()?;
         self.picker_shader.activate();
 
-        self.scene.hexatile.unstage();
+        self.scene.hexatile.unbind();
 
-        Ok(true)
+        Ok(())
     }
+}
 
+impl engine::core::LoopHandler for Game {
     fn done(&self) -> bool {
         self.last_render >= Time::from_millis(60000.0)
     }

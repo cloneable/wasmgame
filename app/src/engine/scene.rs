@@ -109,14 +109,6 @@ impl Object {
     }
 }
 
-pub trait Drawable {
-    fn init(&mut self);
-    fn update(&mut self, t: Time);
-    fn stage(&mut self);
-    fn draw(&self);
-    fn unstage(&mut self);
-}
-
 pub struct Camera {
     position: Vec3,
     target: Vec3,
@@ -271,8 +263,10 @@ impl Model {
             instance_normals_data: Vec::<f32>::new(),
         })
     }
+}
 
-    pub fn init(&mut self) {
+impl crate::engine::Drawable for Model {
+    fn init(&mut self) -> Result<(), Error> {
         let mut i: i32 = 1;
         for instance in self.instances.iter_mut() {
             self.instance_color.push(instance.color.x);
@@ -329,9 +323,10 @@ impl Model {
         attrib::NORMALS.enable(&self.ctx);
 
         self.vao.unbind();
+        Ok(())
     }
 
-    pub fn update(&mut self, t: Time) {
+    fn update(&mut self, t: Time) -> Result<(), Error> {
         self.instance_model_data.clear();
         self.instance_normals_data.clear();
         for instance in self.instances.iter_mut() {
@@ -348,22 +343,26 @@ impl Model {
         self.vbo_instance_normals
             .set_buffer_sub_data(0, &self.instance_normals_data);
         self.vbo_instance_normals.unbind();
+        Ok(())
     }
 
-    pub fn select(&mut self) {
-        self.vao.bind();
-    }
-
-    pub fn draw(&self) {
+    fn draw(&mut self) -> Result<(), Error> {
         self.ctx.gl.draw_arrays_instanced(
             ::web_sys::WebGl2RenderingContext::TRIANGLES,
             0,
             self.object_data.data().len() as i32 / (3 + 3),
             self.instances.len() as i32,
         );
+        Ok(())
+    }
+}
+
+impl crate::engine::Bindable for Model {
+    fn bind(&mut self) {
+        self.vao.bind();
     }
 
-    pub fn unselect(&mut self) {
+    fn unbind(&mut self) {
         self.vao.unbind();
     }
 }
