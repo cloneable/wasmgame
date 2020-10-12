@@ -1,6 +1,5 @@
 #![no_implicit_prelude]
-// TODO: re-enable warnings
-#![cfg_attr(debug_assertions, allow(dead_code, unused_macros))]
+#![cfg_attr(not(debug_assertions), allow(dead_code, unused_macros))]
 
 mod engine;
 mod game;
