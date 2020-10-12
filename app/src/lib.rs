@@ -40,7 +40,7 @@ pub fn wasm_main() -> Result<(), JsValue> {
 
 #[wasm_bindgen]
 pub struct Console {
-    engine: Rc<engine::Engine>,
+    engine_loop: Rc<engine::core::Loop>,
     _game: Rc<RefCell<Game>>,
     _on_resize: event::Listener,
     _on_click: event::Listener,
@@ -71,7 +71,7 @@ impl Console {
             Game::new(&ctx).map_err(Into::<JsValue>::into)?,
         ));
         _game.borrow_mut().init().map_err(Into::<JsValue>::into)?;
-        let engine = engine::Engine::new(_game.clone());
+        let engine_loop = engine::core::Loop::new(_game.clone());
 
         let game0 = _game.clone();
         let _on_resize =
@@ -119,7 +119,7 @@ impl Console {
                 game0.borrow_mut().on_touchcancel(event)
             })?;
         Ok(Console {
-            engine,
+            engine_loop,
             _game,
             _on_resize,
             _on_click,
@@ -135,6 +135,6 @@ impl Console {
 
     pub fn start(&mut self) -> Result<(), JsValue> {
         ::log::info!("wasmgame starting");
-        self.engine.start().map_err(Into::<JsValue>::into)
+        self.engine_loop.start().map_err(Into::<JsValue>::into)
     }
 }

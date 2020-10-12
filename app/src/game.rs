@@ -280,7 +280,7 @@ fn target_rect(e: &::web_sys::Event) -> (i32, i32, i32, i32) {
     )
 }
 
-impl engine::Renderer for Game {
+impl engine::core::LoopHandler for Game {
     fn update(&mut self, t: Time) -> Result<(), Error> {
         self.last_render = t;
         self.scene.camera.update(t);
@@ -293,7 +293,7 @@ impl engine::Renderer for Game {
         Ok(())
     }
 
-    fn render(&mut self, t: Time) -> Result<bool, Error> {
+    fn draw(&mut self, t: Time) -> Result<bool, Error> {
         if t - self.last_render > Duration::from_millis(100.0) {
             return Ok(false);
         }
