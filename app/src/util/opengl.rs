@@ -351,6 +351,14 @@ impl UniformBuffer {
     }
 }
 
+impl ::std::ops::Drop for UniformBuffer {
+    fn drop(&mut self) {
+        log::debug!("deleting uniform buffer");
+        self.ctx.bound_uniform_buffer.assert_unbound(self.id);
+        self.ctx.gl.delete_buffer(Some(&self.buffer));
+    }
+}
+
 #[derive(Copy, Clone)]
 pub struct Attribute(pub u32, pub usize);
 
