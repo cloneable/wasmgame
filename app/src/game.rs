@@ -19,7 +19,7 @@ use engine::Bindable;
 use engine::Error;
 
 struct Scene {
-    hexatile: models::Hexatile,
+    hexatile_triplet: models::HexatileTriplet,
     camera: Camera,
 }
 
@@ -36,8 +36,11 @@ impl Scene {
                 100.0,
             );
         camera.update(Time::from_millis(0.0));
-        let hexatile = models::Hexatile::new(ctx)?;
-        Ok(Scene { hexatile, camera })
+        let hexatile_triplet = models::HexatileTriplet::new(ctx)?;
+        Ok(Scene {
+            hexatile_triplet,
+            camera,
+        })
     }
 }
 
@@ -277,7 +280,7 @@ fn target_rect(e: &::web_sys::Event) -> (i32, i32, i32, i32) {
 
 impl engine::Drawable for Game {
     fn init(&mut self) -> Result<(), Error> {
-        self.scene.hexatile.init()?;
+        self.scene.hexatile_triplet.init()?;
         self.offscreen.activate();
         Ok(())
     }
@@ -285,7 +288,7 @@ impl engine::Drawable for Game {
     fn update(&mut self, t: Time) -> Result<(), Error> {
         self.last_render = t;
         self.scene.camera.update(t);
-        self.scene.hexatile.update(t)?;
+        self.scene.hexatile_triplet.update(t)?;
         self.material_shader.activate();
         self.material_shader
             .set_view(self.scene.camera.view_matrix());
@@ -303,9 +306,9 @@ impl engine::Drawable for Game {
                 | ::web_sys::WebGl2RenderingContext::DEPTH_BUFFER_BIT,
         );
 
-        self.scene.hexatile.bind();
+        self.scene.hexatile_triplet.bind();
         self.material_shader.activate();
-        self.scene.hexatile.draw()?;
+        self.scene.hexatile_triplet.draw()?;
 
         // for read_pixels.
         self.offscreen.activate();
@@ -315,10 +318,10 @@ impl engine::Drawable for Game {
                 | ::web_sys::WebGl2RenderingContext::DEPTH_BUFFER_BIT,
         );
 
-        self.scene.hexatile.draw()?;
+        self.scene.hexatile_triplet.draw()?;
         self.picker_shader.activate();
 
-        self.scene.hexatile.unbind();
+        self.scene.hexatile_triplet.unbind();
 
         Ok(())
     }
