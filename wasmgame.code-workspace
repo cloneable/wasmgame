@@ -1,14 +1,15 @@
 {
 	"folders": [
 		{
-			"name": "app/src",
+			"name": "<APP>",
 			"path": "app/src"
 		},
 		{
-			"name": "macros/src",
+			"name": "<MACROS>",
 			"path": "macros/src"
 		},
 		{
+			"name": "<WASMGAME>",
 			"path": "."
 		}
 	],
