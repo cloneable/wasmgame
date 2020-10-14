@@ -262,6 +262,20 @@ impl Game {
             }
         }
     }
+
+    pub fn on_webglcontextlost(&mut self, e: &::web_sys::WebGlContextEvent) {
+        e.prevent_default();
+        // TODO: handle context loss.
+        // https://www.khronos.org/webgl/wiki/HandlingContextLost
+        ::log::warn!("WebGL context lost!");
+    }
+
+    pub fn on_webglcontextrestored(
+        &mut self, e: &::web_sys::WebGlContextEvent,
+    ) {
+        e.prevent_default();
+        ::log::warn!("WebGL context restored!");
+    }
 }
 
 fn target_rect(e: &::web_sys::Event) -> (i32, i32, i32, i32) {

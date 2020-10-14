@@ -46,6 +46,7 @@ features = [
   'WebGl2RenderingContext',
   'WebGlBuffer',
   'WebGlContextAttributes',
+  'WebGlContextEvent',
   'WebGlFramebuffer',
   'WebGlProgram',
   'WebGlRenderbuffer',
