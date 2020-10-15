@@ -28,7 +28,7 @@ pub fn project(fov: f32, aspect: f32, near: f32, far: f32) -> Mat4 {
 }
 
 #[derive(Copy, Clone)]
-#[repr(C)]
+#[repr(C, align(16))]
 pub struct Vec3 {
     pub x: f32,
     pub y: f32,
@@ -335,7 +335,7 @@ impl ::std::ops::Neg for Vec3 {
 }
 
 #[derive(Copy, Clone)]
-#[repr(C)]
+#[repr(C, align(16))]
 pub struct Vec4 {
     pub x: f32,
     pub y: f32,
@@ -578,20 +578,10 @@ impl ::std::ops::Neg for Vec4 {
     }
 }
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-struct Mat4Column(f32, f32, f32, f32);
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-struct Mat4Columns(Mat4Column, Mat4Column, Mat4Column, Mat4Column);
-
-#[repr(C)]
+#[repr(C, align(16))]
 pub union Mat4 {
     buf: [f32; 16],
     columns: [[f32; 4]; 4],
-    // TODO: Use tuples.y.x once rustfmt can handle that. rust-lang/rustfmt#4355
-    //tuples: Mat4Columns,
 }
 
 impl Mat4 {
@@ -1451,5 +1441,12 @@ pub mod tests {
         assert_eq!(actual, Vec3::with(1.0, 0.0, 0.0));
         let actual = Vec3::with(0.0, 0.0, 1.0).test_rotate([0.0, 0.0, 90.0]);
         assert_eq!(actual, Vec3::with(0.0, 0.0, 1.0));
+    }
+
+    #[wasm_bindgen_test]
+    fn test_alignments() {
+        assert_eq!(::std::mem::align_of::<Vec3>(), 16);
+        assert_eq!(::std::mem::align_of::<Vec4>(), 16);
+        assert_eq!(::std::mem::align_of::<Mat4>(), 16);
     }
 }
