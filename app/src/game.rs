@@ -276,6 +276,13 @@ impl Game {
         e.prevent_default();
         ::log::warn!("WebGL context restored!");
     }
+
+    pub fn on_webglcontextcreationerror(
+        &mut self, e: &::web_sys::WebGlContextEvent,
+    ) {
+        e.prevent_default();
+        ::log::warn!("WebGL context creation error!");
+    }
 }
 
 fn target_rect(e: &::web_sys::Event) -> (i32, i32, i32, i32) {

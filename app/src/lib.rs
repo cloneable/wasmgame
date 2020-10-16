@@ -52,6 +52,7 @@ pub struct Console {
     _on_touchcancel: event::Listener,
     _on_webglcontextlost: event::Listener,
     _on_webglcontextrestored: event::Listener,
+    _on_webglcontextcreationerror: event::Listener,
 }
 
 #[wasm_bindgen]
@@ -130,6 +131,12 @@ impl Console {
             "webglcontextrestored",
             move |event| game0.borrow_mut().on_webglcontextrestored(event),
         )?;
+        let game0 = _game.clone();
+        let _on_webglcontextcreationerror = event::Listener::new(
+            &ctx.canvas,
+            "webglcontextcreationerror",
+            move |event| game0.borrow_mut().on_webglcontextcreationerror(event),
+        )?;
         Ok(Console {
             engine_loop,
             _game,
@@ -144,6 +151,7 @@ impl Console {
             _on_touchcancel,
             _on_webglcontextlost,
             _on_webglcontextrestored,
+            _on_webglcontextcreationerror,
         })
     }
 
