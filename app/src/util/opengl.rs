@@ -279,6 +279,20 @@ impl Uniform {
     }
 }
 
+#[derive(Copy, Clone, Debug)]
+pub struct UniformBinding(u32);
+
+impl UniformBinding {
+    pub fn new(index: u32) -> Self {
+        use ::std::panic;
+        ::std::debug_assert!(index < 48);
+        UniformBinding(index)
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct UniformIndex(u32);
+
 pub struct UniformBuffer {
     ctx: Rc<Context>,
     id: u32,
@@ -315,11 +329,26 @@ impl UniformBuffer {
         self.ctx.gl.bind_buffer(WebGL::UNIFORM_BUFFER, None);
     }
 
-    pub fn bind_buffer_base(&mut self, target: usize) -> &mut Self {
+    pub fn bind_buffer_base(&mut self, binding: UniformBinding) -> &mut Self {
+        self.ctx.bound_uniform_buffer.assert_bound(self.id);
         self.ctx.gl.bind_buffer_base(
             WebGL::UNIFORM_BUFFER,
-            target as u32,
+            binding.0,
             Some(&self.buffer),
+        );
+        self
+    }
+
+    pub fn bind_buffer_range(
+        &mut self, binding: UniformBinding, offset: usize, size: usize,
+    ) -> &mut Self {
+        self.ctx.bound_uniform_buffer.assert_bound(self.id);
+        self.ctx.gl.bind_buffer_range_with_i32_and_i32(
+            WebGL::UNIFORM_BUFFER,
+            binding.0,
+            Some(&self.buffer),
+            offset as i32,
+            size as i32,
         );
         self
     }
@@ -424,6 +453,23 @@ impl Program {
 
     pub fn r#use(&mut self) {
         self.ctx.gl.use_program(Some(&self.program));
+    }
+
+    pub fn get_uniform_block_index(&self, name: &str) -> Option<UniformIndex> {
+        let index = self.ctx.gl.get_uniform_block_index(&self.program, name);
+        if index == WebGL::INVALID_INDEX {
+            None
+        } else {
+            Some(UniformIndex(index))
+        }
+    }
+
+    pub fn set_uniform_block_binding(
+        &mut self, index: UniformIndex, binding: UniformBinding,
+    ) {
+        self.ctx
+            .gl
+            .uniform_block_binding(&self.program, index.0, binding.0);
     }
 }
 
