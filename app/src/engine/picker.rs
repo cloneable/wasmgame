@@ -26,9 +26,9 @@ impl PickerShader {
         program.attach_shader(&vertex_shader);
         program.attach_shader(&fragment_shader);
 
-        attrib::POSITION.bind(ctx, &program, "position");
-        attrib::INSTANCE_ID.bind(ctx, &program, "instance_id");
-        attrib::MODEL.bind(ctx, &program, "model");
+        program.bind_attrib_location(attrib::POSITION, "position");
+        program.bind_attrib_location(attrib::INSTANCE_ID, "instance_id");
+        program.bind_attrib_location(attrib::MODEL, "model");
 
         program.link()?;
 

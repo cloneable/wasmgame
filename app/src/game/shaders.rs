@@ -26,11 +26,11 @@ impl MaterialShader {
         program.attach_shader(&vertex_shader);
         program.attach_shader(&fragment_shader);
 
-        attrib::POSITION.bind(ctx, &program, "position");
-        attrib::NORMAL.bind(ctx, &program, "normal");
-        attrib::INSTANCE_COLOR.bind(ctx, &program, "color");
-        attrib::MODEL.bind(ctx, &program, "model");
-        attrib::NORMALS.bind(ctx, &program, "normals");
+        program.bind_attrib_location(attrib::POSITION, "position");
+        program.bind_attrib_location(attrib::NORMAL, "normal");
+        program.bind_attrib_location(attrib::INSTANCE_COLOR, "color");
+        program.bind_attrib_location(attrib::MODEL, "model");
+        program.bind_attrib_location(attrib::NORMALS, "normals");
 
         program.link()?;
 

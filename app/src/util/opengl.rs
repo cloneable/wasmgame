@@ -392,10 +392,6 @@ impl ::std::ops::Drop for UniformBuffer {
 pub struct Attribute(pub u32, pub usize);
 
 impl Attribute {
-    pub fn bind(&self, ctx: &Rc<Context>, program: &Program, name: &str) {
-        ctx.gl.bind_attrib_location(&program.program, self.0, name)
-    }
-
     pub fn enable(&self, ctx: &Rc<Context>) {
         for i in 0..self.1 {
             ctx.gl.enable_vertex_attrib_array(self.0 + i as u32);
@@ -453,6 +449,12 @@ impl Program {
 
     pub fn r#use(&mut self) {
         self.ctx.gl.use_program(Some(&self.program));
+    }
+
+    pub fn bind_attrib_location(&mut self, attribute: Attribute, name: &str) {
+        self.ctx
+            .gl
+            .bind_attrib_location(&self.program, attribute.0, name)
     }
 
     pub fn get_uniform_block_index(&self, name: &str) -> Option<UniformIndex> {
