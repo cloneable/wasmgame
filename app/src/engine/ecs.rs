@@ -129,7 +129,7 @@ pub struct Provider<'a, C: Component + 'a> {
     _c: PhantomData<&'a C>,
 }
 
-impl<'a, C: Component + 'a> Provider<'a, C> {
+impl<'b, 'a: 'b, C: Component> Provider<'a, C> {
     fn new(world: &'a World) -> Self {
         let _ecm = world.components.get(&TypeId::of::<C>()).unwrap();
         let ecm = _ecm.borrow_mut();
@@ -139,10 +139,8 @@ impl<'a, C: Component + 'a> Provider<'a, C> {
             _c: PhantomData,
         }
     }
-}
 
-impl<'a, 'b: 'a, C: Component> Provider<'b, C> {
-    pub fn stream_mut(&'a mut self) -> impl Iterator<Item = &'a mut C> {
+    pub fn stream_mut(&'b mut self) -> impl Iterator<Item = &'b mut C> {
         self.ecm.iter_mut()
     }
 }
