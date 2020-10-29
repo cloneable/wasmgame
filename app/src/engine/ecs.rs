@@ -101,15 +101,15 @@ where
 }
 
 pub trait Selector<'a> {
-    fn build(db: &'a World) -> Self;
+    fn build(world: &'a World) -> Self;
 }
 
 impl<'a, S1> Selector<'a> for (S1,)
 where
     S1: Selector<'a>,
 {
-    fn build(db: &'a World) -> Self {
-        (S1::build(db),)
+    fn build(world: &'a World) -> Self {
+        (S1::build(world),)
     }
 }
 
@@ -118,8 +118,8 @@ where
     S1: Selector<'a>,
     S2: Selector<'a>,
 {
-    fn build(db: &'a World) -> Self {
-        (S1::build(db), S2::build(db))
+    fn build(world: &'a World) -> Self {
+        (S1::build(world), S2::build(world))
     }
 }
 
@@ -130,8 +130,8 @@ pub struct Provider<'a, C: Component + 'a> {
 }
 
 impl<'a, C: Component + 'a> Provider<'a, C> {
-    fn new(db: &'a World) -> Self {
-        let _ecm = db.components.get(&TypeId::of::<C>()).unwrap();
+    fn new(world: &'a World) -> Self {
+        let _ecm = world.components.get(&TypeId::of::<C>()).unwrap();
         let ecm = _ecm.borrow_mut();
         Provider {
             _ecm,
@@ -148,8 +148,8 @@ impl<'a, 'b: 'a, C: Component> Provider<'b, C> {
 }
 
 impl<'a, C: Component> Selector<'a> for Provider<'a, C> {
-    fn build(db: &'a World) -> Self {
-        Provider::new(db)
+    fn build(world: &'a World) -> Self {
+        Provider::new(world)
     }
 }
 
@@ -168,20 +168,20 @@ impl<'a> Runner<'a> {
         self.systems.push(Box::new(system));
     }
 
-    pub fn exec(&mut self, db: &'a World) {
+    pub fn exec(&mut self, world: &'a World) {
         for system in self.systems.iter_mut() {
-            system.exec(db);
+            system.exec(world);
         }
     }
 }
 
 trait SystemAdaptor<'a> {
-    fn exec(&mut self, db: &'a World);
+    fn exec(&mut self, world: &'a World);
 }
 
 impl<'a, S: System<'a>> SystemAdaptor<'a> for S {
-    fn exec(&mut self, db: &'a World) {
-        S::exec(self, <S::Args as Selector<'a>>::build(db))
+    fn exec(&mut self, world: &'a World) {
+        S::exec(self, <S::Args as Selector<'a>>::build(world))
     }
 }
 
