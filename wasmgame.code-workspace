@@ -27,8 +27,9 @@
 			"--offline"
 		],
 		"rust-analyzer.diagnostics.warningsAsInfo": [
-			"unused_macros",
-			"dead_code"
+			"dead_code",
+			"unused_imports",
+			"unused_macros"
 		],
 		"rust-analyzer.procMacro.enable": true,
 	}
