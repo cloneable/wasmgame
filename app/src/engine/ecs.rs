@@ -18,7 +18,13 @@ use ::std::{
 pub struct Entity(u32);
 
 #[derive(Copy, Clone, Hash, Ord, PartialOrd, Eq, PartialEq, Debug)]
-pub struct ComponentId(TypeId);
+struct ComponentId(TypeId);
+
+impl ComponentId {
+    fn of<C: Component>() -> Self {
+        ComponentId(TypeId::of::<C>())
+    }
+}
 
 pub trait Component: Any {}
 
@@ -28,7 +34,7 @@ pub trait System<'a> {
 }
 
 pub struct World {
-    components: BTreeMap<TypeId, RefCell<EntityComponentMap>>,
+    components: BTreeMap<ComponentId, RefCell<EntityComponentMap>>,
     entities: u32,
 }
 
@@ -50,7 +56,7 @@ impl<'a> World {
     ) {
         let entry = self
             .components
-            .entry(TypeId::of::<C>())
+            .entry(ComponentId::of::<C>())
             .or_insert(RefCell::new(EntityComponentMap::new()));
         entry.borrow_mut().map.insert(entity, Box::new(component));
     }
@@ -131,7 +137,7 @@ pub struct Provider<'a, C: Component + 'a> {
 
 impl<'b, 'a: 'b, C: Component> Provider<'a, C> {
     fn new(world: &'a World) -> Self {
-        let _ecm = world.components.get(&TypeId::of::<C>()).unwrap();
+        let _ecm = world.components.get(&ComponentId::of::<C>()).unwrap();
         let ecm = _ecm.borrow_mut();
         Provider {
             _ecm,
@@ -240,7 +246,7 @@ pub mod tests {
         assert_eq!(world.entities, 2);
         let ecm_a = world
             .components
-            .get(&TypeId::of::<TestComponentA>())
+            .get(&ComponentId::of::<TestComponentA>())
             .unwrap()
             .borrow();
         let comp_a1 = ecm_a
@@ -257,7 +263,7 @@ pub mod tests {
             .unwrap();
         let ecm_b = world
             .components
-            .get(&TypeId::of::<TestComponentB>())
+            .get(&ComponentId::of::<TestComponentB>())
             .unwrap()
             .borrow();
         let comp_b1 = ecm_b
