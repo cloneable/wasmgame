@@ -1,4 +1,5 @@
 pub mod core;
+pub mod ecs;
 pub mod picker;
 pub mod scene;
 pub mod time;
