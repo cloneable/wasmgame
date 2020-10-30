@@ -7,7 +7,7 @@ use ::std::{
     cell::{RefCell, RefMut},
     clone::Clone,
     cmp::Ord,
-    collections::{btree_map::IterMut, BTreeMap},
+    collections::{btree_map::Iter, btree_map::IterMut, BTreeMap},
     iter::Iterator,
     marker::PhantomData,
     option::{Option, Option::None, Option::Some},
@@ -80,10 +80,19 @@ impl EntityComponentMap {
         }
     }
 
+    pub fn iter<C: Component>(
+        &self,
+    ) -> ComponentIter<C, Iter<Entity, Box<dyn Any>>> {
+        ComponentIter {
+            iter: self.map.iter(),
+            _c: PhantomData,
+        }
+    }
+
     pub fn iter_mut<C: Component>(
         &mut self,
-    ) -> ComponentIter<C, IterMut<Entity, Box<dyn Any>>> {
-        ComponentIter {
+    ) -> ComponentIterMut<C, IterMut<Entity, Box<dyn Any>>> {
+        ComponentIterMut {
             iter: self.map.iter_mut(),
             _c: PhantomData,
         }
@@ -93,13 +102,36 @@ impl EntityComponentMap {
 struct ComponentIter<'a, C, I>
 where
     C: Component,
-    I: Iterator<Item = (&'a Entity, &'a mut Box<dyn Any>)>,
+    I: Iterator<Item = (&'a Entity, &'a Box<dyn Any>)>,
 {
     iter: I,
     _c: PhantomData<C>,
 }
 
 impl<'a, C, I> Iterator for ComponentIter<'a, C, I>
+where
+    C: Component,
+    I: Iterator<Item = (&'a Entity, &'a Box<dyn Any>)>,
+{
+    type Item = &'a C;
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.iter.next() {
+            Some((_entity, any)) => Some(any.downcast_ref::<C>().unwrap()),
+            None => None,
+        }
+    }
+}
+
+struct ComponentIterMut<'a, C, I>
+where
+    C: Component,
+    I: Iterator<Item = (&'a Entity, &'a mut Box<dyn Any>)>,
+{
+    iter: I,
+    _c: PhantomData<C>,
+}
+
+impl<'a, C, I> Iterator for ComponentIterMut<'a, C, I>
 where
     C: Component,
     I: Iterator<Item = (&'a Entity, &'a mut Box<dyn Any>)>,
@@ -151,6 +183,10 @@ impl<'b, 'a: 'b, C: Component> PerEntity<'a, C> {
             ecm,
             _c: PhantomData,
         }
+    }
+
+    pub fn stream(&'b self) -> impl Iterator<Item = &'b C> {
+        self.ecm.iter()
     }
 
     pub fn stream_mut(&'b mut self) -> impl Iterator<Item = &'b mut C> {
