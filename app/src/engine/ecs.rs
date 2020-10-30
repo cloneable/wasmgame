@@ -136,17 +136,17 @@ where
     }
 }
 
-pub struct Provider<'a, C: Component> {
+pub struct PerEntity<'a, C: Component> {
     _ecm: &'a RefCell<EntityComponentMap>,
     ecm: RefMut<'a, EntityComponentMap>,
     _c: PhantomData<&'a C>,
 }
 
-impl<'b, 'a: 'b, C: Component> Provider<'a, C> {
+impl<'b, 'a: 'b, C: Component> PerEntity<'a, C> {
     fn new(world: &'a World) -> Self {
         let _ecm = world.components.get(&ComponentId::of::<C>()).unwrap();
         let ecm = _ecm.borrow_mut();
-        Provider {
+        PerEntity {
             _ecm,
             ecm,
             _c: PhantomData,
@@ -158,9 +158,9 @@ impl<'b, 'a: 'b, C: Component> Provider<'a, C> {
     }
 }
 
-impl<'a, C: Component> Selector<'a> for Provider<'a, C> {
+impl<'a, C: Component> Selector<'a> for PerEntity<'a, C> {
     fn build(world: &'a World) -> Self {
-        Provider::new(world)
+        PerEntity::new(world)
     }
 }
 
@@ -251,7 +251,7 @@ pub mod tests {
 
     impl<'a> System<'a> for TestSystemA {
         type Args =
-            (Provider<'a, TestComponentA>, Provider<'a, TestComponentB>);
+            (PerEntity<'a, TestComponentA>, PerEntity<'a, TestComponentB>);
         fn exec(&mut self, (mut comp_a, mut _comp_b): Self::Args) {
             for c in comp_a.stream_mut() {
                 c.0 += 1
@@ -263,7 +263,7 @@ pub mod tests {
 
     impl<'a> System<'a> for TestSystemB {
         type Args = (
-            Provider<'a, TestComponentB>,
+            PerEntity<'a, TestComponentB>,
             Global<'a, GlobalTestComponent>,
         );
         fn exec(&mut self, (mut comp_b, glob): Self::Args) {
