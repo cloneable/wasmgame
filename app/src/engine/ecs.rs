@@ -35,6 +35,7 @@ pub trait System<'a> {
 
 pub struct World {
     components: BTreeMap<ComponentId, RefCell<EntityComponentMap>>,
+    globals: BTreeMap<ComponentId, RefCell<Box<dyn Any>>>,
     entities: u32,
 }
 
@@ -42,6 +43,7 @@ impl World {
     pub fn new() -> Self {
         World {
             components: BTreeMap::new(),
+            globals: BTreeMap::new(),
             entities: 0,
         }
     }
@@ -59,6 +61,11 @@ impl World {
             .entry(ComponentId::of::<C>())
             .or_insert(RefCell::new(EntityComponentMap::new()));
         entry.borrow_mut().map.insert(entity, Box::new(component));
+    }
+
+    pub fn add_global<C: Component>(&mut self, component: C) {
+        self.globals
+            .insert(ComponentId::of::<C>(), RefCell::new(Box::new(component)));
     }
 }
 
@@ -157,6 +164,38 @@ impl<'a, C: Component> Selector<'a> for Provider<'a, C> {
     }
 }
 
+pub struct Global<'a, C: Component> {
+    _c: &'a RefCell<Box<dyn Any>>,
+    c: RefMut<'a, Box<dyn Any>>,
+    _x: PhantomData<&'a C>,
+}
+
+impl<'b, 'a: 'b, C: Component> Global<'a, C> {
+    fn new(world: &'a World) -> Self {
+        let _c = world.globals.get(&ComponentId::of::<C>()).unwrap();
+        let c = _c.borrow_mut();
+        Global {
+            _c,
+            c,
+            _x: PhantomData,
+        }
+    }
+
+    pub fn get(&'b self) -> &'b C {
+        self.c.downcast_ref().unwrap()
+    }
+
+    pub fn get_mut(&'b mut self) -> &'b mut C {
+        self.c.downcast_mut().unwrap()
+    }
+}
+
+impl<'a, C: Component> Selector<'a> for Global<'a, C> {
+    fn build(world: &'a World) -> Self {
+        Global::new(world)
+    }
+}
+
 pub struct Runner<'a> {
     systems: Vec<Box<dyn SystemAdaptor<'a> + 'a>>,
 }
@@ -198,11 +237,15 @@ pub mod tests {
 
     #[derive(PartialEq, Eq, Debug)]
     struct TestComponentA(usize);
+    impl Component for TestComponentA {}
+
     #[derive(PartialEq, Eq, Debug)]
     struct TestComponentB(usize);
-
-    impl Component for TestComponentA {}
     impl Component for TestComponentB {}
+
+    #[derive(PartialEq, Eq, Debug)]
+    struct GlobalTestComponent(usize);
+    impl Component for GlobalTestComponent {}
 
     struct TestSystemA;
 
@@ -219,11 +262,13 @@ pub mod tests {
     struct TestSystemB;
 
     impl<'a> System<'a> for TestSystemB {
-        type Args =
-            (Provider<'a, TestComponentA>, Provider<'a, TestComponentB>);
-        fn exec(&mut self, (mut _comp_a, mut comp_b): Self::Args) {
+        type Args = (
+            Provider<'a, TestComponentB>,
+            Global<'a, GlobalTestComponent>,
+        );
+        fn exec(&mut self, (mut comp_b, glob): Self::Args) {
             for c in comp_b.stream_mut() {
-                c.0 += 1
+                c.0 += glob.get().0
             }
         }
     }
@@ -231,6 +276,7 @@ pub mod tests {
     #[wasm_bindgen_test]
     fn test_lookup() {
         let mut world = World::new();
+        world.add_global(GlobalTestComponent(3));
         let e1 = world.add_entity();
         world.add_component(e1, TestComponentA(10));
         world.add_component(e1, TestComponentB(100));
@@ -280,7 +326,7 @@ pub mod tests {
             .unwrap();
         assert_eq!(comp_a1, &TestComponentA(11));
         assert_eq!(comp_a2, &TestComponentA(21));
-        assert_eq!(comp_b1, &TestComponentB(101));
-        assert_eq!(comp_b2, &TestComponentB(201));
+        assert_eq!(comp_b1, &TestComponentB(103));
+        assert_eq!(comp_b2, &TestComponentB(203));
     }
 }
