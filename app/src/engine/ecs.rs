@@ -38,7 +38,7 @@ pub struct World {
     entities: u32,
 }
 
-impl<'a> World {
+impl World {
     pub fn new() -> Self {
         World {
             components: BTreeMap::new(),
@@ -63,7 +63,7 @@ impl<'a> World {
 }
 
 struct EntityComponentMap {
-    map: BTreeMap<Entity, Box<dyn Any + 'static>>,
+    map: BTreeMap<Entity, Box<dyn Any>>,
 }
 
 impl EntityComponentMap {
@@ -75,7 +75,7 @@ impl EntityComponentMap {
 
     pub fn iter_mut<C: Component>(
         &mut self,
-    ) -> ComponentIter<C, IterMut<Entity, Box<dyn Any + 'static>>> {
+    ) -> ComponentIter<C, IterMut<Entity, Box<dyn Any>>> {
         ComponentIter {
             iter: self.map.iter_mut(),
             _c: PhantomData,
@@ -85,8 +85,8 @@ impl EntityComponentMap {
 
 struct ComponentIter<'a, C, I>
 where
-    C: Component + 'a,
-    I: Iterator<Item = (&'a Entity, &'a mut Box<dyn Any + 'static>)> + 'a,
+    C: Component,
+    I: Iterator<Item = (&'a Entity, &'a mut Box<dyn Any>)>,
 {
     iter: I,
     _c: PhantomData<C>,
@@ -94,8 +94,8 @@ where
 
 impl<'a, C, I> Iterator for ComponentIter<'a, C, I>
 where
-    C: Component + 'a,
-    I: Iterator<Item = (&'a Entity, &'a mut Box<dyn Any + 'static>)> + 'a,
+    C: Component,
+    I: Iterator<Item = (&'a Entity, &'a mut Box<dyn Any>)>,
 {
     type Item = &'a mut C;
     fn next(&mut self) -> Option<Self::Item> {
@@ -129,7 +129,7 @@ where
     }
 }
 
-pub struct Provider<'a, C: Component + 'a> {
+pub struct Provider<'a, C: Component> {
     _ecm: &'a RefCell<EntityComponentMap>,
     ecm: RefMut<'a, EntityComponentMap>,
     _c: PhantomData<&'a C>,
