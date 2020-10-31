@@ -291,24 +291,22 @@ pub trait Selector<'a> {
     fn build(world: &'a World) -> Self;
 }
 
-impl<'a, S1> Selector<'a> for (S1,)
-where
-    S1: Selector<'a>,
-{
-    fn build(world: &'a World) -> Self {
-        (S1::build(world),)
+macro_rules! tuple_selector_impl {
+    ( $( $s:ident),* ) => {
+        impl<'a, $($s),*> Selector<'a> for ($($s,)*)
+        where
+            $($s: Selector<'a>,)*
+        {
+            fn build(world: &'a World) -> Self {
+                ($($s::build(world),)*)
+            }
+        }
     }
 }
 
-impl<'a, S1, S2> Selector<'a> for (S1, S2)
-where
-    S1: Selector<'a>,
-    S2: Selector<'a>,
-{
-    fn build(world: &'a World) -> Self {
-        (S1::build(world), S2::build(world))
-    }
-}
+tuple_selector_impl!(S1);
+tuple_selector_impl!(S1, S2);
+tuple_selector_impl!(S1, S2, S3);
 
 pub struct PerEntity<'a, C: Component> {
     _ecm: &'a RefCell<BTreeComponentMap>,
@@ -441,10 +439,11 @@ pub mod tests {
 
     impl<'a> System<'a> for TestSystemB {
         type Args = (
+            PerEntity<'a, TestComponentA>,
             PerEntity<'a, TestComponentB>,
             Global<'a, GlobalTestComponent>,
         );
-        fn exec(&mut self, (mut comp_b, glob): Self::Args) {
+        fn exec(&mut self, (mut _comp_a, mut comp_b, glob): Self::Args) {
             for c in comp_b.stream_mut() {
                 c.0 += glob.get().0
             }
