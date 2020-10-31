@@ -70,22 +70,19 @@ impl World {
     }
 }
 
-trait ComponentMap<'a, 'b, C: Component>
-where
-    'a: 'b,
-{
-    type Iter: Iterator<Item = &'b C>;
-    type IterMut: Iterator<Item = &'b mut C>;
-    type EntityIter: Iterator<Item = (Entity, &'b C)>;
-    type EntityIterMut: Iterator<Item = (Entity, &'b mut C)>;
+trait ComponentMap<'a, C: Component> {
+    type Iter: Iterator<Item = &'a C>;
+    type IterMut: Iterator<Item = &'a mut C>;
+    type EntityIter: Iterator<Item = (Entity, &'a C)>;
+    type EntityIterMut: Iterator<Item = (Entity, &'a mut C)>;
 
-    fn iter(&'b self) -> Self::Iter;
-    fn iter_mut(&'b mut self) -> Self::IterMut;
-    fn entity_iter(&'b self) -> Self::EntityIter;
-    fn entity_iter_mut(&'b mut self) -> Self::EntityIterMut;
+    fn iter(&'a self) -> Self::Iter;
+    fn iter_mut(&'a mut self) -> Self::IterMut;
+    fn entity_iter(&'a self) -> Self::EntityIter;
+    fn entity_iter_mut(&'a mut self) -> Self::EntityIterMut;
 
-    fn get(&'b self, entity: Entity) -> Option<&'b C>;
-    fn get_mut(&'b mut self, entity: Entity) -> Option<&'b mut C>;
+    fn get(&'a self, entity: Entity) -> Option<&'a C>;
+    fn get_mut(&'a mut self, entity: Entity) -> Option<&'a mut C>;
 }
 
 struct BTreeComponentMap {
@@ -100,7 +97,7 @@ impl Default for BTreeComponentMap {
     }
 }
 
-impl<'b, 'a: 'b, C: Component> ComponentMap<'a, 'b, C> for BTreeComponentMap {
+impl<'b, 'a: 'b, C: Component> ComponentMap<'b, C> for BTreeComponentMap {
     type Iter = ComponentIter<'b, C, btree_map::Iter<'b, Entity, Box<dyn Any>>>;
     type IterMut =
         ComponentIterMut<'b, C, btree_map::IterMut<'b, Entity, Box<dyn Any>>>;
