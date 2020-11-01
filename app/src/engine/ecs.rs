@@ -207,15 +207,19 @@ impl<'a, C: Component> Iterator for EntityComponentIterMut<'a, C> {
 }
 
 pub trait Selector<'a> {
+    type Component: Component;
     fn build(world: &'a World) -> Self;
 }
 
 macro_rules! tuple_selector_impl {
     ( $( $s:ident),* ) => {
+        impl<'a, $($s: Component),*> Component for ($($s,)*) {}
+
         impl<'a, $($s),*> Selector<'a> for ($($s,)*)
         where
             $($s: Selector<'a>,)*
         {
+            type Component = ($($s::Component,)*);
             fn build(world: &'a World) -> Self {
                 ($($s::build(world),)*)
             }
@@ -260,6 +264,7 @@ impl<'b, 'a: 'b, C: Component> PerEntity<'a, C> {
 }
 
 impl<'a, C: Component> Selector<'a> for PerEntity<'a, C> {
+    type Component = C;
     fn build(world: &'a World) -> Self {
         PerEntity::new(world)
     }
@@ -292,6 +297,7 @@ impl<'b, 'a: 'b, C: Component> Global<'a, C> {
 }
 
 impl<'a, C: Component> Selector<'a> for Global<'a, C> {
+    type Component = C;
     fn build(world: &'a World) -> Self {
         Global::new(world)
     }
