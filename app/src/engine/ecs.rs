@@ -35,7 +35,7 @@ pub trait System<'a> {
 }
 
 pub struct World {
-    components: BTreeMap<ComponentId, RefCell<BTreeComponentMap>>,
+    components: BTreeMap<ComponentId, RefCell<Box<dyn Any>>>,
     globals: BTreeMap<ComponentId, RefCell<Box<dyn Any>>>,
     entities: u32,
 }
@@ -57,11 +57,15 @@ impl World {
     pub fn add_component<C: Component>(
         &mut self, entity: Entity, component: C,
     ) {
-        let entry = self
-            .components
-            .entry(ComponentId::of::<C>())
-            .or_insert(RefCell::new(BTreeComponentMap::default()));
-        entry.borrow_mut().map.insert(entity, Box::new(component));
+        let entry = self.components.entry(ComponentId::of::<C>()).or_insert(
+            RefCell::new(Box::new(BTreeComponentMap::<C>::default())),
+        );
+        entry
+            .borrow_mut()
+            .downcast_mut::<BTreeComponentMap<C>>()
+            .unwrap()
+            .map
+            .insert(entity, component);
     }
 
     pub fn add_global<C: Component>(&mut self, component: C) {
@@ -70,26 +74,21 @@ impl World {
     }
 }
 
-trait ComponentMap<'a, C: Component> {
-    type Iter: Iterator<Item = &'a C>;
-    type IterMut: Iterator<Item = &'a mut C>;
-    type EntityIter: Iterator<Item = (Entity, &'a C)>;
-    type EntityIterMut: Iterator<Item = (Entity, &'a mut C)>;
-
-    fn iter(&'a self) -> Self::Iter;
-    fn iter_mut(&'a mut self) -> Self::IterMut;
-    fn entity_iter(&'a self) -> Self::EntityIter;
-    fn entity_iter_mut(&'a mut self) -> Self::EntityIterMut;
+trait ComponentMap<'a, C: Component>: Any {
+    fn iter(&'a self) -> ComponentIter<'a, C>;
+    fn iter_mut(&'a mut self) -> ComponentIterMut<'a, C>;
+    fn entity_iter(&'a self) -> EntityComponentIter<'a, C>;
+    fn entity_iter_mut(&'a mut self) -> EntityComponentIterMut<'a, C>;
 
     fn get(&'a self, entity: Entity) -> Option<&'a C>;
     fn get_mut(&'a mut self, entity: Entity) -> Option<&'a mut C>;
 }
 
-struct BTreeComponentMap {
-    map: BTreeMap<Entity, Box<dyn Any>>,
+struct BTreeComponentMap<C: Component> {
+    map: BTreeMap<Entity, C>,
 }
 
-impl Default for BTreeComponentMap {
+impl<C: Component> Default for BTreeComponentMap<C> {
     fn default() -> Self {
         BTreeComponentMap {
             map: BTreeMap::new(),
@@ -97,188 +96,111 @@ impl Default for BTreeComponentMap {
     }
 }
 
-impl<'b, 'a: 'b, C: Component> ComponentMap<'b, C> for BTreeComponentMap {
-    type Iter = ComponentIter<'b, C, btree_map::Iter<'b, Entity, Box<dyn Any>>>;
-    type IterMut =
-        ComponentIterMut<'b, C, btree_map::IterMut<'b, Entity, Box<dyn Any>>>;
-    type EntityIter =
-        EntityComponentIter<'b, C, btree_map::Iter<'b, Entity, Box<dyn Any>>>;
-    type EntityIterMut = EntityComponentIterMut<
-        'b,
-        C,
-        btree_map::IterMut<'b, Entity, Box<dyn Any>>,
-    >;
-
-    fn iter(&'b self) -> Self::Iter {
+impl<'b, 'a: 'b, C: Component> ComponentMap<'b, C> for BTreeComponentMap<C> {
+    fn iter(&'b self) -> ComponentIter<'b, C> {
         ComponentIter::wrap(self.map.iter())
     }
-    fn iter_mut(&'b mut self) -> Self::IterMut {
+    fn iter_mut(&'b mut self) -> ComponentIterMut<'b, C> {
         ComponentIterMut::wrap(self.map.iter_mut())
     }
-    fn entity_iter(&'b self) -> Self::EntityIter {
+    fn entity_iter(&'b self) -> EntityComponentIter<'b, C> {
         EntityComponentIter::wrap(self.map.iter())
     }
-    fn entity_iter_mut(&'b mut self) -> Self::EntityIterMut {
+    fn entity_iter_mut(&'b mut self) -> EntityComponentIterMut<'b, C> {
         EntityComponentIterMut::wrap(self.map.iter_mut())
     }
 
     fn get(&'b self, entity: Entity) -> Option<&'b C> {
-        match self.map.get(&entity) {
-            Some(ref any) => any.downcast_ref::<C>(),
-            None => None,
-        }
+        self.map.get(&entity)
     }
     fn get_mut(&'b mut self, entity: Entity) -> Option<&'b mut C> {
-        match self.map.get_mut(&entity) {
-            Some(any) => Some(any.downcast_mut::<C>().unwrap()),
-            None => None,
-        }
+        self.map.get_mut(&entity)
     }
 }
 
-struct ComponentIter<'a, C, I>
-where
-    C: Component,
-    I: Iterator<Item = (&'a Entity, &'a Box<dyn Any>)>,
-{
-    iter: I,
-    _c: PhantomData<C>,
+struct ComponentIter<'a, C: Component> {
+    iter: Box<dyn Iterator<Item = (&'a Entity, &'a C)> + 'a>,
 }
 
-impl<'a, C, I> ComponentIter<'a, C, I>
-where
-    C: Component,
-    I: Iterator<Item = (&'a Entity, &'a Box<dyn Any>)>,
-{
-    fn wrap(iter: I) -> Self {
+impl<'a, C: Component> ComponentIter<'a, C> {
+    fn wrap(iter: impl Iterator<Item = (&'a Entity, &'a C)> + 'a) -> Self {
         ComponentIter {
-            iter,
-            _c: PhantomData,
+            iter: Box::new(iter),
         }
     }
 }
 
-impl<'a, C, I> Iterator for ComponentIter<'a, C, I>
-where
-    C: Component,
-    I: Iterator<Item = (&'a Entity, &'a Box<dyn Any>)>,
-{
+impl<'a, C: Component> Iterator for ComponentIter<'a, C> {
     type Item = &'a C;
     fn next(&mut self) -> Option<Self::Item> {
         match self.iter.next() {
-            Some((_entity, any)) => Some(any.downcast_ref::<C>().unwrap()),
+            Some((_entity, component)) => Some(component),
             None => None,
         }
     }
 }
 
-struct ComponentIterMut<'a, C, I>
-where
-    C: Component,
-    I: Iterator<Item = (&'a Entity, &'a mut Box<dyn Any>)>,
-{
-    iter: I,
-    _c: PhantomData<C>,
+struct ComponentIterMut<'a, C: Component> {
+    iter: Box<dyn Iterator<Item = (&'a Entity, &'a mut C)> + 'a>,
 }
 
-impl<'a, C, I> ComponentIterMut<'a, C, I>
-where
-    C: Component,
-    I: Iterator<Item = (&'a Entity, &'a mut Box<dyn Any>)>,
-{
-    fn wrap(iter: I) -> Self {
+impl<'a, C: Component> ComponentIterMut<'a, C> {
+    fn wrap(iter: impl Iterator<Item = (&'a Entity, &'a mut C)> + 'a) -> Self {
         ComponentIterMut {
-            iter,
-            _c: PhantomData,
+            iter: Box::new(iter),
         }
     }
 }
 
-impl<'a, C, I> Iterator for ComponentIterMut<'a, C, I>
-where
-    C: Component,
-    I: Iterator<Item = (&'a Entity, &'a mut Box<dyn Any>)>,
-{
+impl<'a, C: Component> Iterator for ComponentIterMut<'a, C> {
     type Item = &'a mut C;
     fn next(&mut self) -> Option<Self::Item> {
         match self.iter.next() {
-            Some((_entity, any)) => Some(any.downcast_mut::<C>().unwrap()),
+            Some((_entity, component)) => Some(component),
             None => None,
         }
     }
 }
 
-struct EntityComponentIter<'a, C, I>
-where
-    C: Component,
-    I: Iterator<Item = (&'a Entity, &'a Box<dyn Any>)>,
-{
-    iter: I,
-    _c: PhantomData<C>,
+struct EntityComponentIter<'a, C: Component> {
+    iter: Box<dyn Iterator<Item = (&'a Entity, &'a C)> + 'a>,
 }
 
-impl<'a, C, I> EntityComponentIter<'a, C, I>
-where
-    C: Component,
-    I: Iterator<Item = (&'a Entity, &'a Box<dyn Any>)>,
-{
-    fn wrap(iter: I) -> Self {
+impl<'a, C: Component> EntityComponentIter<'a, C> {
+    fn wrap(iter: impl Iterator<Item = (&'a Entity, &'a C)> + 'a) -> Self {
         EntityComponentIter {
-            iter,
-            _c: PhantomData,
+            iter: Box::new(iter),
         }
     }
 }
 
-impl<'a, C, I> Iterator for EntityComponentIter<'a, C, I>
-where
-    C: Component,
-    I: Iterator<Item = (&'a Entity, &'a Box<dyn Any>)>,
-{
+impl<'a, C: Component> Iterator for EntityComponentIter<'a, C> {
     type Item = (Entity, &'a C);
     fn next(&mut self) -> Option<Self::Item> {
         match self.iter.next() {
-            Some((entity, any)) => {
-                Some((*entity, any.downcast_ref::<C>().unwrap()))
-            }
+            Some((entity, component)) => Some((*entity, component)),
             None => None,
         }
     }
 }
 
-struct EntityComponentIterMut<'a, C, I>
-where
-    C: Component,
-    I: Iterator<Item = (&'a Entity, &'a mut Box<dyn Any>)>,
-{
-    iter: I,
-    _c: PhantomData<C>,
+struct EntityComponentIterMut<'a, C: Component> {
+    iter: Box<dyn Iterator<Item = (&'a Entity, &'a mut C)> + 'a>,
 }
 
-impl<'a, C, I> EntityComponentIterMut<'a, C, I>
-where
-    C: Component,
-    I: Iterator<Item = (&'a Entity, &'a mut Box<dyn Any>)>,
-{
-    fn wrap(iter: I) -> Self {
+impl<'a, C: Component> EntityComponentIterMut<'a, C> {
+    fn wrap(iter: impl Iterator<Item = (&'a Entity, &'a mut C)> + 'a) -> Self {
         EntityComponentIterMut {
-            iter,
-            _c: PhantomData,
+            iter: Box::new(iter),
         }
     }
 }
 
-impl<'a, C, I> Iterator for EntityComponentIterMut<'a, C, I>
-where
-    C: Component,
-    I: Iterator<Item = (&'a Entity, &'a mut Box<dyn Any>)>,
-{
+impl<'a, C: Component> Iterator for EntityComponentIterMut<'a, C> {
     type Item = (Entity, &'a mut C);
     fn next(&mut self) -> Option<Self::Item> {
         match self.iter.next() {
-            Some((entity, any)) => {
-                Some((*entity, any.downcast_mut::<C>().unwrap()))
-            }
+            Some((entity, component)) => Some((*entity, component)),
             None => None,
         }
     }
@@ -306,9 +228,9 @@ tuple_selector_impl!(S1, S2);
 tuple_selector_impl!(S1, S2, S3);
 
 pub struct PerEntity<'a, C: Component> {
-    _ecm: &'a RefCell<BTreeComponentMap>,
-    ecm: RefMut<'a, BTreeComponentMap>,
-    _c: PhantomData<&'a C>,
+    _ecm: &'a RefCell<Box<dyn Any>>,
+    ecm: RefMut<'a, Box<dyn Any>>,
+    _c: PhantomData<C>,
 }
 
 impl<'b, 'a: 'b, C: Component> PerEntity<'a, C> {
@@ -322,12 +244,18 @@ impl<'b, 'a: 'b, C: Component> PerEntity<'a, C> {
         }
     }
 
-    pub fn stream(&'b self) -> impl Iterator<Item = &'b C> {
-        self.ecm.iter()
+    pub fn stream(&'b mut self) -> impl Iterator<Item = &'b C> {
+        self.ecm
+            .downcast_mut::<BTreeComponentMap<C>>()
+            .unwrap()
+            .iter()
     }
 
     pub fn stream_mut(&'b mut self) -> impl Iterator<Item = &'b mut C> {
-        self.ecm.iter_mut()
+        self.ecm
+            .downcast_mut::<BTreeComponentMap<C>>()
+            .unwrap()
+            .iter_mut()
     }
 }
 
@@ -458,46 +386,47 @@ pub mod tests {
         world.add_component(e2, TestComponentA(20));
         world.add_component(e2, TestComponentB(200));
 
+        assert_eq!(world.entities, 2);
+        assert_eq!(world.components.len(), 2);
+        assert_eq!(world.globals.len(), 1);
+
         let mut r = Runner::new();
         r.register_system(TestSystemA);
         r.register_system(TestSystemB);
         r.exec(&world);
 
-        assert_eq!(world.entities, 2);
         let ecm_a = world
             .components
             .get(&ComponentId::of::<TestComponentA>())
             .unwrap()
             .borrow();
         let comp_a1 = ecm_a
-            .map
-            .get(&e1)
+            .downcast_ref::<BTreeComponentMap<TestComponentA>>()
             .unwrap()
-            .downcast_ref::<TestComponentA>()
+            .get(e1)
             .unwrap();
         let comp_a2 = ecm_a
-            .map
-            .get(&e2)
+            .downcast_ref::<BTreeComponentMap<TestComponentA>>()
             .unwrap()
-            .downcast_ref::<TestComponentA>()
+            .get(e2)
             .unwrap();
+
         let ecm_b = world
             .components
             .get(&ComponentId::of::<TestComponentB>())
             .unwrap()
             .borrow();
         let comp_b1 = ecm_b
-            .map
-            .get(&e1)
+            .downcast_ref::<BTreeComponentMap<TestComponentB>>()
             .unwrap()
-            .downcast_ref::<TestComponentB>()
+            .get(e1)
             .unwrap();
         let comp_b2 = ecm_b
-            .map
-            .get(&e2)
+            .downcast_ref::<BTreeComponentMap<TestComponentB>>()
             .unwrap()
-            .downcast_ref::<TestComponentB>()
+            .get(e2)
             .unwrap();
+
         assert_eq!(comp_a1, &TestComponentA(11));
         assert_eq!(comp_a2, &TestComponentA(21));
         assert_eq!(comp_b1, &TestComponentB(103));
