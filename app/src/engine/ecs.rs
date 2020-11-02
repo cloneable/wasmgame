@@ -96,24 +96,24 @@ impl<C: Component> Default for BTreeComponentMap<C> {
     }
 }
 
-impl<'b, 'a: 'b, C: Component> ComponentMap<'b, C> for BTreeComponentMap<C> {
-    fn iter(&'b self) -> ComponentIter<'b, C> {
+impl<'a, C: Component> ComponentMap<'a, C> for BTreeComponentMap<C> {
+    fn iter(&'a self) -> ComponentIter<'a, C> {
         ComponentIter::wrap(self.map.iter())
     }
-    fn iter_mut(&'b mut self) -> ComponentIterMut<'b, C> {
+    fn iter_mut(&'a mut self) -> ComponentIterMut<'a, C> {
         ComponentIterMut::wrap(self.map.iter_mut())
     }
-    fn entity_iter(&'b self) -> EntityComponentIter<'b, C> {
+    fn entity_iter(&'a self) -> EntityComponentIter<'a, C> {
         EntityComponentIter::wrap(self.map.iter())
     }
-    fn entity_iter_mut(&'b mut self) -> EntityComponentIterMut<'b, C> {
+    fn entity_iter_mut(&'a mut self) -> EntityComponentIterMut<'a, C> {
         EntityComponentIterMut::wrap(self.map.iter_mut())
     }
 
-    fn get(&'b self, entity: Entity) -> Option<&'b C> {
+    fn get(&'a self, entity: Entity) -> Option<&'a C> {
         self.map.get(&entity)
     }
-    fn get_mut(&'b mut self, entity: Entity) -> Option<&'b mut C> {
+    fn get_mut(&'a mut self, entity: Entity) -> Option<&'a mut C> {
         self.map.get_mut(&entity)
     }
 }
