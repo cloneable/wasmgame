@@ -7,10 +7,10 @@ use ::std::{
     cell::{RefCell, RefMut},
     clone::Clone,
     cmp::Ord,
-    collections::{btree_map, BTreeMap},
+    collections::BTreeMap,
     default::Default,
     iter::Iterator,
-    marker::PhantomData,
+    marker::{PhantomData, Sized},
     option::{Option, Option::None, Option::Some},
     vec::Vec,
 };
@@ -19,7 +19,7 @@ use ::std::{
 pub struct Entity(u32);
 
 #[derive(Copy, Clone, Hash, Ord, PartialOrd, Eq, PartialEq, Debug)]
-struct ComponentId(TypeId);
+pub struct ComponentId(TypeId);
 
 impl ComponentId {
     fn of<C: Component>() -> Self {
@@ -27,7 +27,13 @@ impl ComponentId {
     }
 }
 
-pub trait Component: Any {}
+pub trait Component: Any + Sized {
+    type Container: Container<Self>;
+
+    fn component_id(&self) -> ComponentId {
+        ComponentId(self.type_id())
+    }
+}
 
 pub trait System<'a> {
     type Args: Selector<'a>;
@@ -57,14 +63,14 @@ impl World {
     pub fn add_component<C: Component>(
         &mut self, entity: Entity, component: C,
     ) {
-        let entry = self.components.entry(ComponentId::of::<C>()).or_insert(
-            RefCell::new(Box::new(BTreeComponentMap::<C>::default())),
-        );
+        let entry = self
+            .components
+            .entry(ComponentId::of::<C>())
+            .or_insert(RefCell::new(Box::new(C::Container::default())));
         entry
             .borrow_mut()
-            .downcast_mut::<BTreeComponentMap<C>>()
+            .downcast_mut::<C::Container>()
             .unwrap()
-            .map
             .insert(entity, component);
     }
 
@@ -74,17 +80,19 @@ impl World {
     }
 }
 
-trait ComponentMap<'a, C: Component>: Any {
-    fn iter(&'a self) -> ComponentIter<'a, C>;
-    fn iter_mut(&'a mut self) -> ComponentIterMut<'a, C>;
-    fn entity_iter(&'a self) -> EntityComponentIter<'a, C>;
-    fn entity_iter_mut(&'a mut self) -> EntityComponentIterMut<'a, C>;
+pub trait Container<C: Component>: Any + Default {
+    fn iter<'a>(&'a self) -> ComponentIter<'a, C>;
+    fn iter_mut<'a>(&'a mut self) -> ComponentIterMut<'a, C>;
+    fn entity_iter<'a>(&'a self) -> EntityComponentIter<'a, C>;
+    fn entity_iter_mut<'a>(&'a mut self) -> EntityComponentIterMut<'a, C>;
 
-    fn get(&'a self, entity: Entity) -> Option<&'a C>;
-    fn get_mut(&'a mut self, entity: Entity) -> Option<&'a mut C>;
+    fn get<'a>(&'a self, entity: Entity) -> Option<&'a C>;
+    fn get_mut<'a>(&'a mut self, entity: Entity) -> Option<&'a mut C>;
+
+    fn insert(&mut self, entity: Entity, component: C);
 }
 
-struct BTreeComponentMap<C: Component> {
+pub struct BTreeComponentMap<C: Component> {
     map: BTreeMap<Entity, C>,
 }
 
@@ -96,29 +104,33 @@ impl<C: Component> Default for BTreeComponentMap<C> {
     }
 }
 
-impl<'a, C: Component> ComponentMap<'a, C> for BTreeComponentMap<C> {
-    fn iter(&'a self) -> ComponentIter<'a, C> {
+impl<C: Component> Container<C> for BTreeComponentMap<C> {
+    fn iter<'a>(&'a self) -> ComponentIter<'a, C> {
         ComponentIter::wrap(self.map.iter())
     }
-    fn iter_mut(&'a mut self) -> ComponentIterMut<'a, C> {
+    fn iter_mut<'a>(&'a mut self) -> ComponentIterMut<'a, C> {
         ComponentIterMut::wrap(self.map.iter_mut())
     }
-    fn entity_iter(&'a self) -> EntityComponentIter<'a, C> {
+    fn entity_iter<'a>(&'a self) -> EntityComponentIter<'a, C> {
         EntityComponentIter::wrap(self.map.iter())
     }
-    fn entity_iter_mut(&'a mut self) -> EntityComponentIterMut<'a, C> {
+    fn entity_iter_mut<'a>(&'a mut self) -> EntityComponentIterMut<'a, C> {
         EntityComponentIterMut::wrap(self.map.iter_mut())
     }
 
-    fn get(&'a self, entity: Entity) -> Option<&'a C> {
+    fn get<'a>(&'a self, entity: Entity) -> Option<&'a C> {
         self.map.get(&entity)
     }
-    fn get_mut(&'a mut self, entity: Entity) -> Option<&'a mut C> {
+    fn get_mut<'a>(&'a mut self, entity: Entity) -> Option<&'a mut C> {
         self.map.get_mut(&entity)
+    }
+
+    fn insert(&mut self, entity: Entity, component: C) {
+        self.map.insert(entity, component);
     }
 }
 
-struct ComponentIter<'a, C: Component> {
+pub struct ComponentIter<'a, C: Component> {
     iter: Box<dyn Iterator<Item = (&'a Entity, &'a C)> + 'a>,
 }
 
@@ -140,7 +152,7 @@ impl<'a, C: Component> Iterator for ComponentIter<'a, C> {
     }
 }
 
-struct ComponentIterMut<'a, C: Component> {
+pub struct ComponentIterMut<'a, C: Component> {
     iter: Box<dyn Iterator<Item = (&'a Entity, &'a mut C)> + 'a>,
 }
 
@@ -162,7 +174,7 @@ impl<'a, C: Component> Iterator for ComponentIterMut<'a, C> {
     }
 }
 
-struct EntityComponentIter<'a, C: Component> {
+pub struct EntityComponentIter<'a, C: Component> {
     iter: Box<dyn Iterator<Item = (&'a Entity, &'a C)> + 'a>,
 }
 
@@ -184,7 +196,7 @@ impl<'a, C: Component> Iterator for EntityComponentIter<'a, C> {
     }
 }
 
-struct EntityComponentIterMut<'a, C: Component> {
+pub struct EntityComponentIterMut<'a, C: Component> {
     iter: Box<dyn Iterator<Item = (&'a Entity, &'a mut C)> + 'a>,
 }
 
@@ -207,14 +219,12 @@ impl<'a, C: Component> Iterator for EntityComponentIterMut<'a, C> {
 }
 
 pub trait Selector<'a> {
-    type Component: Component;
+    type Component;
     fn build(world: &'a World) -> Self;
 }
 
 macro_rules! tuple_selector_impl {
     ( $( $s:ident),* ) => {
-        impl<'a, $($s: Component),*> Component for ($($s,)*) {}
-
         impl<'a, $($s),*> Selector<'a> for ($($s,)*)
         where
             $($s: Selector<'a>,)*
@@ -249,17 +259,11 @@ impl<'b, 'a: 'b, C: Component> PerEntity<'a, C> {
     }
 
     pub fn stream(&'b mut self) -> impl Iterator<Item = &'b C> {
-        self.ecm
-            .downcast_mut::<BTreeComponentMap<C>>()
-            .unwrap()
-            .iter()
+        self.ecm.downcast_mut::<C::Container>().unwrap().iter()
     }
 
     pub fn stream_mut(&'b mut self) -> impl Iterator<Item = &'b mut C> {
-        self.ecm
-            .downcast_mut::<BTreeComponentMap<C>>()
-            .unwrap()
-            .iter_mut()
+        self.ecm.downcast_mut::<C::Container>().unwrap().iter_mut()
     }
 }
 
@@ -344,15 +348,22 @@ pub mod tests {
 
     #[derive(PartialEq, Eq, Debug)]
     struct TestComponentA(usize);
-    impl Component for TestComponentA {}
+    impl Component for TestComponentA {
+        type Container = BTreeComponentMap<TestComponentA>;
+    }
 
     #[derive(PartialEq, Eq, Debug)]
     struct TestComponentB(usize);
-    impl Component for TestComponentB {}
+    impl Component for TestComponentB {
+        type Container = BTreeComponentMap<TestComponentB>;
+    }
 
     #[derive(PartialEq, Eq, Debug)]
     struct GlobalTestComponent(usize);
-    impl Component for GlobalTestComponent {}
+    impl Component for GlobalTestComponent {
+        // TODO: Singleton container for globals.
+        type Container = BTreeComponentMap<GlobalTestComponent>;
+    }
 
     struct TestSystemA;
 
@@ -407,12 +418,12 @@ pub mod tests {
             .unwrap()
             .borrow();
         let comp_a1 = ecm_a
-            .downcast_ref::<BTreeComponentMap<TestComponentA>>()
+            .downcast_ref::<<TestComponentA as Component>::Container>()
             .unwrap()
             .get(e1)
             .unwrap();
         let comp_a2 = ecm_a
-            .downcast_ref::<BTreeComponentMap<TestComponentA>>()
+            .downcast_ref::<<TestComponentA as Component>::Container>()
             .unwrap()
             .get(e2)
             .unwrap();
@@ -423,12 +434,12 @@ pub mod tests {
             .unwrap()
             .borrow();
         let comp_b1 = ecm_b
-            .downcast_ref::<BTreeComponentMap<TestComponentB>>()
+            .downcast_ref::<<TestComponentB as Component>::Container>()
             .unwrap()
             .get(e1)
             .unwrap();
         let comp_b2 = ecm_b
-            .downcast_ref::<BTreeComponentMap<TestComponentB>>()
+            .downcast_ref::<<TestComponentB as Component>::Container>()
             .unwrap()
             .get(e2)
             .unwrap();
