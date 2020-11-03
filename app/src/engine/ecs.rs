@@ -80,13 +80,13 @@ impl World {
 }
 
 pub trait Container<C: Component>: Any + Default {
-    fn iter<'a>(&'a self) -> ComponentIter<'a, C>;
-    fn iter_mut<'a>(&'a self) -> ComponentIterMut<'a, C>;
-    fn entity_iter<'a>(&'a self) -> EntityComponentIter<'a, C>;
-    fn entity_iter_mut<'a>(&'a self) -> EntityComponentIterMut<'a, C>;
+    fn iter<'a>(&self) -> ComponentIter<'a, C>;
+    fn iter_mut<'a>(&self) -> ComponentIterMut<'a, C>;
+    fn entity_iter<'a>(&self) -> EntityComponentIter<'a, C>;
+    fn entity_iter_mut<'a>(&self) -> EntityComponentIterMut<'a, C>;
 
-    fn get<'a>(&'a self, entity: Entity) -> Option<&'a C>;
-    fn get_mut<'a>(&'a self, entity: Entity) -> Option<&'a mut C>;
+    fn get<'a>(&self, entity: Entity) -> Option<&'a C>;
+    fn get_mut<'a>(&self, entity: Entity) -> Option<&'a mut C>;
 
     fn insert(&mut self, entity: Entity, component: C);
 }
@@ -105,26 +105,26 @@ impl<C: Component> Default for Singleton<C> {
 }
 
 impl<C: Component> Container<C> for Singleton<C> {
-    fn iter<'a>(&'a self) -> ComponentIter<'a, C> {
+    fn iter<'a>(&self) -> ComponentIter<'a, C> {
         unimplemented!()
     }
-    fn iter_mut<'a>(&'a self) -> ComponentIterMut<'a, C> {
+    fn iter_mut<'a>(&self) -> ComponentIterMut<'a, C> {
         unimplemented!()
     }
-    fn entity_iter<'a>(&'a self) -> EntityComponentIter<'a, C> {
+    fn entity_iter<'a>(&self) -> EntityComponentIter<'a, C> {
         unimplemented!()
     }
-    fn entity_iter_mut<'a>(&'a self) -> EntityComponentIterMut<'a, C> {
+    fn entity_iter_mut<'a>(&self) -> EntityComponentIterMut<'a, C> {
         unimplemented!()
     }
 
-    fn get<'a>(&'a self, _: Entity) -> Option<&'a C> {
+    fn get<'a>(&self, _: Entity) -> Option<&'a C> {
         match unsafe { self.value.get().as_ref() } {
             Some(mu) => unsafe { mu.as_ptr().as_ref() },
             None => None,
         }
     }
-    fn get_mut<'a>(&'a self, _: Entity) -> Option<&'a mut C> {
+    fn get_mut<'a>(&self, _: Entity) -> Option<&'a mut C> {
         match unsafe { self.value.get().as_mut() } {
             Some(mu) => unsafe { mu.as_mut_ptr().as_mut() },
             None => None,
@@ -144,12 +144,12 @@ pub struct BTreeComponentMap<C: Component> {
     map: UnsafeCell<BTreeMap<Entity, C>>,
 }
 
-impl<C: Component> BTreeComponentMap<C> {
-    fn map<'a>(&'a self) -> &'a BTreeMap<Entity, C> {
+impl<'a, C: Component> BTreeComponentMap<C> {
+    fn map(&self) -> &'a BTreeMap<Entity, C> {
         unsafe { self.map.get().as_ref().unwrap() }
     }
 
-    fn map_mut<'a>(&'a self) -> &'a mut BTreeMap<Entity, C> {
+    fn map_mut(&self) -> &'a mut BTreeMap<Entity, C> {
         unsafe { self.map.get().as_mut().unwrap() }
     }
 }
@@ -163,23 +163,23 @@ impl<C: Component> Default for BTreeComponentMap<C> {
 }
 
 impl<C: Component> Container<C> for BTreeComponentMap<C> {
-    fn iter<'a>(&'a self) -> ComponentIter<'a, C> {
+    fn iter<'a>(&self) -> ComponentIter<'a, C> {
         ComponentIter::wrap(self.map().iter())
     }
-    fn iter_mut<'a>(&'a self) -> ComponentIterMut<'a, C> {
+    fn iter_mut<'a>(&self) -> ComponentIterMut<'a, C> {
         ComponentIterMut::wrap(self.map_mut().iter_mut())
     }
-    fn entity_iter<'a>(&'a self) -> EntityComponentIter<'a, C> {
+    fn entity_iter<'a>(&self) -> EntityComponentIter<'a, C> {
         EntityComponentIter::wrap(self.map().iter())
     }
-    fn entity_iter_mut<'a>(&'a self) -> EntityComponentIterMut<'a, C> {
+    fn entity_iter_mut<'a>(&self) -> EntityComponentIterMut<'a, C> {
         EntityComponentIterMut::wrap(self.map_mut().iter_mut())
     }
 
-    fn get<'a>(&'a self, entity: Entity) -> Option<&'a C> {
+    fn get<'a>(&self, entity: Entity) -> Option<&'a C> {
         self.map().get(&entity)
     }
-    fn get_mut<'a>(&'a self, entity: Entity) -> Option<&'a mut C> {
+    fn get_mut<'a>(&self, entity: Entity) -> Option<&'a mut C> {
         self.map_mut().get_mut(&entity)
     }
 
@@ -303,18 +303,18 @@ pub struct PerEntity<'a, C: Component> {
     container: &'a C::Container,
 }
 
-impl<'b, 'a: 'b, C: Component> PerEntity<'a, C> {
+impl<'a, C: Component> PerEntity<'a, C> {
     fn new(world: &'a World) -> Self {
         PerEntity {
             container: world.get_container::<C>(),
         }
     }
 
-    pub fn stream(&'b self) -> impl Iterator<Item = &'b C> {
+    pub fn stream(&self) -> impl Iterator<Item = &'a C> {
         self.container.iter()
     }
 
-    pub fn stream_mut(&'b mut self) -> impl Iterator<Item = &'b mut C> {
+    pub fn stream_mut(&mut self) -> impl Iterator<Item = &'a mut C> {
         self.container.iter_mut()
     }
 }
@@ -333,7 +333,7 @@ where
     container: &'a C::Container,
 }
 
-impl<'b, 'a: 'b, C> Global<'a, C>
+impl<'a, C> Global<'a, C>
 where
     C: Component<Container = Singleton<C>>,
 {
@@ -343,11 +343,11 @@ where
         }
     }
 
-    pub fn get(&'b self) -> &'b C {
+    pub fn get(&self) -> &'a C {
         self.container.get(Entity(0)).unwrap()
     }
 
-    pub fn get_mut(&'b mut self) -> &'b mut C {
+    pub fn get_mut(&mut self) -> &'a mut C {
         self.container.get_mut(Entity(0)).unwrap()
     }
 }
