@@ -483,9 +483,10 @@ where
     type Item = (&'a mut C1, &'a mut C2);
     fn next(&mut self) -> Option<Self::Item> {
         match self.iter.next() {
-            Some((entity, item)) => {
-                Some((item, self.c2.get_mut(entity).unwrap()))
-            }
+            Some((entity, item1)) => match self.c2.get_mut(entity) {
+                Some(item2) => Some((item1, item2)),
+                None => None,
+            },
             None => None,
         }
     }
@@ -558,8 +559,10 @@ pub mod tests {
         let e2 = world.add_entity();
         world.add_component(e2, TestComponentA(2000));
         world.add_component(e2, TestComponentB(200));
+        let e3 = world.add_entity();
+        world.add_component(e3, TestComponentA(3000));
 
-        assert_eq!(world.entities, 2);
+        assert_eq!(world.entities, 3);
         assert_eq!(world.components.len(), 3);
 
         let mut r = Runner::new();
@@ -570,6 +573,7 @@ pub mod tests {
         let container_a = world.get_container::<TestComponentA>();
         let comp_a1 = container_a.get(e1).unwrap();
         let comp_a2 = container_a.get(e2).unwrap();
+        let comp_a3 = container_a.get(e3).unwrap();
 
         let container_b = world.get_container::<TestComponentB>();
         let comp_b1 = container_b.get(e1).unwrap();
@@ -577,6 +581,7 @@ pub mod tests {
 
         assert_eq!(comp_a1, &TestComponentA(1104));
         assert_eq!(comp_a2, &TestComponentA(2204));
+        assert_eq!(comp_a3, &TestComponentA(3001));
         assert_eq!(comp_b1, &TestComponentB(200));
         assert_eq!(comp_b2, &TestComponentB(400));
     }
