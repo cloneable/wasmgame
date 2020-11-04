@@ -91,36 +91,6 @@ pub trait Container<C: Component>: Any + Default {
     fn insert(&mut self, entity: Entity, component: C);
 }
 
-pub struct DevNullContainer;
-impl Default for DevNullContainer {
-    fn default() -> Self {
-        DevNullContainer
-    }
-}
-impl<C: Component> Container<C> for DevNullContainer {
-    fn iter<'a>(&self) -> ComponentIter<'a, C> {
-        unimplemented!()
-    }
-    fn iter_mut<'a>(&self) -> ComponentIterMut<'a, C> {
-        unimplemented!()
-    }
-    fn entity_iter<'a>(&self) -> EntityComponentIter<'a, C> {
-        unimplemented!()
-    }
-    fn entity_iter_mut<'a>(&self) -> EntityComponentIterMut<'a, C> {
-        unimplemented!()
-    }
-    fn get<'a>(&self, _: Entity) -> Option<&'a C> {
-        unimplemented!()
-    }
-    fn get_mut<'a>(&self, _: Entity) -> Option<&'a mut C> {
-        unimplemented!()
-    }
-    fn insert(&mut self, _: Entity, _: C) {
-        unimplemented!()
-    }
-}
-
 pub struct Singleton<C: Component> {
     // TODO: Add wrapper type similar to RefMut to get some safety back.
     value: UnsafeCell<MaybeUninit<C>>,
@@ -307,30 +277,22 @@ impl<'a, C: Component> Iterator for EntityComponentIterMut<'a, C> {
 }
 
 pub trait Selector<'a> {
-    type Component: Component;
     fn build(world: &'a World) -> Self;
+}
+
+pub trait HasContainer<'a> {
+    type Component: Component;
     fn container(&self) -> &'a <Self::Component as Component>::Container;
 }
 
 macro_rules! tuple_selector_impl {
     ( $( $s:ident),* ) => {
-        impl<'a, $($s),*> Component for ($($s,)*)
-        where
-            $($s: Component,)*
-        {
-            type Container = DevNullContainer;
-        }
-
         impl<'a, $($s),*> Selector<'a> for ($($s,)*)
         where
             $($s: Selector<'a>,)*
         {
-            type Component = ($($s::Component,)*);
             fn build(world: &'a World) -> Self {
                 ($($s::build(world),)*)
-            }
-            fn container(&self) -> &'a <Self::Component as Component>::Container {
-                unimplemented!()
             }
         }
     }
@@ -361,11 +323,13 @@ impl<'a, C: Component> PerEntity<'a, C> {
 }
 
 impl<'a, C: Component> Selector<'a> for PerEntity<'a, C> {
-    type Component = C;
-
     fn build(world: &'a World) -> Self {
         PerEntity::new(world)
     }
+}
+
+impl<'a, C: Component> HasContainer<'a> for PerEntity<'a, C> {
+    type Component = C;
 
     fn container(&self) -> &'a C::Container {
         self.container
@@ -402,11 +366,16 @@ impl<'a, C> Selector<'a> for Global<'a, C>
 where
     C: Component<Container = Singleton<C>>,
 {
-    type Component = C;
-
     fn build(world: &'a World) -> Self {
         Global::new(world)
     }
+}
+
+impl<'a, C> HasContainer<'a> for Global<'a, C>
+where
+    C: Component<Container = Singleton<C>>,
+{
+    type Component = C;
 
     fn container(&self) -> &'a C::Container {
         self.container
@@ -453,8 +422,8 @@ pub trait Joiner<'a> {
 
 impl<'a, S1, S2> Joiner<'a> for (&S1, &S2)
 where
-    S1: Selector<'a>,
-    S2: Selector<'a>,
+    S1: HasContainer<'a>,
+    S2: HasContainer<'a>,
 {
     type Output = (&'a mut S1::Component, &'a mut S2::Component);
     type Iterator = JoinerIter<'a, S1::Component, S2::Component>;
