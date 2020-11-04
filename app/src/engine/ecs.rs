@@ -91,6 +91,36 @@ pub trait Container<C: Component>: Any + Default {
     fn insert(&mut self, entity: Entity, component: C);
 }
 
+pub struct DevNullContainer;
+impl Default for DevNullContainer {
+    fn default() -> Self {
+        DevNullContainer
+    }
+}
+impl<C: Component> Container<C> for DevNullContainer {
+    fn iter<'a>(&self) -> ComponentIter<'a, C> {
+        unimplemented!()
+    }
+    fn iter_mut<'a>(&self) -> ComponentIterMut<'a, C> {
+        unimplemented!()
+    }
+    fn entity_iter<'a>(&self) -> EntityComponentIter<'a, C> {
+        unimplemented!()
+    }
+    fn entity_iter_mut<'a>(&self) -> EntityComponentIterMut<'a, C> {
+        unimplemented!()
+    }
+    fn get<'a>(&self, _: Entity) -> Option<&'a C> {
+        unimplemented!()
+    }
+    fn get_mut<'a>(&self, _: Entity) -> Option<&'a mut C> {
+        unimplemented!()
+    }
+    fn insert(&mut self, _: Entity, _: C) {
+        unimplemented!()
+    }
+}
+
 pub struct Singleton<C: Component> {
     // TODO: Add wrapper type similar to RefMut to get some safety back.
     value: UnsafeCell<MaybeUninit<C>>,
@@ -277,12 +307,20 @@ impl<'a, C: Component> Iterator for EntityComponentIterMut<'a, C> {
 }
 
 pub trait Selector<'a> {
-    type Component;
+    type Component: Component;
     fn build(world: &'a World) -> Self;
+    fn container(&self) -> &'a <Self::Component as Component>::Container;
 }
 
 macro_rules! tuple_selector_impl {
     ( $( $s:ident),* ) => {
+        impl<'a, $($s),*> Component for ($($s,)*)
+        where
+            $($s: Component,)*
+        {
+            type Container = DevNullContainer;
+        }
+
         impl<'a, $($s),*> Selector<'a> for ($($s,)*)
         where
             $($s: Selector<'a>,)*
@@ -290,6 +328,9 @@ macro_rules! tuple_selector_impl {
             type Component = ($($s::Component,)*);
             fn build(world: &'a World) -> Self {
                 ($($s::build(world),)*)
+            }
+            fn container(&self) -> &'a <Self::Component as Component>::Container {
+                unimplemented!()
             }
         }
     }
@@ -310,19 +351,24 @@ impl<'a, C: Component> PerEntity<'a, C> {
         }
     }
 
-    pub fn stream(&self) -> impl Iterator<Item = &'a C> {
+    pub fn iter(&self) -> impl Iterator<Item = &'a C> {
         self.container.iter()
     }
 
-    pub fn stream_mut(&mut self) -> impl Iterator<Item = &'a mut C> {
+    pub fn iter_mut(&self) -> impl Iterator<Item = &'a mut C> {
         self.container.iter_mut()
     }
 }
 
 impl<'a, C: Component> Selector<'a> for PerEntity<'a, C> {
     type Component = C;
+
     fn build(world: &'a World) -> Self {
         PerEntity::new(world)
+    }
+
+    fn container(&self) -> &'a C::Container {
+        self.container
     }
 }
 
@@ -357,8 +403,13 @@ where
     C: Component<Container = Singleton<C>>,
 {
     type Component = C;
+
     fn build(world: &'a World) -> Self {
         Global::new(world)
+    }
+
+    fn container(&self) -> &'a C::Container {
+        self.container
     }
 }
 
@@ -394,6 +445,52 @@ impl<'a, S: System<'a>> SystemAdaptor<'a> for S {
     }
 }
 
+pub trait Joiner<'a> {
+    type Output;
+    type Iterator: Iterator<Item = Self::Output>;
+    fn join(&self) -> Self::Iterator;
+}
+
+impl<'a, S1, S2> Joiner<'a> for (&S1, &S2)
+where
+    S1: Selector<'a>,
+    S2: Selector<'a>,
+{
+    type Output = (&'a mut S1::Component, &'a mut S2::Component);
+    type Iterator = JoinerIter<'a, S1::Component, S2::Component>;
+    fn join(&self) -> Self::Iterator {
+        JoinerIter {
+            iter: Box::new(self.0.container().entity_iter_mut()),
+            c2: self.1.container(),
+        }
+    }
+}
+
+pub struct JoinerIter<'a, C1, C2>
+where
+    C1: Component,
+    C2: Component,
+{
+    iter: Box<dyn Iterator<Item = (Entity, &'a mut C1)> + 'a>,
+    c2: &'a C2::Container,
+}
+
+impl<'a, C1, C2> Iterator for JoinerIter<'a, C1, C2>
+where
+    C1: Component,
+    C2: Component,
+{
+    type Item = (&'a mut C1, &'a mut C2);
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.iter.next() {
+            Some((entity, item)) => {
+                Some((item, self.c2.get_mut(entity).unwrap()))
+            }
+            None => None,
+        }
+    }
+}
+
 #[cfg(test)]
 pub mod tests {
     use ::std::{assert_eq, panic};
@@ -425,9 +522,9 @@ pub mod tests {
     impl<'a> System<'a> for TestSystemA {
         type Args =
             (PerEntity<'a, TestComponentA>, PerEntity<'a, TestComponentB>);
-        fn exec(&mut self, (mut comp_a, mut _comp_b): Self::Args) {
-            for c in comp_a.stream_mut() {
-                c.0 += 1
+        fn exec(&mut self, (comp_a, _comp_b): Self::Args) {
+            for a in comp_a.iter_mut() {
+                a.0 += 1
             }
         }
     }
@@ -440,9 +537,12 @@ pub mod tests {
             PerEntity<'a, TestComponentB>,
             Global<'a, GlobalTestComponent>,
         );
-        fn exec(&mut self, (mut _comp_a, mut comp_b, glob): Self::Args) {
-            for c in comp_b.stream_mut() {
-                c.0 += glob.get().0
+        fn exec(&mut self, (comp_a, comp_b, glob): Self::Args) {
+            for (a, b) in (&comp_a, &comp_b).join() {
+                a.0 += b.0 + glob.get().0
+            }
+            for b in comp_b.iter_mut() {
+                b.0 *= 2
             }
         }
     }
@@ -453,10 +553,10 @@ pub mod tests {
         // TODO: provide add_component for global ones.
         world.add_component(Entity(0), GlobalTestComponent(3));
         let e1 = world.add_entity();
-        world.add_component(e1, TestComponentA(10));
+        world.add_component(e1, TestComponentA(1000));
         world.add_component(e1, TestComponentB(100));
         let e2 = world.add_entity();
-        world.add_component(e2, TestComponentA(20));
+        world.add_component(e2, TestComponentA(2000));
         world.add_component(e2, TestComponentB(200));
 
         assert_eq!(world.entities, 2);
@@ -475,9 +575,9 @@ pub mod tests {
         let comp_b1 = container_b.get(e1).unwrap();
         let comp_b2 = container_b.get(e2).unwrap();
 
-        assert_eq!(comp_a1, &TestComponentA(11));
-        assert_eq!(comp_a2, &TestComponentA(21));
-        assert_eq!(comp_b1, &TestComponentB(103));
-        assert_eq!(comp_b2, &TestComponentB(203));
+        assert_eq!(comp_a1, &TestComponentA(1104));
+        assert_eq!(comp_a2, &TestComponentA(2204));
+        assert_eq!(comp_b1, &TestComponentB(200));
+        assert_eq!(comp_b2, &TestComponentB(400));
     }
 }
