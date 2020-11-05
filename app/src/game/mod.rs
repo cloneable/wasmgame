@@ -1,6 +1,8 @@
 mod assets;
+mod components;
 mod models;
 mod shaders;
+mod systems;
 
 use ::std::clone::Clone;
 use ::std::option::{Option, Option::None, Option::Some};
