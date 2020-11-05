@@ -13,7 +13,7 @@ use ::std::{
     iter::Iterator,
     marker::Sized,
     mem::MaybeUninit,
-    ops::Fn,
+    ops::{Deref, DerefMut, Fn},
     option::{Option, Option::None, Option::Some},
     panic, unimplemented,
     vec::Vec,
@@ -381,6 +381,26 @@ where
 
     fn container(&self) -> &'a C::Container {
         self.container
+    }
+}
+
+impl<'a, C> Deref for Global<'a, C>
+where
+    C: Component<Container = Singleton<C>>,
+{
+    type Target = C;
+
+    fn deref(&self) -> &C {
+        self.get()
+    }
+}
+
+impl<'a, C> DerefMut for Global<'a, C>
+where
+    C: Component<Container = Singleton<C>>,
+{
+    fn deref_mut(&mut self) -> &mut C {
+        self.get_mut()
     }
 }
 
