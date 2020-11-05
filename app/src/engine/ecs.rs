@@ -8,10 +8,12 @@ use ::std::{
     clone::Clone,
     cmp::Ord,
     collections::BTreeMap,
+    convert::AsRef,
     default::Default,
     iter::Iterator,
     marker::Sized,
     mem::MaybeUninit,
+    ops::Fn,
     option::{Option, Option::None, Option::Some},
     panic, unimplemented,
     vec::Vec,
@@ -417,7 +419,7 @@ impl<'a, S: System<'a>> SystemAdaptor<'a> for S {
 pub trait Joiner<'a> {
     type Output;
     type Iterator: Iterator<Item = Self::Output>;
-    fn join(&self) -> Self::Iterator;
+    fn join(&'a self) -> Self::Iterator;
 }
 
 impl<'a, S1, S2> Joiner<'a> for (&S1, &S2)
@@ -461,6 +463,64 @@ where
     }
 }
 
+// TODO: Turn into macro.
+impl<'a, S1, S2, S3> Joiner<'a> for (&'a S1, &'a S2, &'a S3)
+where
+    S1: HasContainer<'a>,
+    S2: HasContainer<'a>,
+    S3: HasContainer<'a>,
+{
+    type Output = (
+        &'a mut S1::Component,
+        &'a mut S2::Component,
+        &'a mut S3::Component,
+    );
+    type Iterator = JoinerIter3<'a, Self, S1::Component>;
+    fn join(&'a self) -> Self::Iterator {
+        #[allow(non_snake_case)]
+        let (S1, S2, S3) = self;
+        JoinerIter3::new(
+            Box::new(self.0.container().entity_iter_mut()),
+            move |e: Entity| {
+                Some((
+                    // TODO: Replace unwraps, return None.
+                    S1::container(S1).get_mut(e).unwrap(),
+                    S2::container(S2).get_mut(e).unwrap(),
+                    S3::container(S3).get_mut(e).unwrap(),
+                ))
+            },
+        )
+    }
+}
+
+pub struct JoinerIter3<'a, J: Joiner<'a>, C0: Component> {
+    iter: Box<dyn Iterator<Item = (Entity, &'a mut C0)> + 'a>,
+    func: Box<dyn Fn(Entity) -> Option<J::Output> + 'a>,
+}
+
+impl<'a, J: Joiner<'a>, C0: Component> JoinerIter3<'a, J, C0> {
+    fn new(
+        iter: Box<dyn Iterator<Item = (Entity, &'a mut C0)> + 'a>,
+        func: impl Fn(Entity) -> Option<J::Output> + 'a,
+    ) -> Self {
+        JoinerIter3 {
+            iter,
+            func: Box::new(func),
+        }
+    }
+}
+
+impl<'a, J: Joiner<'a>, C0: Component> Iterator for JoinerIter3<'a, J, C0> {
+    type Item = J::Output;
+    fn next(&mut self) -> Option<Self::Item> {
+        // TODO: iterate over entities as keys only.
+        if let Some((entity, _)) = self.iter.next() {
+            return self.func.as_ref()(entity);
+        }
+        None
+    }
+}
+
 #[cfg(test)]
 pub mod tests {
     use ::std::{assert_eq, panic};
@@ -478,6 +538,12 @@ pub mod tests {
     struct TestComponentB(usize);
     impl Component for TestComponentB {
         type Container = BTreeComponentMap<TestComponentB>;
+    }
+
+    #[derive(PartialEq, Eq, Debug)]
+    struct TestComponentC(usize);
+    impl Component for TestComponentC {
+        type Container = BTreeComponentMap<TestComponentC>;
     }
 
     #[derive(PartialEq, Eq, Debug)]
@@ -517,6 +583,21 @@ pub mod tests {
         }
     }
 
+    struct TestSystemC;
+
+    impl<'a> System<'a> for TestSystemC {
+        type Args = (
+            PerEntity<'a, TestComponentA>,
+            PerEntity<'a, TestComponentB>,
+            PerEntity<'a, TestComponentC>,
+        );
+        fn exec(&mut self, (comp_a, comp_b, comp_c): Self::Args) {
+            for (a, b, c) in (&comp_a, &comp_b, &comp_c).join() {
+                a.0 += b.0 * c.0
+            }
+        }
+    }
+
     #[wasm_bindgen_test]
     fn test_lookup() {
         let mut world = World::new();
@@ -537,6 +618,7 @@ pub mod tests {
         let mut r = Runner::new();
         r.register_system(TestSystemA);
         r.register_system(TestSystemB);
+        r.register_system(TestSystemC);
         r.exec(&world);
 
         let container_a = world.get_container::<TestComponentA>();
