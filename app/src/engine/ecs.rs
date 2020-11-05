@@ -422,103 +422,63 @@ pub trait Joiner<'a> {
     fn join(&'a self) -> Self::Iterator;
 }
 
-impl<'a, S1, S2> Joiner<'a> for (&S1, &S2)
-where
-    S1: HasContainer<'a>,
-    S2: HasContainer<'a>,
-{
-    type Output = (&'a mut S1::Component, &'a mut S2::Component);
-    type Iterator = JoinerIter<'a, S1::Component, S2::Component>;
-    fn join(&self) -> Self::Iterator {
-        JoinerIter {
-            iter: Box::new(self.0.container().entity_iter_mut()),
-            c2: self.1.container(),
+macro_rules! joiner_tuple_impl {
+    ( $s0:ident, $( $s:ident),* ) => {
+        impl<'a, $s0, $($s),*> Joiner<'a> for (&'a $s0, $(&'a $s,)*)
+        where
+            $s0: HasContainer<'a>,
+            $($s: HasContainer<'a>,)*
+        {
+            type Output = (
+                &'a mut $s0::Component,
+                $(&'a mut $s::Component,)*
+            );
+            type Iterator = JoinerIter<'a, Self, $s0::Component>;
+
+            #[allow(non_snake_case)]
+            fn join(&'a self) -> Self::Iterator {
+                let ($s0, $($s,)*) = self;
+                JoinerIter::new(
+                    Box::new($s0.container().entity_iter_mut()),
+                    move |e: Entity| {
+                        // TODO: get first compo from iter.
+                        let $s0 = $s0::container($s0).get_mut(e);
+                        if $s0.is_none() {
+                            return None;
+                        }
+                        $(let $s = $s::container($s).get_mut(e);
+                        if $s.is_none() {
+                            return None;
+                        })*
+                        Some(($s0.unwrap(), $($s.unwrap()),*))
+                    },
+                )
+            }
         }
-    }
+    };
 }
 
-pub struct JoinerIter<'a, C1, C2>
-where
-    C1: Component,
-    C2: Component,
-{
-    iter: Box<dyn Iterator<Item = (Entity, &'a mut C1)> + 'a>,
-    c2: &'a C2::Container,
-}
+joiner_tuple_impl!(S1, S2);
+joiner_tuple_impl!(S1, S2, S3);
 
-impl<'a, C1, C2> Iterator for JoinerIter<'a, C1, C2>
-where
-    C1: Component,
-    C2: Component,
-{
-    type Item = (&'a mut C1, &'a mut C2);
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.iter.next() {
-            Some((entity, item1)) => match self.c2.get_mut(entity) {
-                Some(item2) => Some((item1, item2)),
-                None => None,
-            },
-            None => None,
-        }
-    }
-}
-
-// TODO: Turn into macro.
-impl<'a, S1, S2, S3> Joiner<'a> for (&'a S1, &'a S2, &'a S3)
-where
-    S1: HasContainer<'a>,
-    S2: HasContainer<'a>,
-    S3: HasContainer<'a>,
-{
-    type Output = (
-        &'a mut S1::Component,
-        &'a mut S2::Component,
-        &'a mut S3::Component,
-    );
-    type Iterator = JoinerIter3<'a, Self, S1::Component>;
-
-    #[allow(non_snake_case)]
-    fn join(&'a self) -> Self::Iterator {
-        let (S1, S2, S3) = self;
-        JoinerIter3::new(
-            Box::new(self.0.container().entity_iter_mut()),
-            move |e: Entity| {
-                let S1 = S1::container(S1).get_mut(e);
-                if S1.is_none() {
-                    return None;
-                }
-                let S2 = S2::container(S2).get_mut(e);
-                if S2.is_none() {
-                    return None;
-                }
-                let S3 = S3::container(S3).get_mut(e);
-                if S3.is_none() {
-                    return None;
-                }
-                Some((S1.unwrap(), S2.unwrap(), S3.unwrap()))
-            },
-        )
-    }
-}
-
-pub struct JoinerIter3<'a, J: Joiner<'a>, C0: Component> {
+pub struct JoinerIter<'a, J: Joiner<'a>, C0: Component> {
     iter: Box<dyn Iterator<Item = (Entity, &'a mut C0)> + 'a>,
     func: Box<dyn Fn(Entity) -> Option<J::Output> + 'a>,
 }
 
-impl<'a, J: Joiner<'a>, C0: Component> JoinerIter3<'a, J, C0> {
+impl<'a, J: Joiner<'a>, C0: Component> JoinerIter<'a, J, C0> {
     fn new(
         iter: Box<dyn Iterator<Item = (Entity, &'a mut C0)> + 'a>,
         func: impl Fn(Entity) -> Option<J::Output> + 'a,
     ) -> Self {
-        JoinerIter3 {
+        JoinerIter {
             iter,
             func: Box::new(func),
         }
     }
 }
 
-impl<'a, J: Joiner<'a>, C0: Component> Iterator for JoinerIter3<'a, J, C0> {
+impl<'a, J: Joiner<'a>, C0: Component> Iterator for JoinerIter<'a, J, C0> {
     type Item = J::Output;
     fn next(&mut self) -> Option<Self::Item> {
         // TODO: iterate over entities as keys only.
