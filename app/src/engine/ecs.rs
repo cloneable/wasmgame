@@ -476,18 +476,26 @@ where
         &'a mut S3::Component,
     );
     type Iterator = JoinerIter3<'a, Self, S1::Component>;
+
+    #[allow(non_snake_case)]
     fn join(&'a self) -> Self::Iterator {
-        #[allow(non_snake_case)]
         let (S1, S2, S3) = self;
         JoinerIter3::new(
             Box::new(self.0.container().entity_iter_mut()),
             move |e: Entity| {
-                Some((
-                    // TODO: Replace unwraps, return None.
-                    S1::container(S1).get_mut(e).unwrap(),
-                    S2::container(S2).get_mut(e).unwrap(),
-                    S3::container(S3).get_mut(e).unwrap(),
-                ))
+                let S1 = S1::container(S1).get_mut(e);
+                if S1.is_none() {
+                    return None;
+                }
+                let S2 = S2::container(S2).get_mut(e);
+                if S2.is_none() {
+                    return None;
+                }
+                let S3 = S3::container(S3).get_mut(e);
+                if S3.is_none() {
+                    return None;
+                }
+                Some((S1.unwrap(), S2.unwrap(), S3.unwrap()))
             },
         )
     }
@@ -606,6 +614,7 @@ pub mod tests {
         let e1 = world.add_entity();
         world.add_component(e1, TestComponentA(1000));
         world.add_component(e1, TestComponentB(100));
+        world.add_component(e1, TestComponentC(10000));
         let e2 = world.add_entity();
         world.add_component(e2, TestComponentA(2000));
         world.add_component(e2, TestComponentB(200));
@@ -613,7 +622,7 @@ pub mod tests {
         world.add_component(e3, TestComponentA(3000));
 
         assert_eq!(world.entities, 3);
-        assert_eq!(world.components.len(), 3);
+        assert_eq!(world.components.len(), 4);
 
         let mut r = Runner::new();
         r.register_system(TestSystemA);
@@ -630,7 +639,7 @@ pub mod tests {
         let comp_b1 = container_b.get(e1).unwrap();
         let comp_b2 = container_b.get(e2).unwrap();
 
-        assert_eq!(comp_a1, &TestComponentA(1104));
+        assert_eq!(comp_a1, &TestComponentA(2001104));
         assert_eq!(comp_a2, &TestComponentA(2204));
         assert_eq!(comp_a3, &TestComponentA(3001));
         assert_eq!(comp_b1, &TestComponentB(200));
