@@ -433,13 +433,13 @@ macro_rules! joiner_tuple_impl {
                 &'a mut $s0::Component,
                 $(&'a mut $s::Component,)*
             );
-            type Iterator = JoinerIter<'a, Self, $s0::Component>;
+            type Iterator = JoinerIter<'a, Self::Output, $s0::Component>;
 
             #[allow(non_snake_case)]
             fn join(&'a self) -> Self::Iterator {
                 let ($s0, $($s,)*) = self;
                 JoinerIter::new(
-                    Box::new($s0.container().entity_iter_mut()),
+                    $s0.container().entity_iter_mut(),
                     move |e: Entity| {
                         // TODO: get first compo from iter.
                         let $s0 = $s0::container($s0).get_mut(e);
@@ -461,25 +461,25 @@ macro_rules! joiner_tuple_impl {
 joiner_tuple_impl!(S1, S2);
 joiner_tuple_impl!(S1, S2, S3);
 
-pub struct JoinerIter<'a, J: Joiner<'a>, C0: Component> {
+pub struct JoinerIter<'a, Output, C0: Component> {
     iter: Box<dyn Iterator<Item = (Entity, &'a mut C0)> + 'a>,
-    func: Box<dyn Fn(Entity) -> Option<J::Output> + 'a>,
+    func: Box<dyn Fn(Entity) -> Option<Output> + 'a>,
 }
 
-impl<'a, J: Joiner<'a>, C0: Component> JoinerIter<'a, J, C0> {
+impl<'a, Output, C0: Component> JoinerIter<'a, Output, C0> {
     fn new(
-        iter: Box<dyn Iterator<Item = (Entity, &'a mut C0)> + 'a>,
-        func: impl Fn(Entity) -> Option<J::Output> + 'a,
+        iter: impl Iterator<Item = (Entity, &'a mut C0)> + 'a,
+        func: impl Fn(Entity) -> Option<Output> + 'a,
     ) -> Self {
         JoinerIter {
-            iter,
+            iter: Box::new(iter),
             func: Box::new(func),
         }
     }
 }
 
-impl<'a, J: Joiner<'a>, C0: Component> Iterator for JoinerIter<'a, J, C0> {
-    type Item = J::Output;
+impl<'a, Output, C0: Component> Iterator for JoinerIter<'a, Output, C0> {
+    type Item = Output;
     fn next(&mut self) -> Option<Self::Item> {
         // TODO: iterate over entities as keys only.
         if let Some((entity, _)) = self.iter.next() {
