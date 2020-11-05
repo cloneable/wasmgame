@@ -22,6 +22,8 @@ use ::std::{
 #[derive(Copy, Clone, Hash, Ord, PartialOrd, Eq, PartialEq, Debug)]
 pub struct Entity(u32);
 
+pub const ZERO_ENTITY: Entity = Entity(0);
+
 #[derive(Copy, Clone, Hash, Ord, PartialOrd, Eq, PartialEq, Debug)]
 pub struct ComponentId(TypeId);
 
@@ -356,11 +358,11 @@ where
     }
 
     pub fn get(&self) -> &'a C {
-        self.container.get(Entity(0)).unwrap()
+        self.container.get(ZERO_ENTITY).unwrap()
     }
 
     pub fn get_mut(&mut self) -> &'a mut C {
-        self.container.get_mut(Entity(0)).unwrap()
+        self.container.get_mut(ZERO_ENTITY).unwrap()
     }
 }
 
@@ -590,7 +592,7 @@ pub mod tests {
     fn test_lookup() {
         let mut world = World::new();
         // TODO: provide add_component for global ones.
-        world.add_component(Entity(0), GlobalTestComponent(3));
+        world.add_component(ZERO_ENTITY, GlobalTestComponent(3));
         let e1 = world.add_entity();
         world.add_component(e1, TestComponentA(1000));
         world.add_component(e1, TestComponentB(100));
