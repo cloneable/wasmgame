@@ -18,14 +18,11 @@ use ::std::{
         Option,
         Option::{None, Some},
     },
-    panic, unimplemented,
     vec::Vec,
 };
 
 #[derive(Copy, Clone, Hash, Ord, PartialOrd, Eq, PartialEq, Debug)]
 pub struct Entity(u32);
-
-pub const ZERO_ENTITY: Entity = Entity(0);
 
 #[derive(Copy, Clone, Hash, Ord, PartialOrd, Eq, PartialEq, Debug)]
 pub struct ComponentId(TypeId);
@@ -46,6 +43,7 @@ pub trait Component: Any + Sized {
 
 pub trait System<'a> {
     type Args: Selector<'a>;
+
     fn exec(&mut self, c: Self::Args);
 }
 
@@ -73,18 +71,39 @@ impl World {
         Entity(self.entities)
     }
 
-    pub fn add_component<C: Component>(
-        &mut self, entity: Entity, component: C,
-    ) {
-        self.get_container_mut::<C>().insert(entity, component);
+    pub fn set_component<C: Component>(&mut self, entity: Entity, component: C)
+    where
+        C::Container: MultiContainer<C>,
+    {
+        self.get_container_mut::<C>().set(entity, component);
     }
 
-    pub fn get<C: Component<Container = Singleton<C>>>(
-        &self,
-    ) -> Option<&mut C> {
+    pub fn set_global<C: Component>(&mut self, component: C)
+    where
+        C::Container: SingleContainer<C>,
+    {
+        self.get_container_mut::<C>().set(component);
+    }
+
+    pub fn get_component<C: Component>(&self, entity: Entity) -> Option<&mut C>
+    where
+        C::Container: MultiContainer<C>,
+    {
         if let Some(any) = self.components.get(&ComponentId::of::<C>()) {
             if let Some(container) = any.downcast_ref::<C::Container>() {
-                return container.get_mut(ZERO_ENTITY);
+                return container.get_mut(entity);
+            }
+        }
+        None
+    }
+
+    pub fn get_global<C: Component>(&self) -> Option<&mut C>
+    where
+        C::Container: SingleContainer<C>,
+    {
+        if let Some(any) = self.components.get(&ComponentId::of::<C>()) {
+            if let Some(container) = any.downcast_ref::<C::Container>() {
+                return container.get_mut();
             }
         }
         None
@@ -101,16 +120,23 @@ impl World {
     }
 }
 
-pub trait Container<C: Component>: Any + Default {
+pub trait Container<C: Component>: Any + Default {}
+
+pub trait MultiContainer<C: Component>: Container<C> {
+    fn get<'a>(&self, entity: Entity) -> Option<&'a C>;
+    fn get_mut<'a>(&self, entity: Entity) -> Option<&'a mut C>;
+    fn set(&mut self, entity: Entity, component: C);
+
     fn iter<'a>(&self) -> ComponentIter<'a, C>;
     fn iter_mut<'a>(&self) -> ComponentIterMut<'a, C>;
     fn entity_iter<'a>(&self) -> EntityComponentIter<'a, C>;
     fn entity_iter_mut<'a>(&self) -> EntityComponentIterMut<'a, C>;
+}
 
-    fn get<'a>(&self, entity: Entity) -> Option<&'a C>;
-    fn get_mut<'a>(&self, entity: Entity) -> Option<&'a mut C>;
-
-    fn insert(&mut self, entity: Entity, component: C);
+pub trait SingleContainer<C: Component>: Container<C> {
+    fn get<'a>(&self) -> Option<&'a C>;
+    fn get_mut<'a>(&self) -> Option<&'a mut C>;
+    fn set(&mut self, component: C);
 }
 
 // TODO: Require global component to implement Default?
@@ -127,34 +153,24 @@ impl<C: Component> Default for Singleton<C> {
     }
 }
 
-impl<C: Component> Container<C> for Singleton<C> {
-    fn iter<'a>(&self) -> ComponentIter<'a, C> {
-        unimplemented!()
-    }
-    fn iter_mut<'a>(&self) -> ComponentIterMut<'a, C> {
-        unimplemented!()
-    }
-    fn entity_iter<'a>(&self) -> EntityComponentIter<'a, C> {
-        unimplemented!()
-    }
-    fn entity_iter_mut<'a>(&self) -> EntityComponentIterMut<'a, C> {
-        unimplemented!()
-    }
+impl<C: Component> Container<C> for Singleton<C> {}
 
-    fn get<'a>(&self, _: Entity) -> Option<&'a C> {
+impl<C: Component> SingleContainer<C> for Singleton<C> {
+    fn get<'a>(&self) -> Option<&'a C> {
         match unsafe { self.value.get().as_ref() } {
             Some(mu) => unsafe { mu.as_ptr().as_ref() },
             None => None,
         }
     }
-    fn get_mut<'a>(&self, _: Entity) -> Option<&'a mut C> {
+
+    fn get_mut<'a>(&self) -> Option<&'a mut C> {
         match unsafe { self.value.get().as_mut() } {
             Some(mu) => unsafe { mu.as_mut_ptr().as_mut() },
             None => None,
         }
     }
 
-    fn insert(&mut self, _: Entity, component: C) {
+    fn set(&mut self, component: C) {
         unsafe {
             let mu = self.value.get().as_mut().unwrap();
             mu.as_mut_ptr().write(component);
@@ -185,16 +201,21 @@ impl<C: Component> Default for BTreeComponentMap<C> {
     }
 }
 
-impl<C: Component> Container<C> for BTreeComponentMap<C> {
+impl<C: Component> Container<C> for BTreeComponentMap<C> {}
+
+impl<C: Component> MultiContainer<C> for BTreeComponentMap<C> {
     fn iter<'a>(&self) -> ComponentIter<'a, C> {
         ComponentIter::wrap(self.map().iter().map(|(e, c)| (*e, c)))
     }
+
     fn iter_mut<'a>(&self) -> ComponentIterMut<'a, C> {
         ComponentIterMut::wrap(self.map_mut().iter_mut().map(|(e, c)| (*e, c)))
     }
+
     fn entity_iter<'a>(&self) -> EntityComponentIter<'a, C> {
         EntityComponentIter::wrap(self.map().iter().map(|(e, c)| (*e, c)))
     }
+
     fn entity_iter_mut<'a>(&self) -> EntityComponentIterMut<'a, C> {
         EntityComponentIterMut::wrap(
             self.map_mut().iter_mut().map(|(e, c)| (*e, c)),
@@ -204,11 +225,12 @@ impl<C: Component> Container<C> for BTreeComponentMap<C> {
     fn get<'a>(&self, entity: Entity) -> Option<&'a C> {
         self.map().get(&entity)
     }
+
     fn get_mut<'a>(&self, entity: Entity) -> Option<&'a mut C> {
         self.map_mut().get_mut(&entity)
     }
 
-    fn insert(&mut self, entity: Entity, component: C) {
+    fn set(&mut self, entity: Entity, component: C) {
         self.map_mut().insert(entity, component);
     }
 }
@@ -236,7 +258,9 @@ impl<C: Component> Default for VecIndex<C> {
     }
 }
 
-impl<C: Component> Container<C> for VecIndex<C> {
+impl<C: Component> Container<C> for VecIndex<C> {}
+
+impl<C: Component> MultiContainer<C> for VecIndex<C> {
     fn iter<'a>(&self) -> ComponentIter<'a, C> {
         ComponentIter::wrap(
             self.vec()
@@ -248,6 +272,7 @@ impl<C: Component> Container<C> for VecIndex<C> {
                 }),
         )
     }
+
     fn iter_mut<'a>(&self) -> ComponentIterMut<'a, C> {
         ComponentIterMut::wrap(
             self.vec_mut()
@@ -261,6 +286,7 @@ impl<C: Component> Container<C> for VecIndex<C> {
                 }),
         )
     }
+
     fn entity_iter<'a>(&self) -> EntityComponentIter<'a, C> {
         EntityComponentIter::wrap(
             self.vec()
@@ -272,6 +298,7 @@ impl<C: Component> Container<C> for VecIndex<C> {
                 }),
         )
     }
+
     fn entity_iter_mut<'a>(&self) -> EntityComponentIterMut<'a, C> {
         EntityComponentIterMut::wrap(
             self.vec_mut()
@@ -289,11 +316,12 @@ impl<C: Component> Container<C> for VecIndex<C> {
     fn get<'a>(&self, entity: Entity) -> Option<&'a C> {
         unsafe { self.vec()[entity.0 as usize].1.as_ptr().as_ref() }
     }
+
     fn get_mut<'a>(&self, entity: Entity) -> Option<&'a mut C> {
         unsafe { self.vec_mut()[entity.0 as usize].1.as_mut_ptr().as_mut() }
     }
 
-    fn insert(&mut self, entity: Entity, component: C) {
+    fn set(&mut self, entity: Entity, component: C) {
         let index = entity.0 as usize;
         let v = self.vec_mut();
         if index >= v.len() {
@@ -317,6 +345,7 @@ impl<'a, C: Component> ComponentIter<'a, C> {
 
 impl<'a, C: Component> Iterator for ComponentIter<'a, C> {
     type Item = &'a C;
+
     fn next(&mut self) -> Option<Self::Item> {
         match self.iter.next() {
             Some((_entity, component)) => Some(component),
@@ -339,6 +368,7 @@ impl<'a, C: Component> ComponentIterMut<'a, C> {
 
 impl<'a, C: Component> Iterator for ComponentIterMut<'a, C> {
     type Item = &'a mut C;
+
     fn next(&mut self) -> Option<Self::Item> {
         match self.iter.next() {
             Some((_entity, component)) => Some(component),
@@ -361,6 +391,7 @@ impl<'a, C: Component> EntityComponentIter<'a, C> {
 
 impl<'a, C: Component> Iterator for EntityComponentIter<'a, C> {
     type Item = (Entity, &'a C);
+
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next()
     }
@@ -380,6 +411,7 @@ impl<'a, C: Component> EntityComponentIterMut<'a, C> {
 
 impl<'a, C: Component> Iterator for EntityComponentIterMut<'a, C> {
     type Item = (Entity, &'a mut C);
+
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next()
     }
@@ -391,6 +423,7 @@ pub trait Selector<'a> {
 
 pub trait HasContainer<'a> {
     type Component: Component;
+
     fn container(&self) -> &'a <Self::Component as Component>::Container;
 }
 
@@ -416,11 +449,17 @@ tuple_selector_impl!(S1, S2, S3, S4, S5, S6);
 tuple_selector_impl!(S1, S2, S3, S4, S5, S6, S7);
 tuple_selector_impl!(S1, S2, S3, S4, S5, S6, S7, S8);
 
-pub struct PerEntity<'a, C: Component> {
+pub struct PerEntity<'a, C: Component>
+where
+    C::Container: MultiContainer<C>,
+{
     container: &'a C::Container,
 }
 
-impl<'a, C: Component> PerEntity<'a, C> {
+impl<'a, C: Component> PerEntity<'a, C>
+where
+    C::Container: MultiContainer<C>,
+{
     fn new(world: &'a World) -> Self {
         PerEntity {
             container: world.get_container::<C>(),
@@ -436,13 +475,19 @@ impl<'a, C: Component> PerEntity<'a, C> {
     }
 }
 
-impl<'a, C: Component> Selector<'a> for PerEntity<'a, C> {
+impl<'a, C: Component> Selector<'a> for PerEntity<'a, C>
+where
+    C::Container: MultiContainer<C>,
+{
     fn build(world: &'a World) -> Self {
         PerEntity::new(world)
     }
 }
 
-impl<'a, C: Component> HasContainer<'a> for PerEntity<'a, C> {
+impl<'a, C: Component> HasContainer<'a> for PerEntity<'a, C>
+where
+    C::Container: MultiContainer<C>,
+{
     type Component = C;
 
     fn container(&self) -> &'a C::Container {
@@ -450,16 +495,16 @@ impl<'a, C: Component> HasContainer<'a> for PerEntity<'a, C> {
     }
 }
 
-pub struct Global<'a, C>
+pub struct Global<'a, C: Component>
 where
-    C: Component<Container = Singleton<C>>,
+    C::Container: SingleContainer<C>,
 {
     container: &'a C::Container,
 }
 
-impl<'a, C> Global<'a, C>
+impl<'a, C: Component> Global<'a, C>
 where
-    C: Component<Container = Singleton<C>>,
+    C::Container: SingleContainer<C>,
 {
     fn new(world: &'a World) -> Self {
         Global {
@@ -468,26 +513,26 @@ where
     }
 
     pub fn get(&self) -> &'a C {
-        self.container.get(ZERO_ENTITY).unwrap()
+        self.container.get().unwrap()
     }
 
     pub fn get_mut(&mut self) -> &'a mut C {
-        self.container.get_mut(ZERO_ENTITY).unwrap()
+        self.container.get_mut().unwrap()
     }
 }
 
-impl<'a, C> Selector<'a> for Global<'a, C>
+impl<'a, C: Component> Selector<'a> for Global<'a, C>
 where
-    C: Component<Container = Singleton<C>>,
+    C::Container: SingleContainer<C>,
 {
     fn build(world: &'a World) -> Self {
         Global::new(world)
     }
 }
 
-impl<'a, C> HasContainer<'a> for Global<'a, C>
+impl<'a, C: Component> HasContainer<'a> for Global<'a, C>
 where
-    C: Component<Container = Singleton<C>>,
+    C::Container: SingleContainer<C>,
 {
     type Component = C;
 
@@ -496,9 +541,9 @@ where
     }
 }
 
-impl<'a, C> Deref for Global<'a, C>
+impl<'a, C: Component> Deref for Global<'a, C>
 where
-    C: Component<Container = Singleton<C>>,
+    C::Container: SingleContainer<C>,
 {
     type Target = C;
 
@@ -507,9 +552,9 @@ where
     }
 }
 
-impl<'a, C> DerefMut for Global<'a, C>
+impl<'a, C: Component> DerefMut for Global<'a, C>
 where
-    C: Component<Container = Singleton<C>>,
+    C::Container: SingleContainer<C>,
 {
     fn deref_mut(&mut self) -> &mut C {
         self.get_mut()
@@ -553,6 +598,7 @@ impl<'a, S: System<'a>> SystemAdaptor<'a> for S {
 pub trait Joiner<'a> {
     type Output;
     type Iterator: Iterator<Item = Self::Output>;
+
     fn join(&'a self) -> Self::Iterator;
 }
 
@@ -561,7 +607,9 @@ macro_rules! joiner_tuple_impl {
         impl<'a, $s0, $($s),*> Joiner<'a> for (&'a $s0, $(&'a $s,)*)
         where
             $s0: HasContainer<'a>,
-            $($s: HasContainer<'a>,)*
+            <$s0::Component as Component>::Container: MultiContainer<$s0::Component>,
+            $($s: HasContainer<'a>,
+            <$s::Component as Component>::Container: MultiContainer<$s::Component>,)*
         {
             type Output = (
                 &'a mut $s0::Component,
@@ -618,6 +666,7 @@ impl<'a, Output, C0: Component> JoinerIter<'a, Output, C0> {
 
 impl<'a, Output, C0: Component> Iterator for JoinerIter<'a, Output, C0> {
     type Item = Output;
+
     fn next(&mut self) -> Option<Self::Item> {
         // TODO: iterate over entities as keys only.
         if let Some((entity, _)) = self.iter.next() {
@@ -717,16 +766,16 @@ pub mod tests {
         r.register_system(TestSystemC);
 
         // TODO: provide add_component for global ones.
-        world.add_component(ZERO_ENTITY, GlobalTestComponent(3));
+        world.set_global(GlobalTestComponent(3));
         let e1 = world.add_entity();
-        world.add_component(e1, TestComponentA(1000));
-        world.add_component(e1, TestComponentB(100));
-        world.add_component(e1, TestComponentC(10000));
+        world.set_component(e1, TestComponentA(1000));
+        world.set_component(e1, TestComponentB(100));
+        world.set_component(e1, TestComponentC(10000));
         let e2 = world.add_entity();
-        world.add_component(e2, TestComponentA(2000));
-        world.add_component(e2, TestComponentB(200));
+        world.set_component(e2, TestComponentA(2000));
+        world.set_component(e2, TestComponentB(200));
         let e3 = world.add_entity();
-        world.add_component(e3, TestComponentA(3000));
+        world.set_component(e3, TestComponentA(3000));
 
         assert_eq!(world.entities, 3);
         assert_eq!(world.components.len(), 4);

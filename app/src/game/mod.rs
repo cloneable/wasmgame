@@ -77,10 +77,10 @@ impl Game {
         runner.register_system(systems::TransformationSystem);
 
         let entity1 = world.add_entity();
-        world.add_component(ecs::ZERO_ENTITY, components::Timestamp::default());
-        world.add_component(ecs::ZERO_ENTITY, Camera::new());
-        world.add_component(entity1, components::Spatial::default());
-        world.add_component(entity1, components::ModelMatrix::default());
+        world.set_global(components::Timestamp::default());
+        world.set_global(Camera::new());
+        world.set_component(entity1, components::Spatial::default());
+        world.set_component(entity1, components::ModelMatrix::default());
 
         let scene = Scene::new(ctx)?;
 
@@ -116,7 +116,7 @@ impl Game {
     }
 
     fn ecs_run(&mut self, t: Time) {
-        self.world.get::<components::Timestamp>().unwrap().t = t;
+        self.world.get_global::<components::Timestamp>().unwrap().t = t;
         self.runner.exec(&self.world);
     }
 
