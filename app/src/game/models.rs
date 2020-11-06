@@ -1,17 +1,21 @@
-use ::std::convert::Into;
-use ::std::rc::Rc;
-use ::std::result::{Result, Result::Ok};
-use ::std::vec::Vec;
-use ::std::{assert_eq, panic};
+use ::std::{
+    assert_eq,
+    convert::Into,
+    panic,
+    rc::Rc,
+    result::{Result, Result::Ok},
+    vec::Vec,
+};
 
-use super::assets;
-use crate::engine;
-use crate::engine::time::{Duration, Time};
-use crate::util::math::Vec4;
-use crate::util::opengl::Context;
-use engine::scene::Instance;
-use engine::scene::Model;
-use engine::Error;
+use crate::{
+    engine::{
+        scene::{Instance, Model},
+        time::{Duration, Time},
+        Bindable, Drawable, Error,
+    },
+    game::assets,
+    util::{math::Vec4, opengl::Context},
+};
 
 // TODO: Use new Mesh type once available.
 struct Hexatile {
@@ -38,7 +42,7 @@ impl HexatileTriplet {
     }
 }
 
-impl engine::Drawable for HexatileTriplet {
+impl Drawable for HexatileTriplet {
     fn init(&mut self) -> Result<(), Error> {
         self.hexatile.model[0]
             .object
@@ -83,7 +87,7 @@ impl engine::Drawable for HexatileTriplet {
     }
 }
 
-impl engine::Bindable for HexatileTriplet {
+impl Bindable for HexatileTriplet {
     fn bind(&mut self) {
         self.hexatile.model.bind();
     }
@@ -163,7 +167,7 @@ impl Board {
     }
 }
 
-impl engine::Drawable for Board {
+impl Drawable for Board {
     fn init(&mut self) -> Result<(), Error> {
         Ok(())
     }

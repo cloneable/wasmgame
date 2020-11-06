@@ -1,15 +1,21 @@
-use ::log;
-use ::std::cell::Cell;
-use ::std::clone::Clone;
-use ::std::convert::From;
-use ::std::convert::Into;
-use ::std::option::{Option, Option::None, Option::Some};
-use ::std::rc::Rc;
-use ::std::result::{Result, Result::Err, Result::Ok};
-use ::std::string::String;
+use ::std::{
+    cell::Cell,
+    clone::Clone,
+    convert::{From, Into},
+    option::{
+        Option,
+        Option::{None, Some},
+    },
+    rc::Rc,
+    result::{
+        Result,
+        Result::{Err, Ok},
+    },
+    string::String,
+};
 
-use ::wasm_bindgen::JsCast;
-use ::wasm_bindgen::JsValue;
+use ::log;
+use ::wasm_bindgen::{JsCast, JsValue};
 use ::web_sys::WebGl2RenderingContext as WebGL;
 
 pub struct Context {

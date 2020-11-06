@@ -1,8 +1,9 @@
 use ::std::default::Default;
 
-use crate::engine::ecs;
-use crate::engine::time::Time;
-use crate::util::math::{Mat4, Vec3};
+use crate::{
+    engine::{ecs, time::Time},
+    util::math::{Mat4, Vec3},
+};
 
 pub struct Timestamp {
     pub t: Time,

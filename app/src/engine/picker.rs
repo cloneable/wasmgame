@@ -1,11 +1,18 @@
-use ::std::rc::Rc;
-use ::std::result::{Result, Result::Ok};
+use ::std::{
+    rc::Rc,
+    result::{Result, Result::Ok},
+};
 
-use super::attrib;
-use crate::engine::Error;
-use crate::util::math::Mat4;
-use crate::util::opengl::{
-    Context, Program, Shader, ShaderType::Fragment, ShaderType::Vertex, Uniform,
+use crate::{
+    engine::{attrib, Error},
+    util::{
+        math::Mat4,
+        opengl::{
+            Context, Program, Shader,
+            ShaderType::{Fragment, Vertex},
+            Uniform,
+        },
+    },
 };
 
 pub struct PickerShader {

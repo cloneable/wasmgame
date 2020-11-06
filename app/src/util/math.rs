@@ -1,6 +1,11 @@
-use ::std::convert::{From, Into};
-use ::std::option::{Option, Option::None, Option::Some};
-use ::std::result::Result;
+use ::std::{
+    convert::{From, Into},
+    option::{
+        Option,
+        Option::{None, Some},
+    },
+    result::Result,
+};
 
 #[inline(never)]
 pub fn look_at(eye: Vec3, center: Vec3, up: Vec3) -> Mat4 {

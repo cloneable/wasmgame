@@ -1,18 +1,16 @@
-use ::std::boxed::Box;
-use ::std::cell::RefCell;
-use ::std::clone::Clone;
-use ::std::convert::AsRef;
-use ::std::ops::FnMut;
-use ::std::option::{Option, Option::Some};
-use ::std::rc::Rc;
-use ::std::result::{Result, Result::Ok};
+use ::std::{
+    boxed::Box,
+    cell::RefCell,
+    clone::Clone,
+    convert::AsRef,
+    ops::FnMut,
+    option::{Option, Option::Some},
+    rc::Rc,
+    result::{Result, Result::Ok},
+};
 
-use ::wasm_bindgen::closure::Closure;
-use ::wasm_bindgen::JsCast;
-use ::wasm_bindgen::JsValue;
-use ::web_sys::Event;
-use ::web_sys::EventTarget;
-use ::web_sys::TouchEvent;
+use ::wasm_bindgen::{closure::Closure, JsCast, JsValue};
+use ::web_sys::{Event, EventTarget, TouchEvent};
 
 pub struct Listener {
     target: EventTarget,

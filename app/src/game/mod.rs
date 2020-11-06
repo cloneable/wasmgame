@@ -4,23 +4,24 @@ mod models;
 mod shaders;
 mod systems;
 
-use ::std::clone::Clone;
-use ::std::default::Default;
-use ::std::option::{Option, Option::None, Option::Some};
-use ::std::rc::Rc;
-use ::std::result::{Result, Result::Ok};
+use ::std::{
+    clone::Clone,
+    default::Default,
+    option::{
+        Option,
+        Option::{None, Some},
+    },
+    rc::Rc,
+    result::{Result, Result::Ok},
+};
 
 use ::wasm_bindgen::JsCast;
 
-use crate::engine;
-use crate::util::event;
-use crate::util::math::Vec3;
-use crate::util::opengl::Context;
-use engine::ecs;
-use engine::scene::Camera;
-use engine::time::Time;
-use engine::Bindable;
-use engine::Error;
+use crate::{
+    engine, engine::ecs, engine::scene::Camera, engine::time::Time,
+    engine::Bindable, engine::Error, util::event, util::math::Vec3,
+    util::opengl::Context,
+};
 
 struct Scene {
     hexatile_triplet: models::HexatileTriplet,

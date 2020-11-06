@@ -1,9 +1,13 @@
-use ::std::option::Option::None;
-use ::std::rc::Rc;
-use ::std::result::{Result, Result::Ok};
+use ::std::{
+    option::Option::None,
+    rc::Rc,
+    result::{Result, Result::Ok},
+};
 
-use crate::engine::Error;
-use crate::util::opengl::{Context, Framebuffer, Renderbuffer, Texture2D};
+use crate::{
+    engine::Error,
+    util::opengl::{Context, Framebuffer, Renderbuffer, Texture2D},
+};
 
 pub struct OffscreenBuffer {
     framebuffer: Framebuffer,

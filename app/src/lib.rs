@@ -5,22 +5,24 @@ mod engine;
 mod game;
 mod util;
 
-use ::std::cell::RefCell;
-use ::std::clone::Clone;
-use ::std::convert::Into;
-use ::std::mem::drop;
-use ::std::rc::Rc;
-use ::std::result::{Result, Result::Ok};
+use ::std::{
+    cell::RefCell,
+    clone::Clone,
+    convert::Into,
+    mem::drop,
+    rc::Rc,
+    result::{Result, Result::Ok},
+};
 
 use ::wasm_bindgen;
-use ::wasm_bindgen::JsCast;
-use ::wasm_bindgen::JsValue;
+use ::wasm_bindgen::{JsCast, JsValue};
 use ::wasm_bindgen_macro::wasm_bindgen;
 use ::web_sys;
 
-use crate::util::event;
-use crate::util::opengl::Context;
-use game::Game;
+use crate::{
+    game::Game,
+    util::{event, opengl::Context},
+};
 
 #[cfg(feature = "wee_alloc")]
 #[global_allocator]

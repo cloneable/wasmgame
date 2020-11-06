@@ -14,7 +14,10 @@ use ::std::{
     marker::Sized,
     mem::MaybeUninit,
     ops::{Deref, DerefMut, Fn},
-    option::{Option, Option::None, Option::Some},
+    option::{
+        Option,
+        Option::{None, Some},
+    },
     panic, unimplemented,
     vec::Vec,
 };

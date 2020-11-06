@@ -1,16 +1,21 @@
-use ::std::clone::Clone;
-use ::std::option::{Option::None, Option::Some};
-use ::std::rc::Rc;
-use ::std::result::{Result, Result::Ok};
-use ::std::vec::Vec;
-use ::std::{assert, debug_assert, panic};
+use ::std::{
+    assert,
+    clone::Clone,
+    debug_assert,
+    option::Option::{None, Some},
+    panic,
+    rc::Rc,
+    result::{Result, Result::Ok},
+    vec::Vec,
+};
 
-use super::attrib;
-use crate::engine::ecs;
-use crate::engine::time::Time;
-use crate::engine::Error;
-use crate::util::math::{look_at, project, Mat4, Vec3, Vec4};
-use crate::util::opengl::{ArrayBuffer, Context, VertexArrayObject};
+use crate::{
+    engine::{attrib, ecs, time::Time, Error},
+    util::{
+        math::{look_at, project, Mat4, Vec3, Vec4},
+        opengl::{ArrayBuffer, Context, VertexArrayObject},
+    },
+};
 
 #[derive(Copy, Clone)]
 pub struct ObjectData {

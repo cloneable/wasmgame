@@ -5,15 +5,15 @@ pub mod scene;
 pub mod time;
 pub mod util;
 
-use ::std::convert::From;
-use ::std::convert::Into;
-use ::std::result::Result;
-use ::std::string::String;
-use ::std::string::ToString;
+use ::std::{
+    convert::{From, Into},
+    result::Result,
+    string::{String, ToString},
+};
 
 use ::wasm_bindgen::JsValue;
 
-use time::Time;
+use crate::engine::time::Time;
 
 pub trait Bindable {
     fn bind(&mut self);

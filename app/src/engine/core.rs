@@ -1,17 +1,26 @@
-use ::std::boxed::Box;
-use ::std::cell::RefCell;
-use ::std::clone::Clone;
-use ::std::convert::AsRef;
-use ::std::ops::FnMut;
-use ::std::option::{Option, Option::None, Option::Some};
-use ::std::rc::Rc;
-use ::std::result::{Result, Result::Err, Result::Ok};
+use ::std::{
+    boxed::Box,
+    cell::RefCell,
+    clone::Clone,
+    convert::AsRef,
+    ops::FnMut,
+    option::{
+        Option,
+        Option::{None, Some},
+    },
+    rc::Rc,
+    result::{
+        Result,
+        Result::{Err, Ok},
+    },
+};
 
-use ::wasm_bindgen::closure::Closure;
-use ::wasm_bindgen::JsCast;
+use ::wasm_bindgen::{closure::Closure, JsCast};
 
-use super::time::{Framerate, Time};
-use super::Error;
+use crate::engine::{
+    time::{Framerate, Time},
+    Error,
+};
 
 // TODO: Use event or sth else to terminate loop and drop LookHandler.
 pub trait LoopHandler: super::Drawable {

@@ -1,18 +1,24 @@
 #![no_implicit_prelude]
 
-use ::std::convert::From;
-use ::std::iter::Iterator;
-use ::std::option::Option::Some;
-use ::std::result::{Result::Err, Result::Ok};
-use ::std::vec::Vec;
-use ::std::{assert_eq, panic};
+use ::std::{
+    assert_eq,
+    convert::From,
+    iter::Iterator,
+    option::Option::Some,
+    panic,
+    result::Result::{Err, Ok},
+    vec::Vec,
+};
 
 use ::obj::{IndexTuple, ObjData, SimplePolygon};
 use ::proc_macro::TokenStream;
 use ::quote::quote;
-use ::syn::parse::{Parse, ParseStream};
-use ::syn::punctuated::Punctuated;
-use ::syn::{parse_macro_input, Ident, LitStr, Result, Token};
+use ::syn::{
+    parse::{Parse, ParseStream},
+    parse_macro_input,
+    punctuated::Punctuated,
+    Ident, LitStr, Result, Token,
+};
 
 struct IdentPathMapping {
     ident: Ident,

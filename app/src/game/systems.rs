@@ -1,7 +1,10 @@
-use super::components::{ModelMatrix, Spatial, Timestamp};
-use super::Camera;
-use crate::engine::ecs;
-use crate::engine::ecs::Joiner;
+use crate::{
+    engine::{ecs, ecs::Joiner},
+    game::{
+        components::{ModelMatrix, Spatial, Timestamp},
+        Camera,
+    },
+};
 
 pub struct TransformationSystem;
 
