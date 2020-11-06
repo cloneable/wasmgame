@@ -5,6 +5,7 @@ mod shaders;
 mod systems;
 
 use ::std::clone::Clone;
+use ::std::default::Default;
 use ::std::option::{Option, Option::None, Option::Some};
 use ::std::rc::Rc;
 use ::std::result::{Result, Result::Ok};
@@ -15,6 +16,7 @@ use crate::engine;
 use crate::util::event;
 use crate::util::math::Vec3;
 use crate::util::opengl::Context;
+use engine::ecs;
 use engine::scene::Camera;
 use engine::time::Time;
 use engine::Bindable;
@@ -48,6 +50,8 @@ impl Scene {
 
 pub struct Game {
     ctx: Rc<Context>,
+    world: ecs::World,
+    runner: ecs::Runner,
 
     last_render: Time,
     scene: Scene,
@@ -63,6 +67,20 @@ pub struct Game {
 
 impl Game {
     pub fn new(ctx: &Rc<Context>) -> Result<Self, Error> {
+        let mut world = ecs::World::new();
+        world.register_component::<components::Spatial>();
+        world.register_component::<components::ModelMatrix>();
+        world.register_component::<Camera>();
+        world.register_component::<components::Timestamp>();
+        let mut runner = ecs::Runner::new();
+        runner.register_system(systems::TransformationSystem);
+
+        let entity1 = world.add_entity();
+        world.add_component(ecs::ZERO_ENTITY, components::Timestamp::default());
+        world.add_component(ecs::ZERO_ENTITY, Camera::new());
+        world.add_component(entity1, components::Spatial::default());
+        world.add_component(entity1, components::ModelMatrix::default());
+
         let scene = Scene::new(ctx)?;
 
         let mut picker_shader = engine::picker::PickerShader::new(ctx)?;
@@ -79,6 +97,8 @@ impl Game {
 
         Ok(Self {
             ctx: ctx.clone(),
+            world,
+            runner,
             last_render: Time::from_millis(0.0),
             scene,
             offscreen: engine::util::OffscreenBuffer::new(
@@ -92,6 +112,11 @@ impl Game {
             touch_id: None,
             camera_position,
         })
+    }
+
+    fn ecs_run(&mut self, t: Time) {
+        self.world.get::<components::Timestamp>().unwrap().t = t;
+        self.runner.exec(&self.world);
     }
 
     pub fn on_click(&mut self, e: &::web_sys::MouseEvent) {
@@ -309,6 +334,8 @@ impl engine::Drawable for Game {
     }
 
     fn update(&mut self, t: Time) -> Result<(), Error> {
+        self.ecs_run(t);
+
         self.last_render = t;
         self.scene.camera.update(t);
         self.scene.hexatile_triplet.update(t)?;

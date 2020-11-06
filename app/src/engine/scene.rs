@@ -6,6 +6,7 @@ use ::std::vec::Vec;
 use ::std::{assert, debug_assert, panic};
 
 use super::attrib;
+use crate::engine::ecs;
 use crate::engine::time::Time;
 use crate::engine::Error;
 use crate::util::math::{look_at, project, Mat4, Vec3, Vec4};
@@ -210,6 +211,10 @@ impl Camera {
         debug_assert!(!self.projection_stale);
         &self.projection
     }
+}
+
+impl ecs::Component for Camera {
+    type Container = ecs::Singleton<Self>;
 }
 
 pub struct Model {
