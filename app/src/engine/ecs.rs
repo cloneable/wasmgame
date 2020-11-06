@@ -406,22 +406,24 @@ where
     }
 }
 
-pub struct Runner<'a> {
-    systems: Vec<Box<dyn SystemAdaptor<'a> + 'a>>,
+pub struct Runner {
+    systems: Vec<Box<dyn for<'a> SystemAdaptor<'a> + 'static>>,
 }
 
-impl<'a> Runner<'a> {
+impl Runner {
     pub fn new() -> Self {
         Runner {
             systems: Vec::new(),
         }
     }
 
-    pub fn register_system<S: System<'a> + 'a>(&mut self, system: S) {
+    pub fn register_system<S: for<'a> System<'a> + 'static>(
+        &mut self, system: S,
+    ) {
         self.systems.push(Box::new(system));
     }
 
-    pub fn exec(&mut self, world: &'a World) {
+    pub fn exec<'a>(&mut self, world: &'a World) {
         for system in self.systems.iter_mut() {
             system.exec(world);
         }
