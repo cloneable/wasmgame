@@ -59,6 +59,12 @@ impl World {
         }
     }
 
+    pub fn register_component<C: Component>(&mut self) {
+        self.components
+            .entry(ComponentId::of::<C>())
+            .or_insert(Box::new(C::Container::default()));
+    }
+
     pub fn add_entity(&mut self) -> Entity {
         self.entities += 1;
         Entity(self.entities)
@@ -67,19 +73,28 @@ impl World {
     pub fn add_component<C: Component>(
         &mut self, entity: Entity, component: C,
     ) {
-        let entry = self
-            .components
-            .entry(ComponentId::of::<C>())
-            .or_insert(Box::new(C::Container::default()));
-        entry
-            .downcast_mut::<C::Container>()
-            .unwrap()
-            .insert(entity, component);
+        self.get_container_mut::<C>().insert(entity, component);
+    }
+
+    pub fn get<C: Component<Container = Singleton<C>>>(
+        &self,
+    ) -> Option<&mut C> {
+        if let Some(any) = self.components.get(&ComponentId::of::<C>()) {
+            if let Some(container) = any.downcast_ref::<C::Container>() {
+                return container.get_mut(ZERO_ENTITY);
+            }
+        }
+        None
     }
 
     fn get_container<C: Component>(&self) -> &C::Container {
         let any = self.components.get(&ComponentId::of::<C>()).unwrap();
         any.downcast_ref::<C::Container>().unwrap()
+    }
+
+    fn get_container_mut<C: Component>(&mut self) -> &mut C::Container {
+        let any = self.components.get_mut(&ComponentId::of::<C>()).unwrap();
+        any.downcast_mut::<C::Container>().unwrap()
     }
 }
 
@@ -95,6 +110,7 @@ pub trait Container<C: Component>: Any + Default {
     fn insert(&mut self, entity: Entity, component: C);
 }
 
+// TODO: Require global component to implement Default?
 pub struct Singleton<C: Component> {
     // TODO: Add wrapper type similar to RefMut to get some safety back.
     value: UnsafeCell<MaybeUninit<C>>,
@@ -305,6 +321,11 @@ macro_rules! tuple_selector_impl {
 tuple_selector_impl!(S1);
 tuple_selector_impl!(S1, S2);
 tuple_selector_impl!(S1, S2, S3);
+tuple_selector_impl!(S1, S2, S3, S4);
+tuple_selector_impl!(S1, S2, S3, S4, S5);
+tuple_selector_impl!(S1, S2, S3, S4, S5, S6);
+tuple_selector_impl!(S1, S2, S3, S4, S5, S6, S7);
+tuple_selector_impl!(S1, S2, S3, S4, S5, S6, S7, S8);
 
 pub struct PerEntity<'a, C: Component> {
     container: &'a C::Container,
@@ -484,6 +505,10 @@ macro_rules! joiner_tuple_impl {
 
 joiner_tuple_impl!(S1, S2);
 joiner_tuple_impl!(S1, S2, S3);
+joiner_tuple_impl!(S1, S2, S3, S4);
+joiner_tuple_impl!(S1, S2, S3, S4, S5);
+joiner_tuple_impl!(S1, S2, S3, S4, S5, S6);
+joiner_tuple_impl!(S1, S2, S3, S4, S5, S6, S7);
 
 pub struct JoinerIter<'a, Output, C0: Component> {
     iter: Box<dyn Iterator<Item = (Entity, &'a mut C0)> + 'a>,
@@ -593,6 +618,15 @@ pub mod tests {
     #[wasm_bindgen_test]
     fn test_lookup() {
         let mut world = World::new();
+        world.register_component::<GlobalTestComponent>();
+        world.register_component::<TestComponentA>();
+        world.register_component::<TestComponentB>();
+        world.register_component::<TestComponentC>();
+        let mut r = Runner::new();
+        r.register_system(TestSystemA);
+        r.register_system(TestSystemB);
+        r.register_system(TestSystemC);
+
         // TODO: provide add_component for global ones.
         world.add_component(ZERO_ENTITY, GlobalTestComponent(3));
         let e1 = world.add_entity();
@@ -608,10 +642,6 @@ pub mod tests {
         assert_eq!(world.entities, 3);
         assert_eq!(world.components.len(), 4);
 
-        let mut r = Runner::new();
-        r.register_system(TestSystemA);
-        r.register_system(TestSystemB);
-        r.register_system(TestSystemC);
         r.exec(&world);
 
         let container_a = world.get_container::<TestComponentA>();
