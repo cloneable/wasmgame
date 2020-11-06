@@ -38,7 +38,7 @@ impl Default for Spatial {
 }
 
 impl ecs::Component for Spatial {
-    type Container = ecs::BTreeComponentMap<Self>;
+    type Container = ecs::VecIndex<Self>;
 }
 
 pub struct ModelMatrix {
@@ -54,5 +54,5 @@ impl Default for ModelMatrix {
 }
 
 impl ecs::Component for ModelMatrix {
-    type Container = ecs::BTreeComponentMap<Self>;
+    type Container = ecs::VecIndex<Self>;
 }

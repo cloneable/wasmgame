@@ -187,16 +187,18 @@ impl<C: Component> Default for BTreeComponentMap<C> {
 
 impl<C: Component> Container<C> for BTreeComponentMap<C> {
     fn iter<'a>(&self) -> ComponentIter<'a, C> {
-        ComponentIter::wrap(self.map().iter())
+        ComponentIter::wrap(self.map().iter().map(|(e, c)| (*e, c)))
     }
     fn iter_mut<'a>(&self) -> ComponentIterMut<'a, C> {
-        ComponentIterMut::wrap(self.map_mut().iter_mut())
+        ComponentIterMut::wrap(self.map_mut().iter_mut().map(|(e, c)| (*e, c)))
     }
     fn entity_iter<'a>(&self) -> EntityComponentIter<'a, C> {
-        EntityComponentIter::wrap(self.map().iter())
+        EntityComponentIter::wrap(self.map().iter().map(|(e, c)| (*e, c)))
     }
     fn entity_iter_mut<'a>(&self) -> EntityComponentIterMut<'a, C> {
-        EntityComponentIterMut::wrap(self.map_mut().iter_mut())
+        EntityComponentIterMut::wrap(
+            self.map_mut().iter_mut().map(|(e, c)| (*e, c)),
+        )
     }
 
     fn get<'a>(&self, entity: Entity) -> Option<&'a C> {
@@ -211,12 +213,102 @@ impl<C: Component> Container<C> for BTreeComponentMap<C> {
     }
 }
 
+pub struct VecIndex<C: Component> {
+    // TODO: Add wrapper type similar to RefMut to get some safety back.
+    vec: UnsafeCell<Vec<(bool, MaybeUninit<C>)>>,
+}
+
+impl<'a, C: Component> VecIndex<C> {
+    fn vec(&self) -> &'a Vec<(bool, MaybeUninit<C>)> {
+        unsafe { self.vec.get().as_ref().unwrap() }
+    }
+
+    fn vec_mut(&self) -> &'a mut Vec<(bool, MaybeUninit<C>)> {
+        unsafe { self.vec.get().as_mut().unwrap() }
+    }
+}
+
+impl<C: Component> Default for VecIndex<C> {
+    fn default() -> Self {
+        VecIndex {
+            vec: UnsafeCell::new(Vec::new()),
+        }
+    }
+}
+
+impl<C: Component> Container<C> for VecIndex<C> {
+    fn iter<'a>(&self) -> ComponentIter<'a, C> {
+        ComponentIter::wrap(
+            self.vec()
+                .iter()
+                .enumerate()
+                .filter(move |(_, (set, _))| *set)
+                .map(move |(i, (_, ref c))| {
+                    (Entity(i as u32), unsafe { c.as_ptr().as_ref().unwrap() })
+                }),
+        )
+    }
+    fn iter_mut<'a>(&self) -> ComponentIterMut<'a, C> {
+        ComponentIterMut::wrap(
+            self.vec_mut()
+                .iter_mut()
+                .enumerate()
+                .filter(move |(_, (set, _))| *set)
+                .map(move |(i, (_, ref mut c))| {
+                    (Entity(i as u32), unsafe {
+                        c.as_mut_ptr().as_mut().unwrap()
+                    })
+                }),
+        )
+    }
+    fn entity_iter<'a>(&self) -> EntityComponentIter<'a, C> {
+        EntityComponentIter::wrap(
+            self.vec()
+                .iter()
+                .enumerate()
+                .filter(move |(_, (set, _))| *set)
+                .map(move |(i, (_, ref c))| {
+                    (Entity(i as u32), unsafe { c.as_ptr().as_ref().unwrap() })
+                }),
+        )
+    }
+    fn entity_iter_mut<'a>(&self) -> EntityComponentIterMut<'a, C> {
+        EntityComponentIterMut::wrap(
+            self.vec_mut()
+                .iter_mut()
+                .enumerate()
+                .filter(move |(_, (set, _))| *set)
+                .map(move |(i, (_, ref mut c))| {
+                    (Entity(i as u32), unsafe {
+                        c.as_mut_ptr().as_mut().unwrap()
+                    })
+                }),
+        )
+    }
+
+    fn get<'a>(&self, entity: Entity) -> Option<&'a C> {
+        unsafe { self.vec()[entity.0 as usize].1.as_ptr().as_ref() }
+    }
+    fn get_mut<'a>(&self, entity: Entity) -> Option<&'a mut C> {
+        unsafe { self.vec_mut()[entity.0 as usize].1.as_mut_ptr().as_mut() }
+    }
+
+    fn insert(&mut self, entity: Entity, component: C) {
+        let index = entity.0 as usize;
+        let v = self.vec_mut();
+        if index >= v.len() {
+            v.resize_with(index + 1, move || (false, MaybeUninit::uninit()));
+        }
+        v[index] = (true, MaybeUninit::new(component));
+    }
+}
+
 pub struct ComponentIter<'a, C: Component> {
-    iter: Box<dyn Iterator<Item = (&'a Entity, &'a C)> + 'a>,
+    iter: Box<dyn Iterator<Item = (Entity, &'a C)> + 'a>,
 }
 
 impl<'a, C: Component> ComponentIter<'a, C> {
-    fn wrap(iter: impl Iterator<Item = (&'a Entity, &'a C)> + 'a) -> Self {
+    fn wrap(iter: impl Iterator<Item = (Entity, &'a C)> + 'a) -> Self {
         ComponentIter {
             iter: Box::new(iter),
         }
@@ -234,11 +326,11 @@ impl<'a, C: Component> Iterator for ComponentIter<'a, C> {
 }
 
 pub struct ComponentIterMut<'a, C: Component> {
-    iter: Box<dyn Iterator<Item = (&'a Entity, &'a mut C)> + 'a>,
+    iter: Box<dyn Iterator<Item = (Entity, &'a mut C)> + 'a>,
 }
 
 impl<'a, C: Component> ComponentIterMut<'a, C> {
-    fn wrap(iter: impl Iterator<Item = (&'a Entity, &'a mut C)> + 'a) -> Self {
+    fn wrap(iter: impl Iterator<Item = (Entity, &'a mut C)> + 'a) -> Self {
         ComponentIterMut {
             iter: Box::new(iter),
         }
@@ -256,11 +348,11 @@ impl<'a, C: Component> Iterator for ComponentIterMut<'a, C> {
 }
 
 pub struct EntityComponentIter<'a, C: Component> {
-    iter: Box<dyn Iterator<Item = (&'a Entity, &'a C)> + 'a>,
+    iter: Box<dyn Iterator<Item = (Entity, &'a C)> + 'a>,
 }
 
 impl<'a, C: Component> EntityComponentIter<'a, C> {
-    fn wrap(iter: impl Iterator<Item = (&'a Entity, &'a C)> + 'a) -> Self {
+    fn wrap(iter: impl Iterator<Item = (Entity, &'a C)> + 'a) -> Self {
         EntityComponentIter {
             iter: Box::new(iter),
         }
@@ -270,19 +362,16 @@ impl<'a, C: Component> EntityComponentIter<'a, C> {
 impl<'a, C: Component> Iterator for EntityComponentIter<'a, C> {
     type Item = (Entity, &'a C);
     fn next(&mut self) -> Option<Self::Item> {
-        match self.iter.next() {
-            Some((entity, component)) => Some((*entity, component)),
-            None => None,
-        }
+        self.iter.next()
     }
 }
 
 pub struct EntityComponentIterMut<'a, C: Component> {
-    iter: Box<dyn Iterator<Item = (&'a Entity, &'a mut C)> + 'a>,
+    iter: Box<dyn Iterator<Item = (Entity, &'a mut C)> + 'a>,
 }
 
 impl<'a, C: Component> EntityComponentIterMut<'a, C> {
-    fn wrap(iter: impl Iterator<Item = (&'a Entity, &'a mut C)> + 'a) -> Self {
+    fn wrap(iter: impl Iterator<Item = (Entity, &'a mut C)> + 'a) -> Self {
         EntityComponentIterMut {
             iter: Box::new(iter),
         }
@@ -292,10 +381,7 @@ impl<'a, C: Component> EntityComponentIterMut<'a, C> {
 impl<'a, C: Component> Iterator for EntityComponentIterMut<'a, C> {
     type Item = (Entity, &'a mut C);
     fn next(&mut self) -> Option<Self::Item> {
-        match self.iter.next() {
-            Some((entity, component)) => Some((*entity, component)),
-            None => None,
-        }
+        self.iter.next()
     }
 }
 
@@ -551,7 +637,7 @@ pub mod tests {
     #[derive(PartialEq, Eq, Debug)]
     struct TestComponentA(usize);
     impl Component for TestComponentA {
-        type Container = BTreeComponentMap<TestComponentA>;
+        type Container = VecIndex<TestComponentA>;
     }
 
     #[derive(PartialEq, Eq, Debug)]
