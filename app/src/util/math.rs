@@ -832,6 +832,13 @@ impl Mat4 {
     }
 }
 
+impl ::std::default::Default for Mat4 {
+    #[inline(always)]
+    fn default() -> Self {
+        Mat4::identity()
+    }
+}
+
 impl ::std::clone::Clone for Mat4 {
     #[inline(always)]
     fn clone(&self) -> Self {
