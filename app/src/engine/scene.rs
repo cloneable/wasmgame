@@ -233,7 +233,6 @@ pub struct Model {
 
     // static, per vertex
     vbo_vertex: ArrayBuffer,
-    vbo_normals: ArrayBuffer,
     // static, per instance
     vbo_instance_color: ArrayBuffer,
     vbo_instance_id: ArrayBuffer,
@@ -262,7 +261,6 @@ impl Model {
             instances,
             vao: VertexArrayObject::create(ctx)?,
             vbo_vertex: ArrayBuffer::create(ctx)?,
-            vbo_normals: ArrayBuffer::create(ctx)?,
             vbo_instance_color: ArrayBuffer::create(ctx)?,
             vbo_instance_id: ArrayBuffer::create(ctx)?,
             vbo_instance_models: ArrayBuffer::create(ctx)?,
