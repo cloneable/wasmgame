@@ -52,7 +52,8 @@ impl Scene {
 pub struct Game {
     ctx: Rc<Context>,
     world: ecs::World,
-    runner: ecs::Runner,
+    update_runner: ecs::Runner,
+    draw_runner: ecs::Runner,
 
     last_render: Time,
     scene: Scene,
@@ -71,14 +72,21 @@ impl Game {
         let mut world = ecs::World::new();
         world.register_component::<components::Spatial>();
         world.register_component::<components::ModelMatrix>();
+        world.register_component::<components::HexatileField>();
+        world.register_component::<components::Hexatile>();
         world.register_component::<Camera>();
         world.register_component::<components::Timestamp>();
-        let mut runner = ecs::Runner::new();
-        runner.register_system(systems::TransformationSystem);
+        let mut update_runner = ecs::Runner::new();
+        update_runner.register_system(systems::HexatileSystem {
+            hexatile_scale: 1.0,
+            hexatile_margin: 0.0,
+        });
+        update_runner.register_system(systems::TransformationSystem);
+        let draw_runner = ecs::Runner::new();
 
-        let entity1 = world.add_entity();
         world.set_global(components::Timestamp::default());
         world.set_global(Camera::new());
+        let entity1 = world.add_entity();
         world.set_component(entity1, components::Spatial::default());
         world.set_component(entity1, components::ModelMatrix::default());
 
@@ -99,7 +107,8 @@ impl Game {
         Ok(Self {
             ctx: ctx.clone(),
             world,
-            runner,
+            update_runner,
+            draw_runner,
             last_render: Time::from_millis(0.0),
             scene,
             offscreen: engine::util::OffscreenBuffer::new(
@@ -113,11 +122,6 @@ impl Game {
             touch_id: None,
             camera_position,
         })
-    }
-
-    fn ecs_run(&mut self, t: Time) {
-        self.world.get_global::<components::Timestamp>().unwrap().t = t;
-        self.runner.exec(&self.world);
     }
 
     pub fn on_click(&mut self, e: &::web_sys::MouseEvent) {
@@ -335,7 +339,8 @@ impl engine::Drawable for Game {
     }
 
     fn update(&mut self, t: Time) -> Result<(), Error> {
-        self.ecs_run(t);
+        self.world.get_global::<components::Timestamp>().unwrap().t = t;
+        self.update_runner.exec(&self.world);
 
         self.last_render = t;
         self.scene.camera.update(t);
@@ -349,6 +354,8 @@ impl engine::Drawable for Game {
     }
 
     fn draw(&mut self) -> Result<(), Error> {
+        self.draw_runner.exec(&self.world);
+
         self.offscreen.deactivate();
         self.material_shader.activate();
         self.ctx.gl.clear_color(0.8, 0.7, 0.6, 1.0);

@@ -1,4 +1,4 @@
-use ::std::default::Default;
+use ::std::{default::Default, vec::Vec};
 
 use crate::{
     engine::{ecs, time::Time},
@@ -41,18 +41,48 @@ impl ecs::Component for Spatial {
     type Container = ecs::VecIndex<Self>;
 }
 
+#[derive(Default)]
 pub struct ModelMatrix {
     pub model: Mat4,
 }
 
-impl Default for ModelMatrix {
-    fn default() -> Self {
-        ModelMatrix {
-            model: Mat4::identity(),
-        }
+impl ecs::Component for ModelMatrix {
+    type Container = ecs::VecIndex<Self>;
+}
+
+#[derive(Default)]
+pub struct Hexatile {
+    pub uvw: (i16, i16, i16),
+    pub active: bool,
+    pub hidden: bool,
+
+    pub changed: bool,
+}
+
+impl ecs::Component for Hexatile {
+    type Container = ecs::VecIndex<Self>;
+}
+
+#[derive(Default)]
+pub struct HexatileField {
+    pub width: usize,
+    pub data: Vec<u8>,
+
+    pub changed: bool,
+}
+
+impl HexatileField {
+    fn index(&self, x: usize, y: usize) -> usize {
+        y * self.width + x
+    }
+
+    fn coords(&self, i: usize) -> (usize, usize) {
+        let x = i % self.width;
+        let y = i / self.width;
+        (x, y)
     }
 }
 
-impl ecs::Component for ModelMatrix {
-    type Container = ecs::VecIndex<Self>;
+impl ecs::Component for HexatileField {
+    type Container = ecs::Singleton<Self>;
 }
