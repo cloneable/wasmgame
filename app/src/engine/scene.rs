@@ -18,14 +18,14 @@ use crate::{
 };
 
 #[derive(Copy, Clone)]
-pub struct ObjectData {
+pub struct MeshData {
     pub name: &'static str,
     pub buf: &'static [f32],
     pub start: usize,
     pub end: usize,
 }
 
-impl ObjectData {
+impl MeshData {
     pub fn name(&self) -> &'static str {
         self.name
     }
@@ -222,10 +222,10 @@ impl ecs::Component for Camera {
     type Container = ecs::Singleton<Self>;
 }
 
-pub struct Model {
+pub struct Mesh {
     ctx: Rc<Context>,
 
-    object_data: ObjectData,
+    mesh_data: MeshData,
 
     instances: Vec<Instance>,
 
@@ -246,18 +246,18 @@ pub struct Model {
     instance_normals_data: Vec<f32>,
 }
 
-impl Model {
+impl Mesh {
     pub fn new(
-        ctx: &Rc<Context>, object_data: ObjectData, num_instances: usize,
+        ctx: &Rc<Context>, mesh_data: MeshData, num_instances: usize,
     ) -> Result<Self, Error> {
         assert!(num_instances > 0);
 
         let mut instances: Vec<Instance> = Vec::with_capacity(num_instances);
         instances.resize_with(num_instances, Instance::new);
 
-        Ok(Model {
+        Ok(Mesh {
             ctx: ctx.clone(),
-            object_data,
+            mesh_data,
             instances,
             vao: VertexArrayObject::create(ctx)?,
             vbo_vertex: ArrayBuffer::create(ctx)?,
@@ -273,7 +273,7 @@ impl Model {
     }
 }
 
-impl crate::engine::Drawable for Model {
+impl crate::engine::Drawable for Mesh {
     fn init(&mut self) -> Result<(), Error> {
         let mut i: i32 = 1;
         for instance in self.instances.iter_mut() {
@@ -294,7 +294,7 @@ impl crate::engine::Drawable for Model {
 
         self.vbo_vertex
             .bind()
-            .set_buffer_data(&self.object_data.data())
+            .set_buffer_data(&self.mesh_data.data())
             .set_vertex_attribute_pointer_vec3(attrib::POSITION, 6, 0)
             .set_vertex_attribute_pointer_vec3(attrib::NORMAL, 6, 3)
             .unbind();
@@ -358,14 +358,14 @@ impl crate::engine::Drawable for Model {
         self.ctx.gl.draw_arrays_instanced(
             ::web_sys::WebGl2RenderingContext::TRIANGLES,
             0,
-            self.object_data.data().len() as i32 / (3 + 3),
+            self.mesh_data.data().len() as i32 / (3 + 3),
             self.instances.len() as i32,
         );
         Ok(())
     }
 }
 
-impl crate::engine::Bindable for Model {
+impl crate::engine::Bindable for Mesh {
     fn bind(&mut self) {
         self.vao.bind();
     }
@@ -375,14 +375,14 @@ impl crate::engine::Bindable for Model {
     }
 }
 
-impl ::std::ops::Index<usize> for Model {
+impl ::std::ops::Index<usize> for Mesh {
     type Output = Instance;
     fn index(&self, i: usize) -> &Instance {
         &self.instances[i]
     }
 }
 
-impl ::std::ops::IndexMut<usize> for Model {
+impl ::std::ops::IndexMut<usize> for Mesh {
     fn index_mut(&mut self, i: usize) -> &mut Instance {
         &mut self.instances[i]
     }

@@ -128,7 +128,7 @@ fn generate_output(mappings: Vec<IdentObjMapping>) -> TokenStream {
             }
             let obj_end = points.len();
             objects_code.push(quote! {
-                pub static #ident: ObjectData = ObjectData {
+                pub static #ident: MeshData = MeshData {
                     name: #name,
                     buf: &VERTEX_DATA,
                     start: #obj_start,
@@ -141,7 +141,7 @@ fn generate_output(mappings: Vec<IdentObjMapping>) -> TokenStream {
     assert_eq!(num_points % 6, 0);
 
     let t = quote! {
-        use crate::engine::scene::ObjectData;
+        use crate::engine::scene::MeshData;
 
         static VERTEX_DATA: [f32; #num_points] = [ #(#points),* ];
 
