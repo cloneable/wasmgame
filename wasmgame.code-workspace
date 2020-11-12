@@ -20,8 +20,6 @@
 			"editor.defaultFormatter": "matklad.rust-analyzer"
 		},
 		"rust-client.autoStartRls": false,
-		"rust-client.channel": "stable",
-		"rust-analyzer.updates.channel": "stable",
 		"rust.unstable_features": false,
 		"rust-analyzer.runnables.cargoExtraArgs": [
 			"--offline"
