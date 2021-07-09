@@ -9,21 +9,21 @@ crate-type = ["cdylib"]
 
 [dependencies]
 console_error_panic_hook = { version = "0.1.6", optional = true }
-log = { version = "0.4.11", features = ["max_level_trace", "release_max_level_info"] }
-js-sys = "0.3.45"
-wasm-bindgen = "0.2.68"
-wasm-bindgen-futures = "0.4.18"
-wasm-bindgen-macro = "0.2.68"
+log = { version = "0.4.14", features = ["max_level_trace", "release_max_level_info"] }
+js-sys = "0.3.48"
+wasm-bindgen = "0.2.71"
+wasm-bindgen-futures = "0.4.21"
+wasm-bindgen-macro = "0.2.71"
 wasm-logger = "0.2.0"
 wasmgame-macros = { path = "../macros" }
 wee_alloc = { version = "0.4.5", optional = true }
 
 [dev-dependencies]
-wasm-bindgen-test = "0.3.18"
+wasm-bindgen-test = "0.3.21"
 float-cmp = "0.8.0"
 
 [dependencies.web-sys]
-version = "0.3.45"
+version = "0.3.48"
 features = [
   # DOM
   'Document',
