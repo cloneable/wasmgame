@@ -1,6 +1,5 @@
-/target
-Cargo.lock
-/wbg
-.DS_Store
-.*.swp
-.*.bak
+.*
+!/.*ignore
+
+/target/
+/wbg/

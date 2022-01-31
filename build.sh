@@ -3,7 +3,7 @@
 # $ cargo install wasm-bindgen-cli twiggy devserver
 # MacOS: $ brew install wabt binaryen sccache
 
-set -e
+set -euo pipefail
 
 BUILD_TYPE=debug
 BUILD_FLAGS=

@@ -1,13 +1,13 @@
 [package]
 name = "wasmgame-macros"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Folke Behrens <folke@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 [lib]
 proc-macro = true
 
 [dependencies]
 obj = "0.10.2"
-quote = "1.0.9"
-syn = "1.0.60"
+quote = "1.0.15"
+syn = "1.0.86"

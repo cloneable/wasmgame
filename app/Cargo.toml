@@ -1,29 +1,32 @@
 [package]
 name = "wasmgame"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Folke Behrens <folke@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 [lib]
 crate-type = ["cdylib"]
 
 [dependencies]
-console_error_panic_hook = { version = "0.1.6", optional = true }
-log = { version = "0.4.14", features = ["max_level_trace", "release_max_level_info"] }
-js-sys = "0.3.48"
-wasm-bindgen = "0.2.71"
-wasm-bindgen-futures = "0.4.21"
-wasm-bindgen-macro = "0.2.71"
+console_error_panic_hook = { version = "0.1.7", optional = true }
+log = { version = "0.4.14", features = [
+  "max_level_trace",
+  "release_max_level_info",
+] }
+js-sys = "0.3.56"
+wasm-bindgen = "0.2.79"
+wasm-bindgen-futures = "0.4.29"
+wasm-bindgen-macro = "0.2.79"
 wasm-logger = "0.2.0"
 wasmgame-macros = { path = "../macros" }
 wee_alloc = { version = "0.4.5", optional = true }
 
 [dev-dependencies]
-wasm-bindgen-test = "0.3.21"
-float-cmp = "0.8.0"
+wasm-bindgen-test = "0.3.29"
+float-cmp = "0.9.0"
 
 [dependencies.web-sys]
-version = "0.3.48"
+version = "0.3.56"
 features = [
   # DOM
   'Document',
